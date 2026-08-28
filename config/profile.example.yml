@@ -80,3 +80,21 @@ tracker:
     table_id_reports: ""
     table_id_interviews: ""
     base_url: ""                       # UI link to the Bitable dashboard
+
+# === Job Browser Search（/career-ops browser-search 用，可选）===
+# 控制真实浏览器（Kimi WebBridge）在招聘平台自动搜索岗位的条件。
+# 取消注释并按需修改即可。详见 modes/browser-search.md
+# job_search:
+#   platform: boss                # boss（Boss直聘）
+#   target_titles:
+#     - 采购专员                   # 搜索框输入的职位关键词
+#   target_city:
+#     - 厦门市                     # 城市筛选
+#   target_districts:             # 区域筛选（可为空 = 不限区域）
+#     - 集美区
+#   salary_min_k: 5               # 期望最低月薪 K
+#   salary_max_k: 10              # 期望最高月薪 K
+#   max_jobs_per_run: 30          # 单次最多采集岗位数（风控保护）
+#   concurrency: 1                # 固定为 1，禁止并行浏览
+#   force_refresh: false          # true = 忽略历史去重记录重新采集
+#   excluded_keywords: []         # 标题/正文命中即规则层直接 SKIP

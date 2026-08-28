@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Career Ops · 求职决策中枢</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main class="shell" id="shell">
+
+  <!-- ═══ 左栏 ═══ -->
+  <aside class="panel sidebar" id="sidebar">
+    <div class="identity">
+      <div class="avatar" id="avatar">Z</div>
+      <div>
+        <div class="brand">Career Ops</div>
+        <div class="tagline" id="tagline">求职决策中枢</div>
+      </div>
+    </div>
+
+    <nav class="nav" aria-label="主导航">
+      <div class="nav-section">
+        <div class="nav-label">总览</div>
+        <button class="nav-btn active" data-page="dash"><span class="nav-icon">📊</span><span>概览</span></button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">岗位决策</div>
+        <button class="nav-btn" data-page="all"><span class="nav-icon">🗂️</span><span>全部岗位</span><span class="count" id="cnt-all">0</span></button>
+        <button class="nav-btn" data-page="shortlist"><span class="nav-icon">⭐</span><span>想投</span><span class="count" id="cnt-short">0</span></button>
+        <button class="nav-btn" data-page="Evaluated"><span class="nav-icon">🟡</span><span>待决定</span><span class="count" id="cnt-Evaluated">0</span></button>
+        <button class="nav-btn" data-page="Applied"><span class="nav-icon">📤</span><span>已投递</span><span class="count" id="cnt-Applied">0</span></button>
+        <button class="nav-btn" data-page="Responded"><span class="nav-icon">💬</span><span>招聘方回应</span><span class="count" id="cnt-Responded">0</span></button>
+        <button class="nav-btn" data-page="Interview"><span class="nav-icon">🎤</span><span>面试</span><span class="count" id="cnt-Interview">0</span></button>
+        <button class="nav-btn" data-page="Offer"><span class="nav-icon">🎉</span><span>录用</span><span class="count" id="cnt-Offer">0</span></button>
+        <button class="nav-btn" data-page="closed"><span class="nav-icon">🗄️</span><span>已放弃 / 淘汰</span><span class="count" id="cnt-closed">0</span></button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">记录</div>
+        <button class="nav-btn" data-page="runs"><span class="nav-icon">🔍</span><span>搜索记录</span><span class="count" id="cnt-runs">0</span></button>
+        <button class="nav-btn" data-page="settings"><span class="nav-icon">⚙️</span><span>数据与设置</span></button>
+      </div>
+    </nav>
+
+    <div class="health" id="healthBar">
+      <span class="dot ok" id="healthDot"></span>
+      <span id="healthText">连接中…</span>
+    </div>
+  </aside>
+
+  <!-- ═══ 中栏 ═══ -->
+  <section class="panel mid" id="mid">
+    <header class="mid-head">
+      <div>
+        <h1 id="pageTitle">概览</h1>
+        <div class="fine" id="filterState">当前筛选：全部 · 0 个岗位</div>
+      </div>
+      <button class="btn ghost" id="refreshBtn" type="button">刷新</button>
+    </header>
+
+    <div class="toolbar" id="toolbar">
+      <input class="input grow" id="searchInput" type="search" placeholder="搜索公司 / 岗位关键词">
+      <select class="input" id="districtFilter"><option value="">全部区域</option></select>
+      <select class="input" id="salaryFilter">
+        <option value="">全部薪资</option>
+        <option value="0-5">5K 以下</option>
+        <option value="5-10">5-10K</option>
+        <option value="10-15">10-15K</option>
+        <option value="15-99">15K 以上</option>
+      </select>
+      <select class="input" id="recFilter">
+        <option value="">全部推荐</option>
+        <option>强烈推荐</option><option>推荐</option><option>一般</option><option>不推荐</option><option>硬红线跳过</option>
+      </select>
+      <select class="input" id="statusFilter"><option value="">全部状态</option></select>
+      <label class="chk"><input type="checkbox" id="shortOnly"> 只看想投</label>
+      <select class="input" id="sortBy">
+        <option value="score">排序：综合评分</option>
+        <option value="cv">排序：简历匹配度</option>
+        <option value="salary">排序：薪资</option>
+        <option value="time">排序：采集时间</option>
+      </select>
+    </div>
+
+    <div id="runBanner" class="run-banner hidden"></div>
+    <div class="content-area">
+      <div id="dashView" class="dash-view"></div>
+      <div id="runsView" class="runs-view hidden"></div>
+      <div id="settingsView" class="settings-view hidden"></div>
+      <div id="jobList" class="job-list hidden"></div>
+    </div>
+  </section>
+
+  <!-- ═══ 右栏 ═══ -->
+  <aside class="panel detail" id="detailPanel">
+    <div class="detail-inner" id="detailInner">
+      <div class="empty">
+        <div class="empty-icon">👈</div>
+        <div class="empty-title">选择一个岗位</div>
+        <div class="empty-sub">在中栏点击岗位卡片，这里会显示完整评估</div>
+      </div>
+    </div>
+  </aside>
+
+</main>
+<div class="toast hidden" id="toast"></div>
+<script src="/app.js"></script>
+</body>
+</html>

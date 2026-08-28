@@ -6,6 +6,8 @@
 data/applications.md
 data/pipeline.md
 data/scan-history.tsv
+data/browser-search-history.json
+data/search-results-*.json
 reports/*.md
 !reports/.gitkeep
 outreach/*.md
@@ -79,3 +81,11 @@ pids/
 # === interview-prep ===
 interview-prep/mock-interviews/*
 interview-prep/story-bank.md
+
+# === Acceptance reference (local, never commit) ===
+.acceptance-tmp/
+data/score-inputs-*.json
+data/dashboard-state.json
+
+# === ZCode local ===
+.zcode/
