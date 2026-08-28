@@ -209,11 +209,8 @@ function renderDash() {
     ['硬红线', rec['硬红线跳过'] || 0, 'rc-neutral'],
   ];
   const recTotal = recDefs.reduce((n, x) => n + x[1], 0);
-  const recCells = recDefs.map(([label, n, cls]) => {
-    const mark = cls === 'rc-strong' ? '✓✓ ' : cls === 'rc-good' ? '✓ ' : '';
-    const stateCls = cls === 'rc-neutral' && n > 0 ? 'rc-neutral has-count' : cls;
-    return `<div class="rec-cell ${stateCls}"><span class="rc-label">${mark}${esc(label)}</span><span class="rc-num">${n}</span></div>`;
-  }).join('');
+  const recCells = recDefs.map(([label, n, cls]) =>
+    `<div class="rec-cell ${cls}"><div class="rc2-num">${n}</div><div class="rc2-label">${esc(label)}</div></div>`).join('');
   const pct = (n) => s.total ? Math.round(n / s.total * 100) : 0;
 
   const topJobs = d.jobs.slice().sort((a, b) =>
@@ -223,11 +220,11 @@ function renderDash() {
 
   $('#dashView').innerHTML = `
     <section class="dash-card">
-      <h3 class="dash-h">核心进度</h3>
-      <div class="core-row">
-        ${coreStat(s.total, '总岗位', null)}
-        ${coreStat(s.analyzed, '已分析', pct(s.analyzed), false)}
-        ${coreStat(s.shortlisted, '想投 ⭐', pct(s.shortlisted), true)}
+      <div class="dash-h-row"><h3 class="dash-h">核心进度</h3><span class="fine">共 ${s.total} 个岗位</span></div>
+      <div class="core-ring-row">
+        ${ringStat(pct(s.analyzed), '已分析', `${s.analyzed} / ${s.total}`, 'ring-green')}
+        <div class="core-divider"></div>
+        ${starStat('想投', s.shortlisted)}
       </div>
     </section>
     <section class="dash-card">
@@ -236,17 +233,21 @@ function renderDash() {
     </section>
     <section class="dash-card">
       <h3 class="dash-h">当前搜索摘要</h3>
-      <div class="summary-grid">
-        <span class="k">搜索岗位</span><span>${esc((cfg.target_titles || []).join(' / ') || '—')}</span>
-        <span class="k">平均简历匹配度</span><span>${s.avg_cv_match != null ? s.avg_cv_match + '%' : '—'}</span>
-        <span class="k">城市</span><span>${esc((cfg.target_city || []).join('、') || '—')}</span>
-        <span class="k">平均综合评分</span><span>${s.avg_career_ops_score != null ? s.avg_career_ops_score + ' / 5' : '—'}</span>
-        <span class="k">区域</span><span>${esc((cfg.target_districts || []).join(' · ')) || '不限'}</span>
-        <span class="k">薪资</span><span>${cfg.salary_min_k ?? '?'}K–${cfg.salary_max_k ?? '?'}K</span>
-        <span class="k">候选人</span><span>${esc(d.candidate.full_name || '—')}</span>
-        <span class="k">最后运行</span><span>${esc((d.last_run_at || '—').replace('T', ' ').slice(0, 16))}</span>
-        <span class="k">投递跟踪</span><span>${d.tracker.rows} 行</span>
-        <span class="k">收件箱待处理</span><span>${d.inbox_pending} 个</span>
+      <div class="summary-cols">
+        <div class="summary-group">
+          <div class="sg-row"><span class="k">搜索岗位</span><span>${esc((cfg.target_titles || []).join(' / ') || '—')}</span></div>
+          <div class="sg-row"><span class="k">城市</span><span>${esc((cfg.target_city || []).join('、') || '—')}</span></div>
+          <div class="sg-row"><span class="k">区域</span><span>${esc((cfg.target_districts || []).join(' · ')) || '不限'}</span></div>
+          <div class="sg-row"><span class="k">候选人</span><span>${esc(d.candidate.full_name || '—')}</span></div>
+          <div class="sg-row"><span class="k">投递跟踪</span><span>${d.tracker.rows} 行</span></div>
+        </div>
+        <div class="summary-group">
+          <div class="sg-row"><span class="k">平均简历匹配度</span><span>${s.avg_cv_match != null ? s.avg_cv_match + '%' : '—'}</span></div>
+          <div class="sg-row"><span class="k">平均综合评分</span><span>${s.avg_career_ops_score != null ? s.avg_career_ops_score + ' / 5' : '—'}</span></div>
+          <div class="sg-row"><span class="k">薪资</span><span>${cfg.salary_min_k ?? '?'}K–${cfg.salary_max_k ?? '?'}K</span></div>
+          <div class="sg-row"><span class="k">最后运行</span><span>${esc((d.last_run_at || '—').replace('T', ' ').slice(0, 16))}</span></div>
+          <div class="sg-row"><span class="k">收件箱待处理</span><span>${d.inbox_pending} 个</span></div>
+        </div>
       </div>
     </section>
     <section class="dash-card">
@@ -263,16 +264,28 @@ function renderDash() {
     };
   });
 }
-function coreStat(num, label, barPct, light) {
-  // 总岗位无进度条（纯中性基数）；已分析用品牌蓝；想投 0 时中性、有值时轻品牌色
-  const fillCls = barPct == null ? '' : barPct === 0 ? ' idle' : (light ? ' light' : '');
-  const bar = barPct == null ? '' : `
-    <div class="cs-bar"><div class="cs-bar-fill${fillCls}" style="width:${barPct}%"></div></div>
-    <div class="cs-pct">${barPct}% 的岗位</div>`;
-  return `<div class="core-stat">
-    <div class="cs-num">${esc(num)}</div>
-    <div class="cs-label">${esc(label)}</div>
-    ${bar}
+// 圆环指标（SVG donut）：环中央显示百分比，下方标签与数值，严格垂直中轴
+function ringStat(pct, label, valueText, cls) {
+  const R = 34, C = 2 * Math.PI * R;
+  const dash = (C * Math.min(pct, 100) / 100).toFixed(2);
+  return `<div class="ring-stat">
+    <svg class="ring ${cls}" width="84" height="84" viewBox="0 0 84 84" role="img" aria-label="${esc(label)} ${pct}%">
+      <circle class="ring-track" cx="42" cy="42" r="${R}"></circle>
+      <circle class="ring-fill" cx="42" cy="42" r="${R}" stroke-dasharray="${dash} ${C.toFixed(2)}" transform="rotate(-90 42 42)"></circle>
+      <text class="ring-num" x="42" y="42" text-anchor="middle" dominant-baseline="central">${pct}%</text>
+    </svg>
+    <div class="ring-label">${esc(label)}</div>
+    <div class="ring-value">${esc(valueText)}</div>
+  </div>`;
+}
+// 想投：暖黄圆形底 + 星形 icon（非百分比环），数值只显示数量
+function starStat(label, num) {
+  return `<div class="ring-stat">
+    <div class="star-disc" role="img" aria-label="${esc(label)} ${num}">
+      <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path class="star-path" d="M12 2.4l2.94 5.95 6.57.96-4.75 4.63 1.12 6.54L12 17.37l-5.88 3.11 1.12-6.54-4.75-4.63 6.57-.96z"/></svg>
+    </div>
+    <div class="ring-label">${esc(label)}</div>
+    <div class="ring-value">${esc(num)}</div>
   </div>`;
 }
 // 展示层文本映射（不修改原始数据）：品牌指标名 → 中文
@@ -319,13 +332,13 @@ function topJobRow(j) {
     <div class="tj-line1">
       <span class="tj-company">${esc(j.company)}</span>
       <span class="tj-title">${esc(j.title)}</span>
-      <span class="tj-chips">
-        <span class="score-chip cv">匹配 <b>${a.cv_match_score != null ? a.cv_match_score + '%' : '—'}</b></span>
-        <span class="score-chip ops">综合 <b>${a.career_ops_score ?? '—'}</b>/5</span>
-        ${conf ? `<span class="score-chip ${confClass(conf.percent)}">可信度 <b>${conf.percent}%</b> · ${esc(conf.level)}</span>` : ''}
-        ${a.recommendation ? `<span class="rec-chip rec-${esc(a.recommendation)}">${esc(a.recommendation)}</span>` : ''}
-      </span>
     </div>
+    <span class="tj-chips">
+      <span class="score-chip cv">匹配 <b>${a.cv_match_score != null ? a.cv_match_score + '%' : '—'}</b></span>
+      <span class="score-chip ops">综合 <b>${a.career_ops_score ?? '—'}</b>/5</span>
+      ${conf ? `<span class="score-chip ${confClass(conf.percent)}">可信度 <b>${conf.percent}%</b> · ${esc(conf.level)}</span>` : ''}
+      ${a.recommendation ? `<span class="rec-chip rec-${esc(a.recommendation)}">${esc(a.recommendation)}</span>` : ''}
+    </span>
     <div class="tj-reason">${esc(zhMetrics(a.recommendation_reason || '—'))}</div>
   </button>`;
 }
