@@ -60,6 +60,9 @@ pids/
 .env.*
 !.env.example
 
+# === Local audit / design docs (contain real case data, never commit) ===
+PROCUREMENT_ARCHETYPE_AUDIT.md
+
 # === npm / yarn cache ===
 .npm
 .yarn-integrity

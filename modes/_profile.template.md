@@ -1,105 +1,120 @@
-# User Profile Context — career-ops（中国大陆版）
+# User Profile Context — career-ops（中国大陆版 · 采购领域）
 
 <!-- ============================================================
-     这是你的文件。它永远不会被自动更新。
-     
-     在这里定制所有内容：archetype、叙事、
-     proof points、谈判脚本等。
+     这是模板文件。使用方法：
+       cp modes/_profile.template.md modes/_profile.md
+     然后按各处注释填写。_profile.md 才是你的正式文件，
+     它永远不会被自动更新；本模板会随 career-ops 发布改进。
+     私人数据（姓名/联系方式/具体薪资数字）一律放 config/profile.yml，
+     不要写进 _profile.md。
      ============================================================ -->
 
 ## 北极星 — 目标岗位（中国大陆）
 
-<!-- 替换为你自己的目标岗位。 -->
+<!-- 岗位目标在 config/profile.yml → target_roles 填写（四层分离：
+     primary_archetype / secondary（可选）/ categories / tags / seniority_range，
+     共三条目）。taxonomy 权威定义与判别信号词表：tools/lib/taxonomy.mjs -->
 
-### 核心 Archetypes
+### 核心 Archetypes（采购三型）
 
-| Archetype | 主题轴 | 公司在为这个角色买什么 |
+<!-- 下表是冻结的采购 taxonomy（与 tools/lib/taxonomy.mjs 完全一致），不需要修改。
+     你要做的是在 config/profile.yml → target_roles.archetypes 里选择
+     primary_archetype / secondary 并填 categories / tags / seniority_range。 -->
+
+| Archetype（key） | 主题轴 | 公司在为这个角色买什么 |
 |-----------|--------|---------------------|
-| **数据工程师 / Data Engineer**（primary）| NL2SQL、ChatBI、AI+数据 端到端落地、Pipeline、数据建模 | 能把数据 + LLM 落到业务的人（不是纯写 Spark/Flink 任务） |
-| **大模型应用工程师 / LLM App**（primary）| RAG、Agent、Prompt 工程、Function Calling、Eval、Observability | 能把大模型落地到业务、保证质量、控制成本的人 |
-| **数据治理 / Data Governance**（secondary，转 LLM 的 bridge）| 元数据、血缘、数据资产 + LLM 落地（银行金科常打包招）| 能让数据"用得起 + 管得住"，并在数据基础上做 AI 落地的人 |
+| **execution_procurement 执行采购** | 以日常采购执行、下单、交付跟进、供应协调、价格执行、订单闭环为主要工作 | 把日常采购执行做稳：交期、单证、对账、异常处理不出错 |
+| **sourcing 寻源 / 供应商开发** | 以新供应商开发、RFQ、供应商筛选、比价、商务谈判、导入为主要工作 | 把新供应商从 0 找到、验证、导入的能力 |
+| **strategic_category 战略 / 品类采购** | 以品类策略、年度降本、供应策略、Should-cost、供应商组合、长期商务规划为主要工作 | 品类整体的策略与降本 ownership |
 
-### 已弃用 archetypes
+> 判定规则：primary_archetype 一岗一个，按"这个岗位每周时间的主体在做什么采购工作"判（职责动词分布），title 不进判定；最高信号不足或并列 → `unknown`，禁止硬套。权威定义与 signal 词表见 `tools/lib/taxonomy.mjs`。
 
-<!-- 你明确放弃的方向。JD 命中这些且与 核心archetype 无强重叠 → Tier D → SKIP。 -->
+### 不进入评估池的岗位（采购版排除规则）
 
-以下方向**不再评估**（不在真实可达池 + 候选人主动放弃）：
-- 数据仓库 / 数据平台 / DWH（纯数仓）
-- 大数据算法 / 数据科学
-- 后端工程师（即使带"数据/AI"修饰）
-- AI Infra / 大模型基础设施（候选人画像打不进）
-- 平台工程师 / 架构师
+<!-- 按你的情况增删。JD 命中以下主体职能且与核心 archetype 无强重叠 → 不进入评估池（机制同原 Tier D SKIP，语义换为采购）。 -->
 
-> 评估时若 JD 命中以上方向且**没有强 LLM 应用元素**，直接走 Tier D → SKIP。
+<!-- 默认不评估（可在 _profile.md 里改）：
+- SQE / 质量序列为主体的岗位（来料检验、8D、QSA 审核为主体职责）
+- 仓储物流为主体的岗位（收发货、库存管理、运输调度为主体职责）
+- 生产计划为主体的岗位（PMC、排产、物控为主体职责）
+- 纯销售岗（供应商侧销售，不是采购职能）
+-->
+
+> 评估时若 JD 以上述职责为主体且**没有采购职能主体**（下单跟单 / 寻源开发 / 品类策略），直接不进入评估池，写一句理由。
 
 ### 按 Archetype 自适应包装
 
-<!-- 把你的项目映射到每个 archetype。 -->
-
-> **具体指标：评估时从 `cv.md` + `article-digest.md` 读取。NEVER 在这里硬编码数字。**
+<!-- 把你的经历映射到每个 archetype。具体指标：评估时从 cv.md + article-digest.md 读取。NEVER 在这里硬编码数字。 -->
 
 | 如果岗位是… | 强调候选人身上的… | proof points 来源 |
 |------------|------------------|------------------|
-| 数据工程师 | NL2SQL/ChatBI 端到端、数据治理 + LLM、Elytra Agent SQL、华为 92% 准确率 | article-digest.md + cv.md |
-| 数据治理（带 LLM）| 元数据/血缘 + NL2SQL 闭环、跨部门推动、数据资产 → LLM 落地 | article-digest.md + cv.md |
-| 大模型应用工程师 | 端到端 RAG/Agent、Eval（173/173 tests + 14 case 量化）、Observability、多模型路由、SELECT-only 安全 | cv.md + article-digest.md |
+| execution_procurement 执行采购 | <!-- 从 cv.md / article-digest.md 提取：交付/跟单闭环、交期保障、单证/对账准确性、异常处理证据 --> | cv.md + article-digest.md |
+| sourcing 寻源 / 供应商开发 | <!-- 从 cv.md / article-digest.md 提取：开发数量、源头工厂直达、导入验证证据 --> | cv.md + article-digest.md |
+| strategic_category 战略 / 品类采购 | <!-- 从 cv.md / article-digest.md 提取：品类规模、降本百分比、Should-cost/成本拆解证据 --> | cv.md + article-digest.md |
 
-<!-- 把你具体的项目映射到上面 3 个 archetype。已弃用的方向（数仓/大数据/后端/AI Infra/平台）不在此表。 -->
+<!-- 岗位 primary_archetype = unknown 时，用上表三类的并集做通用采购包装（询比价、谈判、供应商管理、交付、降本）。 -->
 
 ### 个人叙事 / Exit Narrative（在所有 framing 中复用）
 
-<!-- 替换为你自己的叙事。这是所有内容的框架。
-     示例：
-     - "5 年大厂数据开发经验，独立从 0 搭建过日均百亿级数仓"
-     - "数据工程转大模型应用，最近一年 RAG/Agent 系统已上生产"
-     - "稳定性和成本是我的强项，过去两年帮团队把数仓查询提速 5 倍" -->
+<!-- 替换为你自己的叙事。这是所有内容的框架。示例写法：
+     - "N 年 制造/贸易行业采购经验，独立管理 N 个品类"
+     - "从执行采购走到品类管理，降本方法论可以复述到品类级"
+     - "跨境采购全链路：寻源 → 议价 → 单证 → 交付闭环"
+     正式叙事写在 config/profile.yml → narrative.exit_story -->
 
 从 `config/profile.yml` 的 `narrative.exit_story` 读取候选人的叙事，在以下场景使用：
-- **PDF Summary**：用一句话桥接过去与未来 — "把同样的[能力]迁移到[JD 领域]"
-- **STAR 故事**：引用 article-digest.md 中的 proof points
+- **PDF Summary**：用一句话桥接过去与未来 — "把同样的[采购能力]迁移到[JD 品类/行业]"
+- **STAR 故事**：引用 cv.md + article-digest.md 中的量化采购战果
 - **应用表格答案（Section G）**：转型叙事在第一题就要出现
-- **当 JD 提到 "ownership / 自驱 / 全栈 / 端到端 / 从 0 到 1"**：这是 #1 加分项，提高匹配权重
+- **当 JD 提到 "ownership / 自驱 / 端到端 / 从 0 到 1"**：这是 #1 加分项，提高匹配权重
 
 ### 横向优势
 
-<!-- 你的"独门武器"是什么？用复合信号定位自己，而不是技能清单。 -->
+<!-- 你的"独门武器"是什么？用复合信号定位自己，而不是技能清单。
+     建议定位："能落地的采购操盘手"，按岗位调整说法：
+     - 对执行采购：交付跟单稳、单证对账清楚、异常处理有预案
+     - 对寻源开发：有开发方法论、源头工厂直达、导入验证闭环
+     - 对战略/品类采购：能拆 Should-cost、把年度降本目标落到品类动作
+     把你自己的具体说法写进 _profile.md 这一节。 -->
 
-把候选人定位成 **"能落地的技术构建者"（builder with real-world proof）**，按角色调整说法：
-- 对大模型应用：「能把模型从 demo 推到生产、有 Eval/Observability 闭环的工程师」
-- 对数据工程：「既懂业务建模又能写性能稳定的 Spark/Flink 任务的工程师」
-- 对数据治理：「能跨部门推动落地、不只是写文档的治理人」
-- 对平台架构：「自己搭过中台/平台、知道用户痛点的架构师」
+把候选人定位成 **"能落地的采购操盘手"（procurement operator with real-world proof）**，共同底座：开发方法论 + 品类降本 + 数字化流程（SRM/RFQ 线上化）。
 
-把"会写代码 + 能上线 + 有数据"打包成一种专业信号，而不是"个人爱好型 maker"。
+### 量化采购战果包（proof points 清单）
 
-### Portfolio / 作品集 作为 proof point
+<!-- 评估/简历/面试时按此清单从 cv.md + article-digest.md 实时搜集证据。NEVER 硬编码数字。 -->
 
-<!-- 如果你有 live demo、dashboard 或公开项目：
-     dashboard:
-       url: "https://your-blog.dev"
-       password: ""
-       when_to_share: "大模型应用、数据平台岗" -->
-
-如果候选人有 live demo 或 GitHub 项目（在 profile.yml 检查），在相关岗位申请时主动给出链接。
+优先搜寻的量化证据：
+- 量化降本（% 或金额）
+- 供应商开发/淘汰数量
+- 交期改善（交货及时率、大货交期）
+- 付款账期改善
+- 质量改善（合格率、客诉率、质量异常闭环）
+- 库存下降 / 呆滞处理
+- 年度采购额 / 品类规模 / RFQ 项目规模
+- 谈判结果 / 合同金额
+- 供应风险处理案例（断供、单一来源）
+- 数字化流程建设（报价系统、SRM 上线、单据流转提速）
+- 团队规模（带几人、如何分工考核）
 
 ## 谈判脚本
 
-<!-- 按你的情况调整。中文职场语境。 -->
+<!-- 按你的情况调整。中文职场语境。薪资数字一律从 config/profile.yml → compensation 读取，此处不写具体数字。 -->
 
 **薪资期望（通用框架）：**
-> "结合市场行情和这个岗位的要求，我的期望是 [profile.yml 中的范围]。结构上可以谈，关键看 total package 和发展空间。"
+> "结合市场行情和这个岗位的职责范围，我的期望是 [profile.yml 中的范围]。结构上可以谈，关键看总包和发展空间。"
 
-**HR 拿"对标我们司 P6"压价：**
-> "职级 title 我可以接受弹性，但 package 我会按实际能力和市场对标。能否说一下贵司 P6 的薪资带宽？"
+**HR 拿职级压价（采购序列版）：**
+> "职级 title 我可以接受弹性，但 package 我会按实际能力和市场对标。能否说一下这个岗位对标采购主管/采购经理带宽的薪资区间？"
+> 若被以"你现在是主管，过来只能给专员/高级专员"压级：先确认职责对不对等（带不带人、背不背品类 KPI），职级可弹性、带宽要匹配实际职责范围。
 
 **地理折扣（一线 vs 二线）：**
-> "这个岗位的产出不是按城市分的，我过去的项目交付质量也不会因为 base 在 X 城而变化。"
+> "这个岗位的产出不是按城市分的，我过去的交付质量和降本战果也不会因为 base 在 X 城而变化。"
 
 **低于预期：**
 > "我目前在和 [更高范围] 的几家公司谈，选择贵司是因为 [具体原因]。能否在 [目标数字] 这边再 align 一下？"
 
 **反 996 / 大小周提问（如果你介意）：**
-> "我希望能可持续地长期产出。咱们团队的真实工时大概是怎样？周末是 on-call 还是常规要来？"
+> "我希望能可持续地长期产出。咱们采购团队的真实工时大概是怎样？月底对账、旺季交付是否常态化加班？"
 
 ## 工作地点 / 远程政策
 
@@ -107,11 +122,15 @@
 
 **填表时：**
 - "你能否到 [城市] on-site 工作？" 这种问题：按 profile.yml 里你的实际意愿回答
-- 自由文本框里：写清楚你接受的城市、是否能搬迁、是否接受出差比例
+- 自由文本框里：写清楚你接受的城市、是否能搬迁、是否接受出差比例（验厂、盘库、样品确认常要求出差）
 
 **评估打分时：**
-- 国内大厂基本都是 5 天 onsite，**远程评分维度应当务实**：full remote 给 5 分基本没机会
+- 制造/贸易/零售企业的采购岗基本都是 5 天 onsite（验厂、盘库、样品确认都要求到场），**远程评分维度应当务实**：full remote 给 5 分基本没机会（供应链服务公司偶有例外）
 - onsite 在你 base 城市：5 分
 - onsite 在你愿意搬迁的城市：3-4 分
 - onsite 在你不愿去的城市：1-2 分
 - 混合（一周 X 天）：按比例评
+
+---
+
+术语约定：SRM、RFQ、MOQ、OEM/ODM、SKU、Incoterms、ATS 等采购/招聘术语保留英文，不翻译。

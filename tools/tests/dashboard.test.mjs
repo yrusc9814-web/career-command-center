@@ -64,7 +64,7 @@ const APPS = `# Applications Tracker
 | # | Date | Company | Role | Score | Status | PDF | Report | Notes |
 |---|------|---------|------|-------|--------|-----|--------|-------|
 | 1 | 2026-08-27 | 示例公司 | 采购专员 | 2.58/5 | SKIP | ❌ | [001](reports/001-example-2026-08-27.md) | note1 |
-| 2 | 2026-08-27 | 示例供应链公司 | 采购专员/采购主管 | 2.96/5 | SKIP | ❌ | [002](reports/002-yimuxiansheng-2026-08-27.md) | note2 |
+| 2 | 2026-08-27 | 示例供应链公司 | 采购专员/采购主管 | 2.96/5 | SKIP | ❌ | [002](reports/002-example-2026-08-27.md) | note2 |
 `;
 
 let dir;

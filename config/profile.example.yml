@@ -3,66 +3,69 @@
 # This is the single source of truth for your personal data across all modes.
 
 candidate:
-  full_name: "Jane Smith"
-  email: "jane@example.com"
-  phone: "+1-555-0123"
-  location: "San Francisco, CA"
-  linkedin: "linkedin.com/in/janesmith"
-  portfolio_url: "https://janesmith.dev"
-  github: "github.com/janesmith"
-  twitter: "https://x.com/janesmith"
+  full_name: "李四"
+  email: "lisi@example.com"
+  phone: "+86-138-0000-0000"
+  location: "苏州市"
+  linkedin: "linkedin.com/in/lisi-example"
+  portfolio_url: ""                # 采购岗一般不强制，可留空
+  github: ""                       # 采购岗一般不强制，可留空
+  twitter: ""
 
 target_roles:
-  # Your North Star roles — what you're optimizing for
-  primary:
-    - "Senior AI Engineer"
-    - "Staff ML Engineer"
-  # Archetypes help the evaluation system score fit
+  # Your North Star roles — what you're optimizing for.
+  # 四层分离（冻结 §24.4，Phase 1）：primary_archetype / secondary（可选）/
+  # categories / tags / seniority_range。taxonomy 权威定义与判别信号词表：
+  # tools/lib/taxonomy.mjs（execution_procurement / sourcing / strategic_category 三选一，
+  # seniority 取值：助理/专员/高级专员/主管/经理/总监·负责人）。
+  # fit 含义：第 1 条 = primary（梦想岗），第 2 条 = secondary（好匹配），第 3 条 = adjacent（可接受）。
   archetypes:
-    - name: "AI/ML Engineer"
-      level: "Senior/Staff"
-      fit: "primary"        # primary = dream role, secondary = good fit, adjacent = stretch
-    - name: "AI Product Manager"
-      level: "Senior"
-      fit: "secondary"
-    - name: "Solutions Architect"
-      level: "Mid-Senior"
-      fit: "adjacent"
+    - primary_archetype: sourcing
+      secondary: strategic_category
+      categories: [机械设备, 原材料]
+      tags: [cross_border, production_material]
+      seniority_range: [高级专员, 主管]
+    - primary_archetype: strategic_category
+      categories: [机械设备]
+      tags: [domestic, direct]
+      seniority_range: [主管]
+    - primary_archetype: execution_procurement
+      categories: [汽车零部件]
+      tags: [cross_border]
+      seniority_range: [高级专员]
 
 narrative:
   # Your professional headline (1 line)
-  headline: "ML Engineer turned AI product builder"
+  headline: "制造业采购，寻源开发 + 品类降本双线经验"
   # Your exit story — what makes you unique
-  exit_story: "Built and sold my SaaS after 5 years. Now focused on applied AI at scale."
+  exit_story: "从执行采购做到品类采购，沉淀了可复述的供应商开发方法论与年度降本路径。"
   # Your top 3-5 superpowers
   superpowers:
-    - "End-to-end ML pipelines"
-    - "Fast prototyping (idea to prod in 2 weeks)"
-    - "Cross-functional communication"
+    - "供应商开发：从 0 到 1 源头寻源与导入验证"
+    - "品类降本：Should-cost 拆解落到年度降本目标"
+    - "订单闭环：询比价 → 跟单交付 → 对账单证全流程"
   # Proof points — projects, articles, case studies with measurable impact
   proof_points:
-    - name: "Project Alpha"
-      url: "https://janesmith.dev/project-alpha"
-      hero_metric: "Reduced inference latency 40%"
-    - name: "Open Source Tool"
-      url: "https://github.com/janesmith/tool"
-      hero_metric: "2K+ GitHub stars"
+    - name: "年度品类降本项目"
+      hero_metric: "重点品类降本 15%"
+    - name: "供应商开发与整合"
+      hero_metric: "年开发供应商 100+ 家"
   # Optional: dashboard/demo URL with credentials
   # dashboard:
-  #   url: "https://janesmith.dev/demo"
+  #   url: "https://example.com/demo"
   #   password: "demo-2026"
 
 compensation:
-  target_range: "$150K-200K"     # Your target total comp
-  currency: "USD"
-  minimum: "$120K"               # Walk-away number
-  location_flexibility: "Remote preferred, 1 week/month on-site possible"
+  target_range: "15-20K × 13薪"   # Your target total comp
+  currency: "CNY"
+  minimum: "12K × 13薪"           # Walk-away number
+  location_flexibility: "base 城市优先，可接受同省异地（验厂/盘库可出差）"
 
 location:
-  country: "United States"
-  city: "San Francisco"
-  timezone: "PST"
-  visa_status: "No sponsorship needed"
+  country: "中国"
+  city: "苏州市"
+  timezone: "Asia/Shanghai"
+  visa_status: "不涉及"
   # For remote roles outside your country:
   # onsite_availability: "1 week/month in any city"
 
@@ -89,9 +92,9 @@ tracker:
 #   target_titles:
 #     - 采购专员                   # 搜索框输入的职位关键词
 #   target_city:
-#     - 厦门市                     # 城市筛选
+#     - 苏州市                     # 城市筛选
 #   target_districts:             # 区域筛选（可为空 = 不限区域）
-#     - 集美区
+#     - 工业园区
 #   salary_min_k: 5               # 期望最低月薪 K
 #   salary_max_k: 10              # 期望最高月薪 K
 #   max_jobs_per_run: 30          # 单次最多采集岗位数（风控保护）

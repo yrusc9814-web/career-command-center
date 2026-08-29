@@ -80,13 +80,15 @@ title_filter:
     - "Mainframe"
     - "COBOL"
   seniority_boost:
-    # These prefixes add relevance but are not required
-    - "Senior"
-    - "Staff"
-    - "Principal"
-    - "Lead"
+    # These prefixes add relevance but are not required.
+    # Procurement seniority ladder (frozen five words, mirrors
+    # templates/portals-china.example.yml / portals.yml: 采购主管/采购经理/
+    # 采购总监/负责人/高级采购专员)
+    - "Procurement Director"
+    - "Procurement Manager"
+    - "Procurement Supervisor"
     - "Head"
-    - "Director"
+    - "Senior Procurement Specialist"
 
 # -- Search queries --
 # Each query triggers a WebSearch. Use site: to filter by portal.

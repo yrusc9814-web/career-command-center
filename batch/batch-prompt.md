@@ -52,16 +52,16 @@
 
 ### Step 2 — A-F 评估
 
-按 `_profile.md` 里的 archetype 表归类岗位（混合型标最近的 2 个），再按 `_shared.md` 的 framing 规则写以下 block。**内容规范看 `_shared.md`，本文件只给结构：**
+按 `_profile.md` 里的 3 个采购 archetype 归类 primary_archetype（`execution_procurement` 执行采购 / `sourcing` 寻源·供应商开发 / `strategic_category` 战略·品类采购；只看职责动词分布，title 不进判定；最高信号不足或并列 → unknown，禁止硬套；权威 signal 词表见 `tools/lib/taxonomy.mjs`），再按 `_shared.md` 的 framing 规则写以下 block。**内容规范看 `_shared.md`，本文件只给结构：**
 
-- **Block A — 角色摘要**：Archetype / Domain / Function / Seniority（含大厂职级对标）/ 业务方向 / Remote / Base 城市 / 团队规模 / 公司类型 / TL;DR
-- **Block B — CV 匹配**：JD 每条要求 → CV 具体行（按 archetype 调优先级）。附 gaps 段：每个 gap 标 hard blocker / nice-to-have、相邻经验论证、portfolio 填补、缓解动作
+- **Block A — 角色摘要**：primary_archetype / Domain（六值）/ Categories / Tags / Function / Seniority（raw_title 保留 + 采购序列六档：助理/专员/高级专员/主管/经理/总监·负责人；用户可见层禁止 L 编码与互联网职级）/ 业务方向 / Remote / Base 城市 / 团队规模 / 公司类型 / TL;DR
+- **Block B — CV 匹配**：JD 每条要求 → CV 具体行（按 archetype 调优先级）。附 gaps 段：每个 gap 标 hard blocker / nice-to-have、相邻经验论证、portfolio 填补、缓解动作。另按 `modes/offer.md` Block B 的结构化要求输出 Capability/Evidence（JD 侧 required/preferred_capabilities + CV 侧 candidate_evidence + Capability Coverage 四列表，枚举 matched/partial/no_evidence/unknown；该表是证据覆盖状态，不是 CV Match 分数，不输出百分比；能力 key 取自 `tools/lib/taxonomy.mjs` 10 桶，词表见 `tools/lib/evidence.mjs`）
 - **Block C — 级别与策略**：JD 暗示级别 vs 候选人自然级别 / 不撒谎卖资深方案 / 被压级方案
 - **Block D — 薪酬与需求**：**用 `_shared.md` 列出的中文源**（看准 / 脉脉 / OfferShow / 知乎 / 一亩三分地 / leetcode.cn）。查不到写"未查到"，**不要编造**，**不要用 Glassdoor / Levels.fyi / Blind**
 - **Block E — 个性化方案**：Top 5 CV 修改 + Top 5 LinkedIn/脉脉资料修改
 - **Block F — 面试准备**：6-10 个 STAR+R 故事（Reflection 是关键），按 archetype 选材 + 1 个主讲 case + 红线问题（"为什么离职" / "能 996 吗" / "频繁跳槽"）
 
-**全局 Score 表**：CV 匹配 / 北极星对齐 / Comp（含工时折算） / 文化信号 / 公司稳定性 / 红线扣分 / 总分 — 维度和权重看 `_shared.md`。
+**全局 Score 表**：Career Score 十维加权总分（`compensation` 薪酬竞争力 20 / `workload_workstyle` 工作制与强度 15 / `role_seniority` 职级质量与职责范围 13 / `career_growth` 成长空间 10 / `category_domain_value` 品类与行业价值 10 / `procurement_ownership` 采购自主权 9 / `company_stability` 公司与业务稳定性 7 / `location_fit` 地点与通勤 8 / `digital_tooling` 数字化与工具成熟度 5 / `hiring_process_quality` 招聘流程质量 3）— 维度细则唯一权威 = `tools/lib/scoring.mjs` 的 `SCORING_RUBRIC`（1/3/5 定义不复制进 prompt）。**cv_match_score（0-100）由 CV Match 层产出（`tools/lib/cv-match.mjs`），不参与 Career Score 加权**；JD 未写证据的维度 score=null 不入分母，营销叙事不作证据。
 
 ### Step 3 — 写 report .md
 
@@ -74,6 +74,7 @@
 **日期：** {{DATE}}
 **Archetype：** {检测到的}
 **Score：** {X.X/5}
+**推荐等级：** {五档枚举，由 `tools/lib/scoring.mjs` `computeRecommendation` 决策链产出}；**Eligibility / Blocker：** `eligibility_status`（eligible/eligible_with_gaps/ineligible/unknown）+ 命中 blocker + `trace[]` 摘要（`tools/lib/eligibility.mjs` 组装）
 **URL：** {岗位 URL}
 **PDF：** career-ops/output/cv-candidate-{slug}-{{DATE}}.pdf
 **验证状态：** 未确认（batch 模式）
