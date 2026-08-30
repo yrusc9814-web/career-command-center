@@ -175,11 +175,15 @@ recruiter_name, recruiter_title, recruiter_active_status, job_url, published_at,
 对每个规则通过的岗位跑标准 A-F 评估：读 `modes/_shared.md` + `modes/auto-pipeline.md` 的完整流程
 （引用 cv.md 具体行做 CV 匹配、中文源薪酬调研、级别策略等），产出正式 report
 `reports/{NNN}-{slug}-{date}.md` + tracker TSV。同时把结论回填进本模式的 results JSON
-（score / cv_match / strengths / gaps / recommendation 等）。
+（score / cv_match_score / strengths / gaps / recommendation 等；cv_match_score 为 0-100 整数，
+由 CV Match 层 `tools/lib/cv-match.mjs` 产出，结果 JSON 的 `cv_match` 字段填同一 0-100 值，
+禁止 LLM 自算百分比）。recommendation 恒为五档枚举，来自 `tools/lib/scoring.mjs`
+`computeRecommendation` 决策链 + `trace[]`，LLM 只解释不重算。
 
 ### 6b. 未完成 onboarding（当前默认状态）
 
-诚实降级模式 —— **不允许编造 CV 信息**。只做基于客观事实的评估：
+诚实降级模式 —— **不允许编造 CV 信息**。这是 onboarding 完成前的临时路径（不接评分引擎）；
+cv.md 配好之后一律走 6a 的引擎链路。只做基于客观事实的评估：
 
 - salary_fit：实际薪资 vs 配置区间
 - location_fit：区县 vs target_districts
@@ -190,7 +194,7 @@ recruiter_name, recruiter_title, recruiter_active_status, job_url, published_at,
   - title 精确匹配 +1.0（仅关键词相关 +0.5）
   - 无 excluded/redline 命中 +1.0
 - recommendation 映射：rule_score≥4.5 强烈推荐；≥3.5 推荐；≥2.5 一般；<2.5 不推荐；红线命中 → 硬红线跳过
-- cv_match / score(A-F) / gaps / cv_advice / interview_focus 等依赖个人简历的字段标记 `"待填写cv.md"` 
+- cv_match_score / score(A-F) / gaps / cv_advice / interview_focus 等依赖个人简历的字段标记 `"待填写cv.md"`
 - recommendation_reason 写清判定所依据的事实（薪资、区县、JD 关键信号）
 
 每岗写一条 tracker TSV 吗？——**此模式默认不写 applications.md TSV**（那是投递导向的 pipeline 领域），
@@ -244,7 +248,8 @@ per_job（analysis 段字段名是 Excel/MD 生成的契约，脚本 tools/gener
     "hard_redline": false,
     "salary_fit": "", "location_fit": "",
     "rule_score": 0.0,
-    "cv_match": "待填写cv.md 或 x.x/5 或 百分比",
+    "cv_match": "待填写cv.md 或 0-100 整数（= cv_match_score，由 tools/lib/cv-match.mjs 产出；禁止 x.x/5 或百分比自算）",
+    "cv_match_score": null,
     "score": null,
     "strengths": [], "gaps": [],
     "recommendation": "强烈推荐 | 推荐 | 一般 | 不推荐 | 硬红线跳过",
@@ -255,4 +260,4 @@ per_job（analysis 段字段名是 Excel/MD 生成的契约，脚本 tools/gener
 ```
 
 skipped_rule 的岗位 analysis.recommendation = "硬红线跳过" 仅当红/deal_breaker 命中；
-普通规则不符用「不推荐」+ skip_reason（如 "区域不符：集美区以外"）。
+普通规则不符用「不推荐」+ skip_reason（如 "区域不符：目标区以外"）。

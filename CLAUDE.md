@@ -4,11 +4,11 @@
 
 This system was built and used by [santifer](https://santifer.io) to evaluate 740+ job offers, generate 100+ tailored CVs, and land a Head of Applied AI role.
 
-**This fork has been deeply customized for the China mainland job market** — Chinese language by default, archetypes adapted for 数据工程 / 数据治理 / 数据仓库 / 大模型 / AI Infra / 后端 / 平台 roles, salary research sources switched to 看准网/脉脉/OfferShow/知乎/一亩三分地, portals.yml populated with Chinese tech giants and AI unicorns, and login-wall handling for Boss直聘/拉勾/猎聘.
+**This fork has been deeply customized for the China mainland procurement job market** — Chinese language by default, archetypes adapted for 执行采购 / 寻源与供应商开发 / 战略与品类采购 roles, salary research sources switched to 看准网/脉脉/OfferShow/知乎/职友集, portals.yml populated with a procurement company pool template (anonymous placeholders you replace with your real targets), and login-wall handling for Boss直聘/拉勾/猎聘.
 
 The portfolio that goes with the original system is also open source: [cv-santiago](https://github.com/santifer/cv-santiago).
 
-**It will work out of the box, but it's designed to be made yours.** If the archetypes don't match your career, the scoring doesn't fit your priorities -- just ask. You (Claude) can edit any file in this system. 用户说「改 archetype 到 后端 + 推荐算法」你就直接改。这就是这个系统的目的。
+**It will work out of the box, but it's designed to be made yours.** If the archetypes don't match your career, the scoring doesn't fit your priorities -- just ask. You (Claude) can edit any file in this system. 用户说「改 archetype 到 品类采购 + 寻源」你就直接改。这就是这个系统的目的。
 
 ## What is career-ops
 
@@ -56,8 +56,8 @@ AI-powered job search automation built on Claude Code: pipeline tracking, offer 
 > "我需要几个信息来个性化这个系统：
 > - 你的姓名 + 邮箱 + 微信（不会写到生成的内容里，只本地存）
 > - Base 城市 + 是否能搬迁
-> - 目标岗位（数据工程师 / 数据仓库专家 / 大模型应用工程师 / 等）
-> - 期望薪资区间（包不包含年终奖、股票）
+> - 目标岗位（采购专员 / 高级采购 / 寻源 / 品类采购 / 采购主管 / 采购经理 / 等）
+> - 期望薪资区间（包不包含年终奖）
 > - 现在状态：在职 / 离职 / 在看
 >
 > 我帮你填好。"
@@ -65,14 +65,13 @@ AI-powered job search automation built on Claude Code: pipeline tracking, offer 
 把答案写进 `config/profile.yml`。把目标岗位映射到最接近的 archetype（在 `modes/_profile.md` 中），如果不匹配就改 `_profile.md`。
 
 #### Step 3: Portals（可选 — 中国大陆版默认已配好）
-中国大陆版的 `portals.yml` 已经预配置好了 50+ 公司：
-- 一线大厂：字节、阿里、腾讯、美团、百度、京东、拼多多、快手、小红书、B站、网易、滴滴
-- 大模型独角兽：DeepSeek、Moonshot、智谱、MiniMax、百川、零一、阶跃星辰、面壁
-- 数据创业：PingCAP、StarRocks、神策、Kyligence、滴普
-- AI Infra：硅基流动、潞晨、无问芯穹
+中国大陆版的 `portals.yml` 模板已按采购方向预置了结构与示例：
+- `title_filter`：采购正向词表（采购 / 寻源 / 品类采购 / Sourcing / Supplier Development 等）+ 排除词（仓库 / 跟单员 / 计划员 / SQE 等）
+- `search_queries`：Boss / 拉勾 / 猎聘 等平台的采购搜索式（城市用 `{city}` 占位）
+- `tracked_companies`：**匿名示例占位**（如"某工程机械整机厂"），需要用户替换成自己的真实目标公司
 
 问候选人：
-> "portals.yml 已经包含了主流公司。想加自己关注的公司吗？或者想去掉哪些不感兴趣的？"
+> "portals 的采购词表已经配好。你的目标公司有哪些？我帮你填进 tracked_companies，或者去掉你不感兴趣的品类？"
 
 #### Step 4: Tracker
 如果 `data/applications.md` 不存在，创建：
@@ -88,11 +87,11 @@ AI-powered job search automation built on Claude Code: pipeline tracking, offer 
 基础就绪后，主动问更多上下文。**你了解候选人越多，评估越准。**
 
 > "基础已经搞定。但这个系统最大的杠杆是『了解你』。能多告诉我一些吗：
-> - 你的『独门武器』是什么？同岗位的其他人没有的能力？
+> - 你的『独门武器』是什么？同岗位的其他人没有的能力（品类资源？谈判方法？数字化经验）？
 > - 什么样的工作让你兴奋？什么让你疲惫？
-> - 有没有 deal-breaker？（如：不去 996 / 不去南方 / 不做 ToC / 不去外包）
-> - 最让你自豪的一段项目经历，面试时你会主讲的那个？
-> - 有没有公开的项目、文章、知乎回答、GitHub 仓库？
+> - 有没有 deal-breaker？（如：不常驻出差 / 不做纯跟单 / 不去外包派遣）
+> - 最让你自豪的一段采购经历，面试时你会主讲的那个（降本 / 供应商开发 / 交付保障）？
+> - 有没有可量化的采购成果、降本复盘、品类分析（脱敏后）？
 >
 > 给我越多上下文，我就能过滤得越准。把我当成一个新来的猎头 — 第一周需要了解你，之后就会变得很有价值。"
 
@@ -109,7 +108,7 @@ AI-powered job search automation built on Claude Code: pipeline tracking, offer 
 >
 > 一切都可以定制 — 想改什么直接告诉我。
 >
-> 提示：有个个人作品集 / 技术博客对求职帮助很大。如果还没有，可以参考原作者的开源项目：github.com/santifer/cv-santiago，fork 一份改成自己的。"
+> 提示：把领英 / 脉脉个人主页按评估建议完善好（职级、品类、量化成果），对求职帮助很大 — 国内 HR 和猎头会搜。"
 
 然后建议自动化：
 > "要不要我定期帮你扫描新岗位？我可以设置每几天自动扫一次。说一句『每 3 天扫一次』我就配好。"
@@ -122,27 +121,27 @@ AI-powered job search automation built on Claude Code: pipeline tracking, offer 
 
 | 情况 | 提醒内容 |
 |------|---------|
-| 候选人 33+ 岁 | 互联网 35 岁红线是真实存在的。优先投独角兽 / 中小厂 / 外企，大厂社招对资深 P7+ 容忍度更高 |
-| 候选人离职找工作（gap > 3 个月） | gap 在国内 HR 眼里是负面信号。准备好解释（创业 / 学习 / 家庭 / 健康 — 选最不影响匹配度的） |
-| 候选人想投远程岗 | 国内远程岗几乎不存在。海外华人公司（HuggingFace、Replicate 等）有但门槛高 |
-| 候选人没有"大厂背景" | 双非 / 二本 / 没大厂经历 → 用真实项目和数据补 |
-| 候选人在评估 996 公司 | 在 Block D 明确写出真实工时，让候选人自己决定 |
-| 候选人想跳到大模型方向 | 强调"端到端落地经验"比"会调 LangChain"重要 — 让面试官看到 Eval / Observability / 成本控制 / 业务影响 |
-| 候选人简历提了"在某大厂做过外包" | 别隐瞒，但用项目而不是 title 来 hook |
+| 候选人 33+ 岁 | 35 岁顾虑在部分大企业真实存在。优先投成长型制造 / 贸易 / 零售企业，成熟大企业对资深采购管理者容忍度更高 |
+| 候选人离职找工作（gap > 3 个月） | gap 在国内 HR 眼里是负面信号。准备好解释（进修 / 家庭 / 健康 — 选最不影响匹配度的） |
+| 候选人想投远程岗 | 国内采购岗几乎都是 onsite（要到厂 / 到仓）。海外华人公司有但门槛高 |
+| 候选人没有"名企背景" | 中小厂 / 无名企经历 → 用可量化的品类成果和完整的采购闭环补 |
+| 候选人在评估高强度公司 | 在 Block D 明确写出真实工时，让候选人自己决定 |
+| 候选人想转品类采购 / 寻源方向 | 强调"完整采购闭环经验 + 可迁移品类方法论"比"只熟悉某个品类"重要 — 让面试官看到降本 / 供应商开发 / 成本拆解的硬证据 |
+| 候选人简历提了"在某大企业做过外包 / 派遣" | 别隐瞒，但用项目而不是 title 来 hook |
 
 ### Personalization
 
 This system is designed to be customized by YOU (Claude). 用户让你改 archetype、调评分、加公司、改谈判话术 — 直接改。你能读到同样的文件，所以你知道要改哪里。
 
 **常见定制请求：**
-- "改 archetype 到 [后端/前端/算法/SRE]" → 改 `modes/_profile.md`
+- "改 archetype 到 [寻源开发 / 品类采购 / 执行采购]" → 改 `modes/_profile.md`
 - "把 modes 翻成英文" → 改 `modes/` 下所有文件
 - "把这些公司加到 portals" → 改 `portals.yml`
 - "更新我的 profile" → 改 `config/profile.yml`
 - "改 CV 模板设计" → 改 `templates/cv-template.html`
-- "调评分权重" → 用户特定权重改 `modes/_profile.md`，系统默认权重改 `modes/_shared.md` 和 `batch/batch-prompt.md`
-- "我对 996 容忍度变高了" → 改 `modes/offers.md` 的工时权重
-- "我现在主攻方向变成 X" → 改 `modes/_profile.md` 的 archetype 列表
+- "调评分权重" → 系统默认维度与权重 = `tools/lib/scoring.mjs` 的 `SCORING_RUBRIC`（代码 SoT，改它要同步跑测试）；用户个人叙事与偏好改 `modes/_profile.md`
+- "我对加班容忍度变高了" → 改 `modes/_profile.md` 的偏好段
+- "我现在主攻方向变成品类采购" → 改 `modes/_profile.md` 的 archetype 列表
 
 ### Skill Modes
 
@@ -183,7 +182,7 @@ This system is designed to be customized by YOU (Claude). 用户让你改 archet
 
 - **不要推荐爬虫式扫描 Boss/拉勾/猎聘**。这些平台的 ToS 通常禁止自动化。系统的 scan 模式默认走公司自有 careers 页 + 低频 WebSearch，不直接抓门户。
 - **不要替用户在脉脉/微信上主动加陌生人**。`contact` 模式只生成消息草稿，发不发由用户决定。
-- **不要伪造学历、年龄、工作经历**。如果用户的简历有"美化"成分，提醒一次：很多大厂会做背调，被发现入职后会被解约。
+- **不要伪造学历、年龄、工作经历**。如果用户的简历有"美化"成分，提醒一次：很多企业会做背调，被发现入职后会被解约。
 - **不要绕开公司的 HR 流程**。比如不要建议用户拿到 offer 后偷偷再去面竞品压价 — 圈子不大，人设很重要。
 
 ---
@@ -197,8 +196,8 @@ This system is designed to be customized by YOU (Claude). 用户让你改 archet
 
 **国内特殊情况：**
 - **Boss直聘 / 拉勾 / 猎聘 / 脉脉招聘**：登录墙挡住 → 没法验证 → 让用户手动确认岗位是否还开
-- **大厂自有 careers 页**：一般无登录，可以正常验证
-- **AI 独角兽**：多数无登录
+- **企业自有招聘页**：一般无登录，可以正常验证
+- **外企官网 ATS**：多数无登录
 
 **Batch worker（`claude -p`）的例外：** headless pipe 模式没有 Playwright。用 WebFetch fallback 并在 report 头标 `**验证状态：** 未确认（batch 模式）`。用户可以之后手动验证。
 

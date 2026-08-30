@@ -7,12 +7,15 @@
 // dims-inputs JSON 结构：
 // {
 //   "<job_id>": {
-//     "cv_match_score": 72,               // 0-100，独立指标
-//     "dimensions": [ {"key":"north_star","score":3,"reason":"...","evidence":"..."}, ... ],
+//     "cv_match_score": 72,               // 0-100，独立指标（tools/lib/cv-match.mjs 产出）
+//     "dimensions": [ {"key":"compensation","score":3,"reason":"...","evidence":"..."}, ... ],
 //     "blockers": { "current_employer_conflict": true, ... }
 //   }
 // }
 //
+// 维度 key 必须取自 scoring.mjs SCORING_RUBRIC 的十维（compensation / workload_workstyle /
+// role_seniority / career_growth / category_domain_value / procurement_ownership /
+// company_stability / location_fit / digital_tooling / hiring_process_quality）。
 // 维度 score=null → unknown（不入分母）。输出包含完整 score_breakdown + score_confidence。
 
 import fs from 'node:fs';
@@ -53,8 +56,8 @@ for (const job of results.jobs) {
 results.rescored_at = new Date().toISOString();
 results.analysis_basis = {
   ...(results.analysis_basis || {}),
-  scoring_engine: 'tools/lib/scoring.mjs（115 权重归一化 + unknown 出分母 + confidence）',
-  recommendation: '独立逻辑：评分 + 硬红线 + 现任雇主冲突 + 薪资底线 + 级别严重倒退 + deal_breakers',
+  scoring_engine: 'tools/lib/scoring.mjs（采购十维 × 权重 100 归一化 + unknown 出分母 + confidence）',
+  recommendation: '决策链唯一 SoT = computeRecommendation：评分 + 硬红线/deal_breakers + candidate-side blocker + job-side 资格 + 决策矩阵 + 缺口封顶（trace[] 可追溯）',
 };
 results.counters = { ...(results.counters || {}), analyzed: changed };
 

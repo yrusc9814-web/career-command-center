@@ -1,31 +1,43 @@
 # Mode: offers — 多 Offer 比较
 
-10 维加权打分矩阵：
+## Career Score 十维（与评估引擎同一套维度）
 
-| 维度 | 权重 | 1-5 评分标准 |
-|------|------|-------------|
-| 北极星对齐度 | 25% | 5=完全对齐目标 archetype，1=不相关 |
-| CV 匹配度 | 15% | 5=90%+ 匹配，1=<40% |
-| 级别（资深+） | 15% | 5=专家/架构师，4=资深，3=高级，2=中级，1=初级 |
-| Comp（含工时换算） | 15% | 5=明显高于市场，1=明显低于市场（**含 996/大小周折算**） |
-| 成长路径 | 10% | 5=清晰晋升通道，1=死胡同 |
-| 工时与生活 | 10% | 5=双休不强制加班，3=偶尔加班，1=996/大小周 |
-| 公司稳定性 / 业务前景 | 10% | 5=头部稳，1=随时裁员风险 |
-| 技术栈现代度 | 5% | 5=前沿技术（大模型/湖仓一体），1=老旧 |
-| 流程速度 | 5% | 5=快流程（2-3 周），1=拖 6+ 个月 |
-| 文化信号 | 5% | 5=工程师文化，1=PUA / 官僚 |
+十维 = `tools/lib/scoring.mjs` 的 `SCORING_RUBRIC`（权重合计 100；每维 1/3/5 定义、证据来源与 unknown 规则的唯一权威在该文件，prompt 只列 key + 中文名 + 权重 + 指向，不复制细则）：
 
-**注意权重分配的中国版改动：**
-- **Comp 从 10% 提到 15%** — 国内 comp 差异大
-- **工时从 5% 提到 10%** — 大小周/996 直接影响生活质量
-- **公司稳定性从 5% 提到 10%** — 国内裁员/优化频繁
-- **远程质量去掉了** — 国内远程岗几乎没有
+| key | 维度 | 权重 |
+|---|---|---:|
+| compensation | 薪酬竞争力 | 20 |
+| workload_workstyle | 工作制与强度 | 15 |
+| role_seniority | 职级质量与职责范围 | 13 |
+| career_growth | 成长空间 | 10 |
+| category_domain_value | 品类与行业价值 | 10 |
+| procurement_ownership | 采购自主权 | 9 |
+| company_stability | 公司与业务稳定性 | 7 |
+| location_fit | 地点与通勤 | 8 |
+| digital_tooling | 数字化与工具成熟度 | 5 |
+| hiring_process_quality | 招聘流程质量 | 3 |
 
-每个 offer：每个维度打分 → 加权总分。
-最终排名 + 推荐，需要考虑：
+`career_ops_score`（1.0-5.0）= Σ(score × weight) / Σ(valid_weight)，unknown 维度不入分母，输出带 `score_confidence`（effective_weight / total_weight，≥85% 高 / ≥60% 中）。分数与档位一律由引擎产出，**LLM 只解释不重算**。
+
+## 多 Offer 比较表 — 三列分离，禁止合成一个总分
+
+CV Match、Career Score、Recommendation 是**三层独立决策**（PROCUREMENT 决策架构：Eligibility / Blocker → CV Match → Career Score → Recommendation），**必须分列展示，禁止加权合并成一个总分**：
+
+| Offer | CV Match（0-100，来自 `tools/lib/cv-match.mjs`） | Career Score（1-5，来自 `tools/lib/scoring.mjs`） | Recommendation（五档，来自 `computeRecommendation` 决策链 + `trace[]`） | 关键解释（LLM 只解释） |
+|-------|----------------------------------------------|----------------------------------------------|--------------------------------------------------------------|----------------------|
+| Offer A | X / 100 | X.X / 5 | 强烈推荐 / 推荐 / 一般 / 不推荐 / 硬红线跳过 | 决策依据（blocker / 缺口 / trace 摘要） |
+| Offer B | X / 100 | X.X / 5 | ... | ... |
+
+规则：
+- **三列口径不同、不可互相换算**：CV Match 回答"履历与岗位多匹配"（0-100）；Career Score 回答"岗位本身对候选人的职业价值"（1-5）；Recommendation 是综合硬红线 / blocker / 资格 / 决策矩阵 / 缺口封顶后的五档结论。
+- **Recommendation 不是分数的复读机**：高分不推荐是合法状态（现任雇主冲突 / 薪资底线 / 职级倒退 / 硬性资格 / HARD_GAP 封顶等都会覆盖分数）；decision trace 是唯一解释依据，禁止看到高分自动翻案。
+- 排序讨论可以分别按某一列排，但**不存在"综合分"**。
+
+## 决策时需要一起考虑的因素（非评分，供讨论）
+
 - 时间到 offer 的成本
 - 跨城市搬迁成本
 - 现有 offer 的截止时间
 - 心理上能否接受拒掉某个 offer
 
-如果 offer 没在上下文中，让用户提供。可以是文本、URL、或者 tracker 里已评估的引用。
+如果 offer 没在上下文中，让用户提供。可以是文本、URL、或者 tracker 里已评估的引用（引用时直接读对应 report 的 cv_match_score / career_ops_score / recommendation，不要凭记忆重算）。

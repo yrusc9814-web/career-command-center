@@ -1,5 +1,10 @@
 // dashboard.test.mjs — Dashboard 聚合层与状态写回单元测试
 // Run: node --test tools/tests/dashboard.test.mjs
+//
+// 注意：RESULTS 里 job-a 的 score_breakdown 刻意使用旧维度 key（north_star /
+// process_speed）与 total_weight 115 —— 这是 Phase 3 维度表切换前的历史 score-inputs
+// 形态，用于锁定 aggregator 的向后兼容契约（旧 key 兼容读取、不为兼容保留计算）。
+// 新增 fixture 请使用 scoring.mjs SCORING_RUBRIC 的采购十维 key 与 total_weight 100。
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

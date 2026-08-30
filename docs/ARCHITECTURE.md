@@ -38,18 +38,23 @@
 
 1. **Input**: User pastes JD text or URL
 2. **Extract**: Playwright/WebFetch extracts JD from URL
-3. **Classify**: Detect archetype (1 of 6 types)
+3. **Classify**: Detect procurement archetype (1 of 3 types: `execution_procurement` / `sourcing` / `strategic_category`; unknown if evidence insufficient — `tools/lib/taxonomy.mjs`)
 4. **Evaluate**: 6 blocks (A-F):
-   - A: Role summary
-   - B: CV match (gaps + mitigation)
+   - A: Role summary (archetype / domain / categories / tags / procurement seniority ladder)
+   - B: CV match (gaps graded BLOCKER / HARD_GAP / SOFT_GAP / UNKNOWN + capability coverage)
    - C: Level strategy
-   - D: Comp research (WebSearch)
-   - E: CV personalization plan
-   - F: Interview prep (STAR stories)
-5. **Score**: Weighted average across 10 dimensions (1-5)
+   - D: Comp research (WebSearch, Chinese sources)
+   - E: CV personalization plan (procurement quantified evidence)
+   - F: Interview prep (STAR+R stories from the 18-class Story Bank, questions from `modes/interview-questions.md`)
+5. **Score (engine, `tools/lib/`)**:
+   - CV Match: `cv_match_score` 0-100 (14 factors, Primary 55 / Secondary 30 / Low 15 — `cv-match.mjs`)
+   - Career Score: `career_ops_score` 1.0-5.0 across 10 dimensions (total weight 100, unknown dims excluded from denominator — `scoring.mjs`)
+   - Recommendation: five levels via `computeRecommendation` decision chain (matrix + hard redlines + blockers + gap caps, with `trace[]` — `scoring.mjs`; evidence assembled by `eligibility.mjs`)
 6. **Report**: Save as `reports/{num}-{company}-{date}.md`
 7. **PDF**: Generate ATS-optimized CV (`tools/generate-pdf.mjs`)
 8. **Track**: Write TSV to `batch/tracker-additions/`, auto-merged
+
+> Prompt layer rule: all numeric outputs (cv_match_score / career_ops_score / recommendation) come from the runtime engine; the LLM only explains, never recomputes or overrides.
 
 ## Batch Processing
 

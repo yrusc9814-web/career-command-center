@@ -48,7 +48,7 @@
 
 | 能 | 不能 |
 |----|------|
-| ✅ 用 Playwright 抓**大厂自有 careers 页**的岗位列表（标题 + URL，多数无登录） | ❌ 抓 Boss直聘 / 拉勾 / 猎聘 / Mokahr 的 JD 详情 |
+| ✅ 用 Playwright 抓**企业自有招聘页**的岗位列表（标题 + URL，多数无登录） | ❌ 抓 Boss直聘 / 拉勾 / 猎聘 / Mokahr 的 JD 详情 |
 | ✅ 用 WebSearch 在搜索引擎层面**发现**岗位 URL（`site:` 过滤） | ❌ 验证 Boss/拉勾的岗位是否还在招 |
 | ✅ 监听公开渠道：V2EX 招聘版、GitHub 招聘 README、知乎招聘文章、公众号文章 URL | ❌ 抓取脉脉/微信公众号/飞书表单内容 |
 | ✅ 把发现的 URL 写进 `pipeline.md`，标注是否需要人工取 JD（`[ ]` 可取 / `[!]` 需人工） | ❌ 替用户筛选 JD 内容（因为大部分时候根本抓不到） |
@@ -61,23 +61,24 @@
 读 `portals.yml`：
 - `scan_defaults` — token 节流开关（`scan_company_queries_enabled` / `dedup_window_days` / `interactive_confirm`）
 - `search_queries` — WebSearch queries（广度发现），每条带 `priority: high|low`
-- `tracked_companies` — 大厂直抓列表，每条带 `careers_url`，部分带 `scan_query`（公司级，默认不跑）
+- `tracked_companies` — 企业自有招聘页直抓列表，每条带 `careers_url`，部分带 `scan_query`（公司级，默认不跑）
 - `title_filter` — positive/negative/seniority_boost 关键词
 
 **可选字段（2026-04-20 新增，仅作 metadata 用于分组 / selector 提示）：**
-- `category: big_tech | ai_unicorn | ai_research | data_infra | mnc_china`
+- `category: manufacturer | trader_brand | retail_consumer | supply_chain_service | mnc_china`
+  - 制造企业 / 贸易与品牌商 / 零售与消费 / 供应链服务 / 外企在华采购办
   - 用于将来 `scan --category=<name>` 子集过滤；目前 Claude 只用于输出摘要分组
 - `ats: workday | greenhouse | smartrecruiters | mokahr | feishu | custom`
   - Mokahr / 飞书 通常需登录 → Claude 读到这两个值时应跳过 Playwright 改标 `[!]`
   - Workday / Greenhouse / SmartRecruiters 是公开 ATS，Playwright 可直抓，selector 模式相对稳定
 
-**渠道扩容日志：** 新渠道清单维护在 `~/.claude/plans/scan-playwright-lively-meteor.md`（2026-04-20 +21 家公司 / +13 条 query；A1 AI 研究机构、A2 二线独角兽、A3 数据 Infra 多数 enabled=false 需抽样验证 URL 后再开；A4 外企在华公开 ATS 已默认 enabled=true）。
+**渠道扩容日志：** 新增渠道时先小样本抽样验证 URL 可用性再开 `enabled: true`；采购岗位集中在制造 / 贸易 / 零售企业的自有招聘页与 Boss / 猎聘，扩容优先这两类。
 
 **⚠️ WebSearch query 写法约束（2026-04-20 首轮实测）：** 写新 `search_queries` 条目或改写现有 query 时必须遵守：
 
 | 模式 | 能否工作 | 替代写法 |
 |------|---------|---------|
-| `site:X/deep/path keywords`（如 `site:v2ex.com/go/jobs`、`site:paperswithcode.com/jobs`）| ❌ 返回 0 | 去掉 site:，用"品牌名 子路径关键词 + 2026" 自然语言，如 `V2EX 招聘 数据工程 2026` |
+| `site:X/deep/path keywords`（如 `site:v2ex.com/go/jobs`）| ❌ 返回 0 | 去掉 site:，用"品牌名 子路径关键词 + 2026" 自然语言，如 `V2EX 招聘 采购 2026` |
 | `site:A OR site:B keywords`（多站点 OR）| ❌ 返回 0 | 挑最强的一个 `site:`，或去掉 site: 全部 |
 | `site:tld (A OR B)`（只用顶域 + OR 关键词组）| ✅ 可用 | 保留 |
 | `品牌名/域名 + 关键词 + 2026`（纯自然语言）| ✅ 可用 | 保留 |
@@ -90,16 +91,16 @@
 
 | 平台 | scan 能做 | 备注 |
 |------|----------|------|
-| **大厂自有 careers**（字节/阿里/腾讯/美团/快手/小红书/B站 等） | ✅ Playwright 抓岗位列表 OK | 详情页可能 SPA → 列表足够，详情让用户截图 |
-| **AI 独角兽 careers**（DeepSeek/Moonshot/智谱/MiniMax 等） | ⚠️ 部分能抓，多数嵌入 Mokahr / 飞书表单 → 列表抓不完整 | 标题 + 入口 URL 给到用户，让用户自己进 |
+| **大型企业自有招聘页**（制造 / 贸易 / 零售集团 careers，如某工程机械整机厂、某快消集团的自有站） | ✅ Playwright 抓岗位列表 OK | 详情页可能 SPA → 列表足够，详情让用户截图 |
+| **电商 / 新消费 / 供应链服务企业**（多嵌 Mokahr / 飞书表单） | ⚠️ 部分能抓，多数嵌入表单 → 列表抓不完整 | 标题 + 入口 URL 给到用户，让用户自己进 |
 | **Boss直聘** | ❌ 列表 + 详情都登录墙 | **不要尝试 Playwright**。WebSearch 只能拿到 URL + 标题片段，详情让用户截图 |
 | **拉勾** | ⚠️ 列表偶尔可见，详情常需登录 | 同上 |
 | **猎聘** | ⚠️ 列表可见，详情登录墙 | 同上 |
 | **智联** | ⚠️ 反爬严，频率必须低 | 不推荐 |
-| **51job** | ✅ 反爬较弱 | 可以试，但岗位质量一般 |
+| **51job** | ✅ 反爬较弱 | 可以试，采购岗位量较大 |
 | **脉脉招聘** | ❌ 必须登录 | 不放进 scan |
-| **V2EX 招聘版** | ✅ WebFetch JD 全文 | 内推贴的 JD 多数公开完整 |
-| **GitHub 招聘 README**（如 `awesome-jobs`、各 AI 公司开源仓库的 hiring 段） | ✅ WebFetch | JD 全文公开 |
+| **V2EX 招聘版** | ✅ WebFetch JD 全文 | 内推贴的 JD 多数公开完整（采购岗少，作补充渠道） |
+| **GitHub 招聘 README**（部分公司 / 团队在开源仓库维护 hiring 段） | ✅ WebFetch | JD 全文公开（采购岗少见，作补充渠道） |
 | **公众号文章** | ⚠️ 部分 URL 能 WebFetch（要看是否 mp.weixin） | 抓不到的让用户复制 |
 
 ---
@@ -151,7 +152,7 @@ WebSearch query：
 
 ### Phase 2 — 执行（按用户选择的范围）
 
-**Level 1 — Playwright 扫描大厂 careers**（用户选了 `y` / `h` / `c` 时执行；`n` 跳过）
+**Level 1 — Playwright 扫描企业自有招聘页**（用户选了 `y` / `h` / `c` 时执行；`n` 跳过）
 对候选的 tracked_companies：
 - `browser_navigate` 到 `careers_url`
 - `browser_snapshot` 读所有 job listing
@@ -237,9 +238,9 @@ title 过滤后：N
 **（A）URL 级记录**（历史一直有的）：
 ```
 url	first_seen	portal	title	company	status
-https://...	2026-04-07	字节跳动 careers	数据工程师	字节跳动	added
-https://...	2026-04-07	Boss直聘 query	Java	某公司	skipped_title
-https://...	2026-04-07	Lagou query	数据	某公司	needs_manual
+https://...	2026-04-07	某制造集团 招聘页	采购专员	某机械制造公司	added
+https://...	2026-04-07	Boss直聘 query	采购主管	某公司	skipped_title
+https://...	2026-04-07	Lagou query	寻源	某公司	needs_manual
 ```
 
 status 取值：`added` / `skipped_title` / `skipped_dup` / `needs_manual`
@@ -247,8 +248,8 @@ status 取值：`added` / `skipped_title` / `skipped_dup` / `needs_manual`
 **（B）Query 级记录**（2026-04 新增，用于事前去重）：
 ```
 query_run	{query_name}	{timestamp}	{priority}	{results_count}
-query_run	Boss直聘 — 数据工程	2026-04-15T10:23	high	18
-query_run	GitHub — 大模型公司招聘	2026-04-15T10:25	high	7
+query_run	Boss直聘 — 采购执行	2026-04-15T10:23	high	18
+query_run	GitHub — 企业招聘页	2026-04-15T10:25	high	7
 ```
 
 每次实际调用 WebSearch 的 query 都写一行。scan 启动时回读，`dedup_window_days` 内已跑过的 query 从候选集剔除。
@@ -284,13 +285,13 @@ query_run	GitHub — 大模型公司招聘	2026-04-15T10:25	high	7
 旧版 scan 试图做 **"发现 + 提取 JD + 去重 + 评估准备"** 一条龙。在国内市场上，"提取 JD" 这一步**结构性失败率 > 90%**：
 
 - Boss 直聘 / 拉勾 / 猎聘 详情页 = 登录墙
-- DeepSeek / Moonshot / 阶跃 等独角兽 = Mokahr / 飞书表单
-- 字节 / 美团 / 小红书 careers 详情 = SPA 空壳
+- 电商 / 新消费 / 供应链服务企业 = Mokahr / 飞书表单
+- 制造 / 零售集团 careers 详情 = SPA 空壳
 - 脉脉 / 微信公众号 = 完全反爬
 
 继续在这条路上挣扎只会**累死 Claude，挫败用户**。新版的核心理念：
 
-1. **职责分离：** scan 只管"发现哪些岗位存在"。"取 JD"交给人（5 秒截图）+ Claude Vision（直接读图）。
+1. **职责分离：** scan 只管"发现哪些采购岗位存在"。"取 JD"交给人（5 秒截图）+ Claude Vision（直接读图）。
 2. **诚实预期：** 输出摘要明确告诉用户哪些 URL 抓得到、哪些抓不到、对应取 JD 方式是什么。
 3. **零浪费：** 不在反爬战争里耗 Playwright/WebFetch。**抓不到立刻 yield 给用户。**
-4. **大厂 careers 仍然有价值：** 字节/阿里/腾讯 等的 careers 列表页能抓，至少能告诉用户「这家最近在招什么方向」。
+4. **企业自有招聘页仍然有价值：** 制造 / 贸易 / 零售集团的自有招聘列表页能抓，至少能告诉用户「这家最近在招什么采购方向」。

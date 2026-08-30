@@ -1,50 +1,50 @@
 # career-ops-china
 
-> **🇨🇳 中国大陆深度定制版**
+> **🇨🇳 中国大陆深度定制版（采购方向）**
 >
-> 这是 [`santifer/career-ops`](https://github.com/santifer/career-ops) 的中国大陆求职市场深度定制 fork。**所有功能、archetype、数据源、模板都已为国内 AI / 数据 / 后端 / 平台 求职者重新设计**，核心改动包括：
+> 这是 [`santifer/career-ops`](https://github.com/santifer/career-ops) 的中国大陆求职市场深度定制 fork。**所有功能、archetype、数据源、模板都已为国内采购从业者（执行采购 / 寻源与供应商开发 / 战略与品类采购）重新设计**，核心改动包括：
 >
 > - **16 个 mode 文件** 全部翻译为中文，按国内招聘流程重写（含新增 `inbox` mode）
-> - **8 个 archetype** 替换为数据工程 / 数据治理 / 数据仓库 / 大模型应用 / AI Infra / 后端 / 平台架构 / 大数据算法
-> - **薪酬调研源** 从 Glassdoor / Levels.fyi / Blind 切换到 **看准网 / 脉脉 / OfferShow / 知乎 / 一亩三分地 / leetcode.cn**
-> - **公司调研源** 改用 脉脉职言区 / 天眼查 / 企查查 / IT 桔子 / 36 氪 / 小红书
-> - **🔑 Bookmarklet + Local Inbox 工作流**（新）：一键绕过 Boss 直聘 / 猎聘 / Mokahr / 大厂 SPA 的反爬 + 反复制 + 登录墙 — 浏览器点按钮 → 本地服务器接收 JSON → Claude 批量评估。**国内 JD 取数的正确范式**
-> - **门户处理范式** 放弃对国内反爬平台的自动化爬取，改为 **截图 / bookmarklet** 人机协作（Playwright / WebFetch 只用于公司自有静态页 + V2EX + GitHub）
-> - **预置 50+ 公司**：12 家一线互联网大厂 + 8 家大模型独角兽 + 数据创业 + AI Infra
+> - **3 个采购 archetype**（执行采购 / 寻源与供应商开发 / 战略与品类采购）+ 采购六档职级序列（助理 / 专员 / 高级专员 / 主管 / 经理 / 总监·负责人）
+> - **四层决策架构**：Eligibility / Blocker → CV Match（0-100）→ Career Score（1-5，十维 × 权重 100）→ Recommendation（五档 + decision trace），全部由运行时引擎（`tools/lib/`）产出
+> - **薪酬调研源** 从 Glassdoor / Levels.fyi / Blind 切换到 **看准网 / 脉脉 / OfferShow / 知乎 / 职友集 / 猎聘**
+> - **公司调研源** 改用 脉脉职言区 / 天眼查 / 企查查 / 招投标公告 / 行业媒体 / 小红书
+> - **🔑 Bookmarklet + Local Inbox 工作流**（新）：一键绕过 Boss 直聘 / 猎聘 / Mokahr / 企业 SPA 的反爬 + 反复制 + 登录墙 — 浏览器点按钮 → 本地服务器接收 JSON → Claude 批量评估。**国内 JD 取数的正确范式**
+> - **门户处理范式** 放弃对国内反爬平台的自动化爬取，改为 **截图 / bookmarklet** 人机协作（Playwright / WebFetch 只用于企业自有静态招聘页 + V2EX + GitHub）
+> - **企业池模板**：按目标品类自填（制造 / 贸易品牌 / 零售消费 / 供应链服务 / 外企在华），预置匿名占位与使用指引
 > - **触达模式** 从 LinkedIn 改为 脉脉 + 微信 双轨
 > - **CV 模板** 加入中文字体回退（PingFang SC / Microsoft YaHei / Noto Sans SC）
-> - **硬红线机制** 直接 SKIP 不接受的公司类型（用户可定义如华为/外包/大小周），含 **HR 派遣公司识别**（人瑞 / 中智 / FESCO / 外企德科 / 万宝盛华 / 科锐国际 等）
-> - **大厂职级对标** 加入阿里 P / 字节 / 腾讯 T / 美团 L 等职级映射表
+> - **硬红线机制** 直接 SKIP 不接受的公司类型（用户可定义如派遣外包 / 大小周），含 **HR 派遣公司识别**
+> - **面试体系**：15 主题 × 4 职级采购面试题库（`modes/interview-questions.md`）+ Story Bank 18 类采购故事
 >
 > 原版 [`santifer/career-ops`](https://github.com/santifer/career-ops) 在 MIT License 下保留所有版权 — 见 [LICENSE](LICENSE)。
 
 ---
 
-## ⚠️ 通用性说明 — 不只是给数据/AI 求职者
+## ⚠️ 通用性说明 — 不只是给采购求职者
 
-虽然这个 fork 的**预置**配置（archetype、portals 公司清单、薪酬调研词条、deal_breakers 模板）是围绕**数据工程师 + AI 工程师 + 大模型应用工程师**做的，但**整个系统的工作流是通用的**：A-F 评估、CV 匹配、薪酬调研、tracker 入库、PDF 生成、bookmarklet inbox 都和你的目标岗位无关。
+虽然这个 fork 的**预置**配置（archetype、portals 词表与公司池模板、薪酬调研词条、deal_breakers 模板）是围绕**采购序列（执行采购 / 寻源与供应商开发 / 战略与品类采购）**做的，但**整个系统的工作流是通用的**：A-F 评估、CV 匹配、薪酬调研、tracker 入库、PDF 生成、bookmarklet inbox 都和你的目标岗位无关。
 
 **换方向只需告诉 Claude 改几个文件**（不要手动改，让 Claude 改最快）：
 
 | 你想做什么方向 | 让 Claude 改 |
 |----------------|--------------|
-| 后端 / 全栈 / SRE / 运维 | `modes/_profile.md` 的 archetype 表 + `portals.yml` 的 title_filter + tracked_companies |
-| 前端 / 客户端 / 移动端 | 同上 + 把"前端/iOS/Android"从 negative 移到 positive |
-| 产品经理 / 运营 / 增长 | archetype 替换为 PM/运营 + 评估维度 weights 调整（技术栈 → 业务能力） |
-| 算法研究 / 学术岗 | archetype 改为 Research Scientist + 加 ICLR/NeurIPS 等会议关键词 |
-| 销售 / 市场 / HR / 法务 | 重写 archetype + 评分维度从"技术栈"换成"行业经验/客户网络/语言能力" |
+| 销售 / 市场 / 客户成功 | `modes/_profile.md` 的 archetype 表 + `portals.yml` 的 title_filter + tracked_companies |
+| 供应链计划 / 物流 / 仓储 | 同上 + 调整排除词（把"计划员/物流"从 negative 移到 positive） |
+| 质量 / SQE / 生产管理 | archetype 替换 + 评估维度权重调整（采购自主权 → 质量体系） |
+| 财务 / HR / 法务 | 重写 archetype + 评估维度从"品类与行业价值"换成对应职能价值 |
 | 海外岗（任何方向）| 改用上游 [`santifer/career-ops`](https://github.com/santifer/career-ops)（薪酬源用 Glassdoor/Levels.fyi 而非看准网） |
-| 其他冷门方向（医疗 / 法律 / 教育 / 制造业）| 直接和 Claude 描述你的方向，它会重写 archetypes + 数据源 + framing |
+| 其他冷门方向（医疗 / 教育 / 制造业其他序列）| 直接和 Claude 描述你的方向，它会重写 archetypes + 数据源 + framing |
 
 **操作只需一句话**：跟 Claude 说"我是 [方向] 的，请把整个系统调整到这个方向"，它会改 `_profile.md`（archetype + 叙事）/ `profile.yml` / `portals.yml` / `cv-template.html` 等所有相关文件。
 
-> 设计哲学：**文件即配置，Claude 即编辑器**。系统不是给"数据/AI 求职者"专用的 — 是给"任何想用 AI 助手做精准求职的人"用的。预置只是起点，不是边界。
+> 设计哲学：**文件即配置，Claude 即编辑器**。系统不是给"采购求职者"专用的 — 是给"任何想用 AI 助手做精准求职的人"用的。预置只是起点，不是边界。
 
 ---
 
 ## 这个项目是什么
 
-**career-ops-china 把 Claude Code 变成一个中国大陆求职指挥中心**：贴一个岗位 JD 进来，AI 会自动跑完整 6 块评估（A-F），生成针对该岗位的 ATS 优化简历 PDF，把申请入库追踪。再加上薪资调研、面试故事库、谈判话术、批量扫描、申请表助手、脉脉/微信 触达消息生成等十几个独立 mode。
+**career-ops-china 把 Claude Code 变成一个中国大陆求职指挥中心**：贴一个岗位 JD 进来，AI 会自动跑完整 6 块评估（A-F），生成针对该岗位的 ATS 优化简历 PDF，把申请入库追踪。再加上薪资调研、面试题库与故事库、谈判话术、批量扫描、申请表助手、脉脉/微信 触达消息生成等十几个独立 mode。
 
 > ⚠️ **这不是海投工具，是过滤器**。系统对 < 4.0/5 分的岗位会强烈不建议申请。所有动作的最后一步永远是用户决定是否提交。
 
@@ -52,9 +52,10 @@
 
 ⚠️注意：求职方向仅供参考，你可以自己更改或者系统会根据你 cv.md 里的经历和技能自动检测 archetype，如果 JD 对齐度高但不完全匹配预置 archetype，也会给出合理的评估和建议。
 
-- **求职方向**：数据工程 / 数据治理 / 数据仓库 / 大模型应用 / AI Infra / 后端（数据/AI 方向）/ 平台架构 / 大数据算法
-- **目标 base**：北京 / 上海 / 深圳 / 杭州 / 苏州 / 南京 / 广州（其他城市也可，但门户预置主要覆盖一线和 AI 中心）
-- **目标公司**：互联网大厂 + 大模型独角兽 + 数据/AI 创业中小厂 + 海外华人公司
+- **求职方向**：采购序列 — 执行采购 / 寻源与供应商开发 / 战略与品类采购
+- **典型行业**：制造（机械 / 汽车零部件 / 电子）/ 贸易与品牌商 / 零售与消费 / 供应链服务 / 外企在华采购办
+- **目标 base**：北京 / 上海 / 深圳 / 苏州 / 宁波 / 厦门 等（其他城市也可，门户预置覆盖全国主流门户）
+- **目标公司**：制造 / 贸易 / 零售企业 + 供应链服务公司（按目标品类自填企业池）
 
 ### 不适合谁
 
@@ -68,7 +69,7 @@
 ```mermaid
 flowchart TD
     User(["👤 用户"])
-    Browser(["🌐 浏览器<br/>Boss/猎聘/Mokahr/大厂 SPA"])
+    Browser(["🌐 浏览器<br/>Boss/猎聘/Mokahr/企业 SPA"])
 
     User -->|截图 JD 或贴文本| AutoPipe
     User -->|/career-ops scan| ScanMode
@@ -121,42 +122,48 @@ flowchart TD
 
 | Block | 内容 | 配置位置 |
 |------|------|---------|
-| **A 角色摘要** | Archetype、Domain、Function、Seniority、业务方向、Base 城市、TL;DR | `_profile.md`（archetype 列表）|
-| **B CV 匹配** | JD 每条要求 → 候选人 cv.md 对应行；列出 gaps + 缓解策略 | `_profile.md`（自适应包装表）|
-| **C 级别策略** | JD 暗示级别 vs 候选人自然级别；「不撒谎卖资深」/「被压级」两套话术 | 大厂职级对标表 |
-| **D 薪酬与需求** | **看准网/脉脉/OfferShow/知乎** 调研薪资段、口碑、工时、业务前景 | 数据源列表 |
-| **E 个性化方案** | Top 5 CV 修改 + Top 5 LinkedIn/脉脉资料修改 | — |
-| **F 面试准备** | 6-10 个 STAR+R 故事 + 主讲 case study + 红线问题预演 | 国内 HR 红线问题（离职原因/996/婚育） |
+| **A 角色摘要** | Archetype、Domain、Categories、Tags、Seniority（采购六档）、业务方向、Base 城市、TL;DR | `_profile.md`（archetype 列表）+ `tools/lib/taxonomy.mjs` |
+| **B CV 匹配** | JD 每条要求 → 候选人 cv.md 对应行；Gap 四级（BLOCKER / HARD_GAP / SOFT_GAP / UNKNOWN）+ 类型 + 缓解策略；Capability Coverage 表 | `_profile.md` + `tools/lib/cv-match.mjs` / `evidence.mjs` |
+| **C 级别策略** | JD 暗示级别 vs 候选人自然级别（采购六档序列）；「不撒谎卖资深」/「被压级」两套话术 | `_shared.md` 采购职级序列 |
+| **D 薪酬与需求** | **看准网/脉脉/OfferShow/知乎/职友集** 调研薪资段、口碑、工时、业务前景 | `_shared.md` 数据源列表 |
+| **E 个性化方案** | Top 5 CV 修改 + Top 5 LinkedIn/脉脉资料修改（围绕采购量化证据） | `offer.md` Block E 证据清单 |
+| **F 面试准备** | 6-10 个 STAR+R 故事（Story Bank 18 类）+ 主讲 case + 红线问题预演；题目按 `modes/interview-questions.md`（15 主题 × 4 职级）选 | `modes/interview-questions.md` |
 
-### 8 个 archetype（中国大陆特化，仅供参考）
+### 3 个采购 archetype（预置，可改）
 
 | Archetype | 主题轴 | 公司在买什么 |
 |---|---|---|
-| **数据工程师 / Data Engineer** | ETL/ELT、Spark/Flink、调度 | 把数据稳定汇总进数仓的人 |
-| **数据仓库 / 数据平台 / DWH** | 分层建模、湖仓、Doris/StarRocks/CK | 从 0 到 1 或迭代企业级数仓的架构者 |
-| **数据治理 / Data Governance** | 元数据、血缘、质量、合规、主数据 | 让数据"用得起、管得住、信得过"的人 |
-| **大模型应用工程师 / LLM Engineer** | RAG、Agent、Prompt、向量检索、Eval | 把大模型落地业务并保证质量的人 |
-| **AI Infra / 大模型基础设施** | vLLM/SGLang、训推、显存优化、GPU 调度 | 让大模型跑得快、稳、便宜的人 |
-| **后端工程师（数据/AI 方向）** | Java/Go/Python、高并发、中间件 | 业务后端扎实、能配合数据/AI 团队 |
-| **平台工程师 / 架构师** | 内部平台、MLOps、CI/CD、SRE | 工程组织"地基"做好的人 |
-| **大数据算法 / 数据科学** | 推荐、风控、AB、特征工程 | 用数据驱动业务并落地模型的人 |
+| **执行采购 / execution_procurement** | 询比价执行、下单、跟单、催交、对账、交货及时率 | 把订单闭环做稳、供应不断档的人 |
+| **寻源与供应商开发 / sourcing** | 新供应商开发、RFQ、筛选、比价、谈判、导入 | 能持续找到并导入更优供应商的人 |
+| **战略与品类采购 / strategic_category** | 品类策略、年度降本、Should-cost、供应商组合 | 管好一个品类的总成本与供应结构的人 |
 
-### 评分维度（10 维加权，针对中国市场重新分配权重）
+> 判定规则：只看职责动词分布，title 不进判定；证据不足 → unknown 禁止硬套。权威 signal 词表：`tools/lib/taxonomy.mjs`。
 
-| 维度 | 权重 | 备注 |
-|------|------|------|
-| 北极星对齐 | 25% | 与目标 archetype 的对齐度 |
-| CV 匹配度 | 15% | 简历真实匹配 JD 的程度 |
-| 级别（资深+） | 15% | JD 暗示的职级 vs 候选人自然级别 |
-| **Comp（含工时折算）** | **15%**（原 10%） | 国内薪酬差异大，权重提高 |
-| 成长路径 | 10% | 团队是否扩张 / 技术方向是否前沿 |
-| **工时与生活** | **10%**（原 5%） | 大小周/996 直接影响生活质量 |
-| **公司稳定性** | **10%**（原 5%） | 国内裁员频繁，稳定性关键 |
-| 技术栈现代度 | 5% | 是否前沿（大模型 / 湖仓 / Agent 等） |
-| 流程速度 | 5% | 内推 / HR 流程的速度 |
-| 文化信号 | 5% | 工程师文化 vs 官僚文化 |
+### 评分与决策（四层架构，全部由运行时引擎产出）
 
-> **删除维度：远程质量** — 国内远程岗几乎不存在，没有评估意义。
+| 层 | 输出 | 实现 |
+|----|------|------|
+| **Eligibility / Blocker** | `eligibility_status`（eligible / eligible_with_gaps / ineligible / unknown）+ hard_requirements[] + candidate-side blocker | `tools/lib/eligibility.mjs` |
+| **CV Match** | `cv_match_score` 0-100（14 因子：Primary 55 / Secondary 30 / Low 15）+ confidence | `tools/lib/cv-match.mjs` |
+| **Career Score** | `career_ops_score` 1.0-5.0（十维 × 权重 100，unknown 不入分母）+ confidence | `tools/lib/scoring.mjs` |
+| **Recommendation** | 五档（强烈推荐 / 推荐 / 一般 / 不推荐 / 硬红线跳过）= 决策矩阵 + 硬红线 + blocker + 缺口封顶，附 `trace[]` | `tools/lib/scoring.mjs` `computeRecommendation` |
+
+十维维度表（key / 中文名 / 权重，1/3/5 细则见 `tools/lib/scoring.mjs` 的 `SCORING_RUBRIC`）：
+
+| key | 维度 | 权重 |
+|-----|------|-----:|
+| compensation | 薪酬竞争力 | 20 |
+| workload_workstyle | 工作制与强度 | 15 |
+| role_seniority | 职级质量与职责范围 | 13 |
+| career_growth | 成长空间 | 10 |
+| category_domain_value | 品类与行业价值 | 10 |
+| procurement_ownership | 采购自主权 | 9 |
+| company_stability | 公司与业务稳定性 | 7 |
+| location_fit | 地点与通勤 | 8 |
+| digital_tooling | 数字化与工具成熟度 | 5 |
+| hiring_process_quality | 招聘流程质量 | 3 |
+
+> 三列独立：CV Match（0-100）回答"履历与岗位多匹配"；Career Score（1-5）回答"岗位本身的职业价值"；Recommendation 是决策结论。**三列不可加权合成一个总分**，高分不推荐是合法状态（decision trace 是唯一解释依据）。
 
 ### 硬红线机制（你定义，系统执行）
 
@@ -164,9 +171,9 @@ flowchart TD
 
 ```yaml
 deal_breakers:
-  - "HUAWEI（任何 BU、任何子公司）"
+  - "外包 / 派遣 / 劳务外包岗位"
   - "大小周"
-  - "外包 / OD / 派遣"
+  - "纯跟单员 / 仓储物流岗（非采购职能）"
 ```
 
 每次 scan / 评估都会先检查红线，命中直接跳过不浪费精力。
@@ -177,9 +184,9 @@ deal_breakers:
 
 | 平台 | 问题 | 系统处理（2026-04 后） |
 |------|------|---------------------|
-| **V2EX 招聘 / GitHub README / 公司自有静态 careers** | 公开无限制 | ✅ WebFetch 直接取 |
-| **大厂 careers SPA**（字节 / 阿里 / 腾讯 / 美团 / 网易 / 小红书 / B 站 等） | JD 详情页 SPA 空壳 | ⚡ **浏览器 bookmarklet 主路径**（`tools/bookmarklets/dachang-spa.js`），或用户截图 |
-| **AI 独角兽 careers**（DeepSeek via Mokahr / Moonshot 飞书 / 智谱 / MiniMax 等） | Mokahr iframe / 飞书表单 | ⚡ **bookmarklet**（`mokahr.js`）或截图 |
+| **V2EX 招聘 / GitHub README / 企业自有静态招聘页** | 公开无限制 | ✅ WebFetch 直接取 |
+| **企业自有招聘 SPA**（制造 / 贸易 / 零售集团 careers） | JD 详情页 SPA 空壳 | ⚡ **浏览器 bookmarklet 主路径**（`tools/bookmarklets/dachang-spa.js`），或用户截图 |
+| **电商 / 新消费 / 供应链服务企业招聘**（多走 Mokahr / 飞书表单） | Mokahr iframe / 飞书表单 | ⚡ **bookmarklet**（`mokahr.js`）或截图 |
 | **Boss 直聘 / 拉勾 / 猎聘** | 强反爬 + 滑块 + 登录墙 + 反复制 | ⚡ **bookmarklet 专用版本**（`boss-zhipin.js` / `liepin.js` / `lagou.js`），绕过反复制，结构化抽取 |
 | **脉脉招聘 / LinkedIn / 微信公众号** | 必须登录 / DOM 加密 | 📸 用户截图拖给 Claude |
 
@@ -193,20 +200,20 @@ deal_breakers:
 
 | # | 区别 | 文件 |
 |---|------|------|
-| 1 | 8 个 archetype 替换为中国数据/AI 岗位类型 | `modes/_profile.template.md` |
+| 1 | 3 个采购 archetype（执行 / 寻源 / 品类）+ 六档采购职级序列 | `modes/_profile.template.md`, `modes/_shared.md` |
 | 2 | A-F 评估流程全中文重写，加入国内 HR 红线问题 | `modes/offer.md` |
-| 3 | Block D 薪酬源换为看准网/脉脉/OfferShow/知乎/一亩三分地 | `modes/offer.md` |
-| 4 | 7 维公司调研改用脉脉职言/天眼查/IT 桔子/36 氪/小红书 | `modes/deep.md` |
+| 3 | Block D 薪酬源换为看准网/脉脉/OfferShow/知乎/职友集 | `modes/offer.md` |
+| 4 | 7 维公司调研改用脉脉职言/天眼查/招投标/行业媒体/小红书 | `modes/deep.md` |
 | 5 | 扫描器处理 Boss/拉勾/猎聘 登录墙 + 反爬 | `modes/scan.md` |
 | 6 | 触达模式从 LinkedIn 改为脉脉 + 微信双轨 | `modes/contact.md` |
-| 7 | 10 维评分权重重新分配（Comp/工时/稳定性 提权，远程删除） | `modes/offers.md` |
-| 8 | 评估完整 Section G 加入国内表单特有问题（婚育/996/学历认证等） | `modes/auto-pipeline.md`, `modes/apply.md` |
-| 9 | PDF 生成加入中国 CV 约定（学历位置/量化结果/技术栈）+ 中文字体回退 | `modes/pdf.md`, `templates/cv-template.html` |
-| 10 | portals-china.example.yml 预置 50+ 中国公司 | `templates/portals-china.example.yml` |
+| 7 | 四层决策架构：CV Match 0-100 + Career Score 十维 100 + Recommendation 五档决策链 | `tools/lib/`, `modes/offers.md` |
+| 8 | 评估完整 Section G 加入国内表单特有问题（婚育/加班/学历认证等） | `modes/auto-pipeline.md`, `modes/apply.md` |
+| 9 | PDF 生成加入中国 CV 约定（学历位置/采购量化证据/术语约定）+ 中文字体回退 | `modes/pdf.md`, `templates/cv-template.html` |
+| 10 | portals-china.example.yml 预置采购词表 + 匿名企业池占位（用户自填真实目标公司） | `templates/portals-china.example.yml` |
 | 11 | states.yml 加入中文别名（已评估/已投递/面试中/被拒/不投 等） | `templates/states.yml` |
 | 12 | 4 个 .mjs 脚本修复 path-with-spaces bug + 加入英文 canonical states + 中文别名 | `tools/merge-tracker.mjs`, `tools/verify-pipeline.mjs`, `tools/dedup-tracker.mjs`, `tools/normalize-statuses.mjs` |
-| 13 | 新增 `tools/scan-helper.mjs` Playwright 桥接脚本（处理国内 SPA careers 页） | `tools/scan-helper.mjs` |
-| 14 | CLAUDE.md 加入中国求职市场的特殊提醒（35 岁红线/gap/996/外包/双非/婚育等） | `CLAUDE.md` |
+| 13 | 新增 `tools/scan-helper.mjs` Playwright 桥接脚本（处理国内 SPA 招聘页） | `tools/scan-helper.mjs` |
+| 14 | CLAUDE.md 加入中国求职市场的特殊提醒（35 岁红线/gap/加班/外包/婚育等） | `CLAUDE.md` |
 
 ### 不变的部分
 
@@ -228,7 +235,7 @@ cd career-ops-china
 # 2) 装 npm 依赖（只有 playwright 一个）
 npm install
 
-# 3) 装 Playwright Chromium（用于 PDF 生成 + 国内大厂 SPA 页面抓取）
+# 3) 装 Playwright Chromium（用于 PDF 生成 + 企业 SPA 招聘页抓取）
 npx playwright install chromium
 
 # 4) 复制 example 配置 + 创建你的 cv.md
@@ -279,20 +286,20 @@ Claude 会按 `CLAUDE.md` 里的 onboarding 流程引导你：
 
 ```
 用户：
-[贴一段 JD 文本，比如："大模型业务组招人，岗位描述如下..."]
+[贴一段采购 JD 文本，比如："某品类采购主管，岗位描述如下..."]
 
 Claude：
-1. 检测 archetype：大模型应用工程师（primary）
-2. Block A：角色摘要表（公司、级别、base、TL;DR）
-3. Block B：CV 匹配度 95%（JD 每条要求 → cv.md 对应行）
+1. 检测 archetype：如 寻源与供应商开发（primary）
+2. Block A：角色摘要表（公司、职级档位、base、TL;DR）
+3. Block B：JD 每条要求 → cv.md 对应行；Gap 四级标注 + Capability Coverage 表（cv_match_score 0-100 由引擎产出）
 4. Block C：级别推断 + 卖资深/被压级 两套话术
 5. Block D：薪酬调研（去看准/脉脉查真实薪资段 + 工时风险警告）
-6. Block E：CV 改写建议（Top 5 修改）
-7. Block F：6-10 个 STAR+R 面试故事
+6. Block E：CV 改写建议（Top 5 修改，围绕采购量化证据）
+7. Block F：6-10 个 STAR+R 面试故事（引用 interview-questions 题库选题）
 8. 写 report.md → reports/{NNN}-{slug}-{date}.md
-9. 生成 PDF（注入 20 个 JD 关键词到 cv-template.html → Playwright 渲染）
+9. 生成 PDF（注入 JD 关键词到 cv-template.html → Playwright 渲染）
 10. 写 tracker TSV → 自动 merge 到 applications.md
-11. 显示总分 + 推荐动作 + 谈判 anchor
+11. 显示 Career Score（1-5）+ CV Match（0-100）+ 推荐等级（五档）+ 谈判 anchor
 ```
 
 实际示例报告参考：[`reports/001-kuaishou-llm-fintech-2026-04-07.md`](reports/001-kuaishou-llm-fintech-2026-04-07.md)
@@ -307,7 +314,7 @@ Claude（2026-04 重定位后）：
 2. 跑 portals.yml 里 enabled 的 search_queries 发现 URL（不尝试取 JD 内容）
 3. Playwright 抓 tracked_companies 的 careers 列表页（仅标题 + URL）
 4. 按 title_filter 过滤
-5. 按 deal_breakers 过滤（华为/外包/大小周/HR 派遣公司直接 SKIP）
+5. 按 deal_breakers 过滤（派遣外包 / 红线企业 / 大小周 / HR 派遣公司直接 SKIP）
 6. 三重去重（scan-history / applications / pipeline）
 7. 写新发现的岗位到 data/pipeline.md（带优先级 P1/P2/P3 + [!] 标记取 JD 方式）
 8. 显示汇总 + 明确提示"下一步请用 bookmarklet 或截图取每个 JD"
@@ -325,8 +332,8 @@ Claude（2026-04 重定位后）：
 3. 浏览器 open tools/install.html → 把彩色按钮拖到书签栏
 
 日常使用（每个 JD 5 秒）：
-1. 浏览器打开任意 JD 页（Boss / 猎聘 / 字节 careers / Mokahr 都行）
-2. 点对应 bookmarklet（通用 / Boss / 猎聘 / 拉勾 / Mokahr / 大厂 SPA）
+1. 浏览器打开任意 JD 页（Boss / 猎聘 / 企业自有招聘页 / Mokahr 都行）
+2. 点对应 bookmarklet（通用 / Boss / 猎聘 / 拉勾 / Mokahr / 企业 SPA）
 3. 看到 "✓ JD captured" = 本地 inbox/*.json 已就位
 4. 攒几个后回 Claude：/career-ops inbox
    → Claude 批量评估（每个出 report + PDF + tracker TSV）
@@ -375,28 +382,28 @@ Claude：
 - 姓名 / 性别 / 年龄
 - 联系方式（手机 + 邮箱，本地存放，不会出现在生成内容里）
 - 当前 base 城市
-- GitHub / Blog / Kaggle 等
+- 领英 / 脉脉 主页（如有）
 
 ## 教育背景
-表格形式：时间 | 学校 | 专业 | 学位 | GPA
+表格形式：时间 | 学校 | 专业 | 学位
 
 ## 工作经历
 按时间倒序，每段包含：公司 + title + 时间 + 1 行总结
 
-## 项目经历
-**国内招聘 HR 看重项目细节超过职级**。每个项目按这个模板：
-### YYYY.MM-YYYY.MM｜公司 — 项目名｜你的角色
-**项目背景与目标**：业务背景 + 目标
+## 项目 / 专项经历
+**国内招聘 HR 看重经历细节超过职级**。每段按这个模板：
+### YYYY.MM-YYYY.MM｜公司 — 品类/专项名｜你的角色
+**业务背景与目标**：业务背景 + 目标
 **我的职责**：1. 2. 3. 4.
-**业绩**：量化结果（QPS / p99 / 准确率 / 降本 / 用户量 等）
+**业绩**：量化结果（年采购额 / 降本比例 / 供应商数量 / 新开发导入数 / RFQ 规模 / 谈判结果 / 账期 / OTD / 质量合格率 / 库存下降 / ERP·SRM 成果 等 — 全部真实数字，不编造）
 
-## 技术能力
-按类别分组：编程语言 / AI 大模型 / 数据 / 后端 / DevOps
+## 专业能力
+按类别分组：品类经验 / 谈判与降本 / 供应商管理 / 交付与供应链 / ERP·SRM 工具 / 语言能力
 
 ## 获奖与证书
-
-## 学术发表（可选）
 ```
+
+> 可参考 [`examples/cv-example.md`](examples/cv-example.md) 的采购版匿名示例。
 
 ### 6. profile.yml 怎么写
 
@@ -412,17 +419,17 @@ candidate:
   age: 27
   location: "杭州"
   willing_to_relocate: true
-  preferred_cities: ["杭州", "上海", "北京"]
-  github: "https://github.com/..."
-  blog: "https://..."
+  preferred_cities: ["杭州", "上海", "苏州"]
+  linkedin: "https://..."   # 如有
+  maimai: "https://..."     # 如有（字段以 config/profile.example.yml 为准）
 
 target_roles:
   primary:
-    - "数据工程师 / Data Engineer"
-    - "大模型应用工程师 / LLM Engineer"
+    - "采购主管 / 品类采购"
+    - "寻源与供应商开发"
   archetypes:
-    - name: "数据工程师 / Data Engineer"
-      level: "中高级"
+    - name: "采购主管 / 品类采购"
+      level: "高级专员-主管档"
       fit: "primary"
     # ... 按优先级排
 
@@ -431,11 +438,11 @@ narrative:
   exit_story: "为什么找新工作 + 想往哪个方向走"
   superpowers: ["...", "..."]
   proof_points:
-    - name: "项目名"
+    - name: "品类/专项名"
       hero_metrics: ["指标 1", "指标 2"]
 
 compensation:
-  target_range: "20K × 14"
+  target_range: "12-18K × 13"
   walk_away_minimum: "..."
 
 # 硬红线 — 命中直接 SKIP
@@ -457,26 +464,27 @@ strong_preferences_against:
 ```yaml
 title_filter:
   positive:
-    - "数据工程"      # 你的目标岗位关键词
-    - "大模型"
-    - "Data Engineer"
+    - "采购"          # 你的目标岗位关键词
+    - "寻源"
+    - "品类采购"
+    - "Sourcing"
   negative:
     - "实习"          # 不要的岗位关键词
     - "校招"
-    - "iOS"
+    - "SQE"
 
 search_queries:
-  - name: Boss直聘 — 数据工程
-    query: 'site:zhipin.com "数据开发" 高级 OR 资深'
+  - name: Boss直聘 — 采购执行与寻源
+    query: 'site:zhipin.com "采购专员" OR "采购主管" OR "供应商开发" {city}'
     enabled: true
   # ...
 
 tracked_companies:
-  - name: 字节跳动
-    careers_url: https://jobs.bytedance.com/experienced/position
+  - name: 某工程机械整机厂（示例，替换成你的真实目标公司）
+    careers_url: https://careers.example-oem.com/jobs
     scan_method: playwright
     enabled: true
-  # ... 50+ 公司预置好了
+  # ... 按目标品类自填，模板附使用指引
 ```
 
 ### 8. 让 Claude 帮你定制
@@ -485,13 +493,13 @@ tracked_companies:
 
 | 你说的话 | Claude 会改 |
 |---------|-----------|
-| "把 archetype 加一个 SRE 方向" | `modes/_profile.md` |
-| "我现在不在意工时了，把权重调小" | `modes/offers.md` |
+| "把 archetype 加一个间接采购方向" | `modes/_profile.md` |
+| "我现在不在意工时了，把权重调小" | `tools/lib/scoring.mjs`（`SCORING_RUBRIC`，改后跑测试） |
 | "加这 5 家公司到 portals" | `portals.yml` |
-| "更新我的简历，加一段 X 项目" | `cv.md` |
+| "更新我的简历，加一段 X 品类降本经历" | `cv.md` |
 | "把 PDF 模板的颜色改成蓝色" | `templates/cv-template.html` |
-| "我对 996 容忍度变高了" | `modes/offers.md` |
-| "我现在主攻方向变成后端" | `modes/_profile.md` |
+| "我对加班容忍度变高了" | `modes/_profile.md` |
+| "我现在主攻品类采购" | `modes/_profile.md` |
 | "把 deal-breaker 的『大小周』移除" | `config/profile.yml` |
 
 每次评估完一个岗位，如果 Claude 评分和你的直觉差太多，告诉它："这个分太高/低了，因为 X"，它会更新你的 profile / 调整 framing，下次会更准。**系统是越用越聪明的**。
@@ -689,8 +697,8 @@ career-ops-china/
 │       ├── boss-zhipin.js          # Boss 直聘（反复制专用）
 │       ├── liepin.js               # 猎聘
 │       ├── lagou.js                # 拉勾
-│       ├── mokahr.js               # Mokahr ATS（DeepSeek 等）
-│       └── dachang-spa.js          # 大厂 careers SPA 通用（字节/阿里/腾讯/美团/快手/...）
+│       ├── mokahr.js               # Mokahr ATS（电商/新消费企业常用）
+│       └── dachang-spa.js          # 企业自有 careers SPA 通用（文件名为代码契约，保留原名）
 │
 ├── inbox/                          # ⛔ gitignored — bookmarklet 捕获的 JD JSON
 │   ├── jd-*.json                   # 待处理
@@ -740,8 +748,8 @@ career-ops-china/
 | 💼 **boss-zhipin** | `zhipin.com` 详情页（反复制 + 结构化字段）|
 | 🎯 **liepin** | `liepin.com` 详情页 |
 | 🛒 **lagou** | `lagou.com` 详情页 |
-| 🔑 **mokahr** | `mokahr.com` / `app.mokahr.com`（DeepSeek 等独角兽 ATS）|
-| 🏢 **dachang-spa** | 字节 / 阿里 / 蚂蚁 / 腾讯 / 美团 / 快手 / 小红书 careers / B站 / 网易 / 京东 / 拼多多 / 百度 / 滴滴 / 智谱 / MiniMax / 阶跃 / 面壁 |
+| 🔑 **mokahr** | `mokahr.com` / `app.mokahr.com`（电商 / 新消费 / 供应链服务企业常用 ATS）|
+| 🏢 **dachang-spa** | 制造 / 贸易 / 零售集团等企业自有 careers SPA 通用（各集团招聘官网） |
 
 ### 一次性安装（5 分钟）
 
@@ -778,7 +786,7 @@ open tools/install.html
 
 `tools/scan-helper.mjs` 是更早为处理国内 SPA 写的 Playwright 桥，现在**已基本被 bookmarklet 取代**。仍保留供：
 
-- 处理完全公开的公司自有 careers 列表页（大厂 SPA 的列表层面，非详情层）
+- 处理完全公开的企业自有招聘列表页（SPA 的列表层面，非详情层）
 - 离线批量脚本中
 
 ```bash
@@ -811,7 +819,7 @@ node tools/scan-helper.mjs <URL> [--mode=jd|list] [--wait=5000]
 5. 评估完一定写入 tracker
 6. 默认中文输出，除非 JD 是英文（外企 / 海外远程）
 7. 直接、可执行 — 不要 fluff
-8. 中文文案保留英文技术术语（LLM、Embedding、Pipeline、ATS、p99 等）
+8. 中文文案保留英文采购术语（SRM、RFQ、MOQ、OEM/ODM、SKU、Incoterms、ATS 等）
 
 ---
 
@@ -819,12 +827,12 @@ node tools/scan-helper.mjs <URL> [--mode=jd|list] [--wait=5000]
 
 | 情况 | 提醒 |
 |------|------|
-| 33+ 岁 | 互联网 35 岁红线真实存在。优先投独角兽 / 中小厂 / 外企 |
+| 33+ 岁 | 35 岁顾虑在部分大企业真实存在。优先投成长型制造 / 贸易 / 零售企业 |
 | Gap > 3 个月 | 在国内 HR 眼里是负面信号。准备好解释 |
-| 想投远程岗 | 国内远程岗几乎不存在。海外华人公司有但门槛高 |
-| 没"大厂背景" | 双非 / 二本 / 没大厂经历 → 用真实项目和数据补 |
-| 想转大模型方向 | 强调"端到端落地经验"比"会调 LangChain"重要 |
-| 简历提了"外包" | 别隐瞒，但用项目而不是 title 来 hook |
+| 想投远程岗 | 国内采购岗几乎都是 onsite（要到厂 / 到仓）。海外华人公司有但门槛高 |
+| 没"名企背景" | 中小厂 / 无名企经历 → 用可量化的品类成果和完整采购闭环补 |
+| 想转品类采购 / 寻源方向 | 强调"完整采购闭环经验 + 可迁移品类方法论"比"只熟悉某个品类"重要 |
+| 简历提了"外包 / 派遣" | 别隐瞒，但用项目而不是 title 来 hook |
 | HR 问婚育/年龄/加班 | 这些问题违法但确实存在。系统会帮你准备得体的应对话术 |
 
 ---
@@ -833,9 +841,9 @@ node tools/scan-helper.mjs <URL> [--mode=jd|list] [--wait=5000]
 
 - **完整保留** 原版 MIT License + santifer 的 copyright
 - **保留** 原作者的设计思想：filter not cannon、HITL as feature、agentic 评估
-- **保留** 大部分基础设施：14 个 mode 框架、A-F 6 块结构、TSV pipeline、scoring matrix、batch worker 架构
-- **替换** 所有 archetype、薪酬源、调研源、portal 配置、谈判话术、CV 约定
-- **新增** 中国大陆特有逻辑：登录墙处理、deal_breakers 红线、大厂职级对标、scan-helper 桥
+- **保留** 大部分基础设施：mode 框架、A-F 6 块结构、TSV pipeline、评分引擎、batch worker 架构
+- **替换** 所有 archetype（→ 采购 3 archetype）、薪酬源、调研源、portal 配置（→ 采购词表 + 企业池模板）、谈判话术、CV 约定
+- **新增** 中国大陆特有逻辑：登录墙处理、deal_breakers 红线、采购职级序列、四层决策引擎（`tools/lib/`）、scan-helper 桥
 - **修复** 4 个上游 .mjs 脚本的 path-with-spaces bug
 
 如果你想看上游的完整介绍（含原作者的求职案例），去 [`santifer/career-ops`](https://github.com/santifer/career-ops)。

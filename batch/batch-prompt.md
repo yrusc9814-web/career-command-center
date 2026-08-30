@@ -55,17 +55,19 @@
 按 `_profile.md` 里的 3 个采购 archetype 归类 primary_archetype（`execution_procurement` 执行采购 / `sourcing` 寻源·供应商开发 / `strategic_category` 战略·品类采购；只看职责动词分布，title 不进判定；最高信号不足或并列 → unknown，禁止硬套；权威 signal 词表见 `tools/lib/taxonomy.mjs`），再按 `_shared.md` 的 framing 规则写以下 block。**内容规范看 `_shared.md`，本文件只给结构：**
 
 - **Block A — 角色摘要**：primary_archetype / Domain（六值）/ Categories / Tags / Function / Seniority（raw_title 保留 + 采购序列六档：助理/专员/高级专员/主管/经理/总监·负责人；用户可见层禁止 L 编码与互联网职级）/ 业务方向 / Remote / Base 城市 / 团队规模 / 公司类型 / TL;DR
-- **Block B — CV 匹配**：JD 每条要求 → CV 具体行（按 archetype 调优先级）。附 gaps 段：每个 gap 标 hard blocker / nice-to-have、相邻经验论证、portfolio 填补、缓解动作。另按 `modes/offer.md` Block B 的结构化要求输出 Capability/Evidence（JD 侧 required/preferred_capabilities + CV 侧 candidate_evidence + Capability Coverage 四列表，枚举 matched/partial/no_evidence/unknown；该表是证据覆盖状态，不是 CV Match 分数，不输出百分比；能力 key 取自 `tools/lib/taxonomy.mjs` 10 桶，词表见 `tools/lib/evidence.mjs`）
+- **Block B — CV 匹配**：JD 每条要求 → CV 具体行（按 archetype 调优先级）。附 gaps 段：每个 gap 按四级标注（`BLOCKER` 硬性不满足 / `HARD_GAP` 无法靠包装解决 / `SOFT_GAP` 可靠改写与证据补足 / `UNKNOWN` 信息不足）+ gap 类型（品类经验 / 行业经验 / 供应商开发 / RFQ 询比价 / 谈判 / 降本 / 供应商管理 / 交期 / 质量异常 / 合同账期 / ERP·SRM / 国际采购 / 管理经验 / 职级 / 学历 / 语言）。SOFT_GAP 允许建议：改写已有经历、补量化证据、准备面试故事、强调可迁移品类经验、准备供应商开发案例、补 ERP·SRM 叙述、补谈判降本证据；HARD_GAP 必须诚实写明"简历包装不能解决"（例：无目标品类供应商资源）；UNKNOWN 只写"当前信息不足 / JD 未披露 / 需面试确认"。**禁止默认建议补 GitHub / 开源 / 技术栈 / side project**。另按 `modes/offer.md` Block B 的结构化要求输出 Capability/Evidence（JD 侧 required/preferred_capabilities + CV 侧 candidate_evidence + Capability Coverage 四列表，枚举 matched/partial/no_evidence/unknown；该表是证据覆盖状态，不是 CV Match 分数，不输出百分比；能力 key 取自 `tools/lib/taxonomy.mjs` 10 桶，词表见 `tools/lib/evidence.mjs`）
 - **Block C — 级别与策略**：JD 暗示级别 vs 候选人自然级别 / 不撒谎卖资深方案 / 被压级方案
-- **Block D — 薪酬与需求**：**用 `_shared.md` 列出的中文源**（看准 / 脉脉 / OfferShow / 知乎 / 一亩三分地 / leetcode.cn）。查不到写"未查到"，**不要编造**，**不要用 Glassdoor / Levels.fyi / Blind**
-- **Block E — 个性化方案**：Top 5 CV 修改 + Top 5 LinkedIn/脉脉资料修改
-- **Block F — 面试准备**：6-10 个 STAR+R 故事（Reflection 是关键），按 archetype 选材 + 1 个主讲 case + 红线问题（"为什么离职" / "能 996 吗" / "频繁跳槽"）
+- **Block D — 薪酬与需求**：**用 `_shared.md` 列出的中文源**（看准 / 脉脉 / OfferShow / 知乎 / 职友集 / 猎聘）。查不到写"未查到"，**不要编造**，**不要用 Glassdoor / Levels.fyi / Blind**
+- **Block E — 个性化方案**：Top 5 CV 修改 + Top 5 LinkedIn/脉脉资料修改（优先补量化证据：年采购额 / 降本金额与比例 / 供应商数量 / 新开发导入数 / RFQ 数量 / 谈判结果 / 账期 / MOQ / Lead Time / OTD / 质量 / 库存 / ERP·SRM；句式 = 动作+规模+结果+业务影响）
+- **Block F — 面试准备**：6-10 个 STAR+R 故事（S/T/A/R + R=Reflection/Relevance，最后的 R 回答"这段经历对当前 JD 的价值"）。**Evidence-backed：素材只来自 candidate_evidence / cv.md 已有事实；缺证据 → 标"待补充真实案例"，禁止编造数字与经历。** 题目与素材方向引用 `modes/interview-questions.md`（15 主题 × 4 职级）+ Story Bank 18 类（降本谈判 / 新供应商 0→1 开发 / 涨价应对 / 紧急交付 / 供应中断 / 单一来源 / 多供应商导入 / 质量事故 / 供应商淘汰 / 合同商务 / 库存 / 呆滞 / MOQ·Lead Time / 跨部门 / ERP·SRM / 国际物流外贸 / 带团队），按 JD 核心要求选材 + 1 个主讲 case + 红线问题（"为什么离职" / "能接受加班吗" / "频繁跳槽"）
+
+**输出守卫（Prompt 服从引擎）：** ① cv_match_score（0-100）/ coverage / recommendation 全部来自运行时引擎（`tools/lib/cv-match.mjs` / `tools/lib/scoring.mjs`），LLM 只解释不重算，禁止自报"匹配度 85%"式数字；② Gap 按四级+类型标注；③ Recommendation 恒五档来自引擎 + `trace[]`，LLM 只解释（如"岗位匹配与价值不错，但现任雇主冲突，最终不推荐"），禁止改写档位；④ **高分不推荐是合法状态**，decision trace 是唯一解释依据，禁止看到高分自动翻案；⑤ capability matched + 品类 hard gap 必须表述为"具有供应商开发能力，但缺目标品类供应商资源"，禁止写成"缺乏采购 / sourcing 能力"。
 
 **全局 Score 表**：Career Score 十维加权总分（`compensation` 薪酬竞争力 20 / `workload_workstyle` 工作制与强度 15 / `role_seniority` 职级质量与职责范围 13 / `career_growth` 成长空间 10 / `category_domain_value` 品类与行业价值 10 / `procurement_ownership` 采购自主权 9 / `company_stability` 公司与业务稳定性 7 / `location_fit` 地点与通勤 8 / `digital_tooling` 数字化与工具成熟度 5 / `hiring_process_quality` 招聘流程质量 3）— 维度细则唯一权威 = `tools/lib/scoring.mjs` 的 `SCORING_RUBRIC`（1/3/5 定义不复制进 prompt）。**cv_match_score（0-100）由 CV Match 层产出（`tools/lib/cv-match.mjs`），不参与 Career Score 加权**；JD 未写证据的维度 score=null 不入分母，营销叙事不作证据。
 
 ### Step 3 — 写 report .md
 
-保存到 `reports/{{REPORT_NUM}}-{company-slug}-{{DATE}}.md`。`{company-slug}` 是公司英文名小写连字符（中文公司用拼音或英文，如 bytedance/alibaba）。
+保存到 `reports/{{REPORT_NUM}}-{company-slug}-{{DATE}}.md`。`{company-slug}` 是公司英文名小写连字符（中文公司用拼音或常用英文名，如某公司用 `example-oem` 式占位确认后再写真实 slug）。
 
 **Header 必须含**：
 ```

@@ -1,6 +1,6 @@
 ---
 name: career-ops
-description: 中国大陆 AI 求职指挥中心 — 评估岗位、生成定制简历、扫描门户、追踪申请
+description: 中国大陆采购/供应链求职指挥中心 — 评估岗位、生成定制简历、扫描门户、追踪申请
 user_invocable: true
 argument-hint: "[JD截图/文本/URL] | scan | inbox | tracker | offer | offers | pdf | contact | deep | apply | pipeline | batch | training | project | story-sync"
 arguments: mode
@@ -83,6 +83,9 @@ Applies to: `auto-pipeline`, `offer`, `offers`, `pdf`, `contact`, `apply`, `pipe
 Read `modes/{mode}.md`
 
 Applies to: `tracker`, `deep`, `training`, `project`, `story-sync`
+
+### Domain reference (loaded by `offer` / `batch` via their mode files):
+`modes/interview-questions.md` — 采购面试题库（15 主题 × 4 职级），由 Block F 引用，不单独调用
 
 ### Modes delegated to subagent:
 For `scan`, `apply` (with Playwright), and `pipeline` (3+ URLs): launch as Agent with the content of `_shared.md` + `modes/{mode}.md` injected into the subagent prompt.

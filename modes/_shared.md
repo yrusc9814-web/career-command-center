@@ -82,7 +82,7 @@
 | 总监·负责人 | L5 | 汇报总监/VP/GM，采购体系整体 ownership |
 
 > 职级归一规则（title 直接映射 + 职责信号推断 + unknown 不硬套）的权威实现：`tools/lib/taxonomy.mjs`。
-> 报告输出格式示例：`职级判断：主管（JD 暗示：带 4 人小组、背品类 KPI）`。
+> 报告输出格式示例：`职级判断：主管（JD 暗示：带 N 人小组、背品类 KPI）`。
 
 **厦门市场带宽基线**（2025，职友集·猎聘·BOSS直聘公开数据）：
 
@@ -107,12 +107,31 @@
 
 ---
 
+## 输出守卫 — 数值与文案（Prompt 服从引擎，所有 mode 必须遵守）
+
+**运行时决策 SoT = `tools/lib/{taxonomy,evidence,cv-match,scoring,eligibility}.mjs`。** Prompt 是给 LLM 的规则文本，不是代码：所有数值型结论来自运行时引擎，LLM 只解释、不重算、不发明。
+
+1. **Block B 数值来自引擎**：`cv_match_score`（0-100）/ capability coverage（matched / partial / no_evidence / unknown）来自 `tools/lib/cv-match.mjs` + `tools/lib/evidence.mjs`。LLM 只解释数字，**禁止自报"匹配度 85%"式自算百分比**。
+2. **Gap 按四级 + 类型标注**：四级 = `BLOCKER`（硬性不满足）/ `HARD_GAP`（无法靠简历包装解决）/ `SOFT_GAP`（可靠改写与证据补足）/ `UNKNOWN`（信息不足）；类型 = 品类经验 / 行业经验 / 新供应商开发 / RFQ·询比价 / 商务谈判 / 降本 / 供应商管理 / 交期 / 质量异常 / 合同·账期 / ERP·SRM / 国际采购 / 管理经验 / 职级 / 学历 / 语言。
+   - SOFT_GAP 允许建议：改写已有经历、补量化证据、准备面试故事、强调可迁移品类经验、准备供应商开发案例、补 ERP·SRM 叙述、补谈判降本证据。
+   - HARD_GAP 必须诚实写明"简历包装不能解决"（例：无目标品类供应商资源）。
+   - **禁止默认建议**：补 GitHub / 开源项目 / 系统设计经验 / 技术栈 / side project。
+3. **Recommendation 恒五档来自引擎**：`强烈推荐 / 推荐 / 一般 / 不推荐 / 硬红线跳过`，由 `tools/lib/scoring.mjs` `computeRecommendation` 决策链 + `trace[]`（decision trace）产出，LLM 只解释（例："岗位匹配与价值不错，但现任雇主冲突，最终不推荐"），**禁止改写档位**（如把"不推荐"改成"建议投递"）。
+4. **高分不推荐是合法状态**：cv_match_score 84 + Career Score 3.8 + 不推荐 = 合法（手动 blocker / 资格缺口 / 缺口封顶都会压过分数）。**禁止看到高分自动翻案；decision trace 是唯一解释依据。**
+5. **"有能力但缺资源"守卫（002 类案例）**：capability matched + 品类 hard gap 必须表述为"具有供应商开发能力，但缺目标品类供应商资源"，**禁止写成"缺乏采购 / sourcing 能力"**。
+6. **UNKNOWN 文案守卫**：UNKNOWN 只写"当前信息不足 / JD 未披露 / 需面试确认"，**禁止写成"不具备 / 没有 / 较差"**（例：招聘流程 unknown 不得写"招聘流程较差"）。
+7. **无可靠数据一律 unknown**：薪资 / 公司规模 / 市场排名 / 成立时间 / 品牌地位 — 查不到可靠数据就写 unknown，**禁止 LLM 自补事实**。
+
+**评分细则权威**：Career Score 十维（权重合计 100）的 1/3/5 定义、证据来源与 unknown 规则的唯一 SoT = `tools/lib/scoring.mjs` 的 `SCORING_RUBRIC`。prompt 层只列 key + 中文名 + 权重 + 指向（见 `modes/offer.md`），不复制细则全文。
+
+---
+
 ## 全局规则
 
 ### 永远不要
 
 1. 编造经历或指标
-2. 修改 cv.md 或作品集文件
+2. 修改 cv.md 或其他个人资料文件
 3. 替候选人提交申请
 4. 在生成的消息里写出手机号
 5. 推荐低于市场的薪酬

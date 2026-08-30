@@ -13,25 +13,25 @@ Key sections:
 
 ## Target Roles (modes/_shared.md)
 
-The archetype table in `_shared.md` determines how offers are scored and CVs are framed. Edit the table to match YOUR career targets:
+The archetype table in `modes/_profile.md` determines how offers are scored and CVs are framed. Edit the table to match YOUR career targets:
 
 ```markdown
-| Archetype | Thematic axes | What they buy |
+| Archetype | 主题轴 | 公司在买什么 |
 |-----------|---------------|---------------|
 | **Your Role 1** | key skills | what they need |
 | **Your Role 2** | key skills | what they need |
 ```
 
-Also update the "Adaptive Framing" table to map YOUR specific projects to each archetype.
+Also update the "Adaptive Framing" table to map YOUR specific projects to each archetype. The 3 preloaded procurement archetypes (`execution_procurement` / `sourcing` / `strategic_category`) and their signal word lists live in `tools/lib/taxonomy.mjs` — the prompt layer follows that engine.
 
 ## Portals (portals.yml)
 
-Copy from `templates/portals.example.yml` and customize:
+Copy from `templates/portals-china.example.yml` (China mainland) or `templates/portals.example.yml` (English/overseas) and customize:
 
-1. **title_filter.positive**: Keywords matching your target roles
-2. **title_filter.negative**: Tech stacks or domains to exclude
-3. **search_queries**: WebSearch queries for job boards (Ashby, Greenhouse, Lever)
-4. **tracked_companies**: Companies to check directly
+1. **title_filter.positive**: Keywords matching your target roles (procurement words preloaded)
+2. **title_filter.negative**: Adjacent functions or seniority to exclude
+3. **search_queries**: WebSearch queries for job boards (replace `{city}` placeholders with your target cities)
+4. **tracked_companies**: Replace the anonymous placeholder companies with your real targets
 
 ## CV Template (templates/cv-template.html)
 

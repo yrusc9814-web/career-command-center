@@ -1,48 +1,56 @@
-# CV -- Alex Chen
+# CV — 示例候选人（采购版匿名示例）
 
-**Location:** Austin, TX
-**Email:** alex@example.com
-**LinkedIn:** linkedin.com/in/alexchen
-**Portfolio:** alexchen.dev
-**GitHub:** github.com/alexchen
+> 本文件是匿名示例（演示 cv.md 的推荐写法），姓名、公司、数字均为占位（X / N / 某某）。
+> 真实 cv.md 在项目根目录（gitignored），按此结构填写真实经历。产出流程见 `modes/pdf.md`。
 
-## Professional Summary
+**所在城市：** 示例城市
+**邮箱：** candidate@example.com
+**领英 / 脉脉：** 主页链接（如有）
 
-Full-stack AI engineer with 6 years building production ML systems. Led the ML platform at a Series B fintech (2020-2024), scaling from 2 models to 15+ in production. Built real-time fraud detection (99.7% precision, $2M/year saved), recommendation engine (18% uplift), and an internal MLOps platform serving 4 engineering teams.
+## 专业摘要
 
-## Work Experience
+X 年制造业采购经验，覆盖执行采购 → 品类采购完整闭环。现任某工程机械制造企业品类采购，负责某品类年度采购，管理 N 家核心供应商；通过年度议价与替代导入实现成本下降 X%，账期从 Y 天延长至 Z 天；带 N 人采购小组背品类 KPI。
 
-### TechFin Corp -- Austin, TX
-**Senior ML Engineer / ML Platform Lead**
-2020-2024
+## 工作经历
 
-- Led ML platform team (3 engineers), built internal MLOps tooling: model registry, A/B testing framework, feature store
-- Designed real-time fraud detection pipeline: Kafka → feature computation → model inference → decision engine. 99.7% precision at 50ms p99
-- Built recommendation engine for lending products: collaborative filtering + LLM reranking. 18% conversion uplift
-- Reduced model deployment time from 2 weeks to 4 hours with CI/CD pipeline (GitHub Actions + SageMaker)
-- Established model monitoring: drift detection, performance dashboards (Grafana), automated retraining triggers
+### 某工程机械制造企业 — 示例城市
+**品类采购（主管档）**
+20XX-20XX
 
-### DataStartup Inc -- Remote
-**ML Engineer**
-2018-2020
+- 负责某品类年度采购，年采购额 X 万元，管理 N 家核心供应商
+- 主导品类年度降本：通过 Spend 拆解、年度议价与替代供应商导入实现成本下降 X%
+- 完成 N 家新供应商从寻源、验厂、打样到批产导入的 0→1 开发，消除 N 个单一来源风险点
+- 通过 MOQ 与 Lead Time 优化，库存下降 X%，交货及时率（OTD）从 X% 提升至 Y%
+- 参与 ERP·SRM 采购流程线上化，关键单据流转由 X 小时缩短至 Y 小时
 
-- Built NLP pipeline for document classification (BERT fine-tuning, 94% accuracy on legal docs)
-- Implemented search ranking with learning-to-rank models
-- Set up experiment tracking with MLflow and model versioning
+### 某贸易公司 — 示例城市
+**采购专员**
+20XX-20XX
 
-## Projects
+- 独立完成询价、核价到下单的完整执行闭环，RFQ 数量 X 项/年
+- 处理紧急插单与来料质量异常，保障产线连续供货
+- 协助年度比价与供应商资料库维护
 
-- **FraudShield** (Open Source) -- Real-time fraud detection framework. Kafka Streams + feature store + model serving. 500+ GitHub stars
-- **LLM Eval Toolkit** (Open Source) -- Evaluation framework for LLM applications. Supports custom metrics, regression testing, CI integration
+## 项目 / 专项经历
 
-## Education
+### 20XX.XX-20XX.XX｜某工程机械制造企业 — 某品类降本专项｜负责人
+**业务背景与目标**：原材料涨价压力，品类降本目标 X%
+**我的职责**：Spend 分析、成本拆解、年度议价、替代供应商开发导入
+**业绩**：成本下降 X%（议价贡献 X1 个点 / 替代导入 X2 个点），账期改善 Y 天
 
-- MS Computer Science, UT Austin (2018)
-- BS Computer Science, UC Berkeley (2016)
+## 专业能力
 
-## Skills
+- **品类**：某品类 / 相邻品类的供应商结构与成本结构管理
+- **谈判与降本**：年度议价、账期谈判、成本拆解、替代导入
+- **交付与供应链**：交期管理、MOQ / 安全库存策略、跨部门协同
+- **工具与语言**：ERP / SRM 采购模块、Excel 数据分析；英语（可邮件沟通）
 
-- **ML/AI:** PyTorch, TensorFlow, scikit-learn, Hugging Face, LangChain
-- **MLOps:** SageMaker, MLflow, Kubeflow, Airflow, Feature Store
-- **Infra:** Kubernetes, Kafka, Redis, PostgreSQL, AWS
-- **Languages:** Python, Go, TypeScript, SQL
+## 教育背景
+
+| 时间 | 学校 | 专业 | 学位 |
+|------|------|------|------|
+| 20XX-20XX | 示例大学 | 机械工程 | 本科 |
+
+## 获奖与证书
+
+- 公司年度降本奖（20XX，示例）

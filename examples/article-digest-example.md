@@ -1,40 +1,42 @@
-# Article Digest -- Proof Points
+# Article Digest — Proof Points
 
-Compact proof points from portfolio projects. Read by career-ops at evaluation time.
+Compact proof points from real work achievements. Read by career-ops at evaluation time.
 
----
-
-## FraudShield -- Real-Time Fraud Detection
-
-**Hero metrics:** 99.7% precision, 50ms p99 latency, $2M/year fraud prevented
-
-**Architecture:** Kafka Streams ingestion → real-time feature computation (200+ features, sliding windows) → ensemble model (XGBoost + neural network) → decision engine with configurable thresholds → human review queue for edge cases
-
-**Key decisions:**
-- Chose streaming over batch to catch fraud in real-time (batch had 4-hour delay)
-- Ensemble approach: XGBoost for speed + neural net for complex patterns
-- Built custom feature store for real-time features (Redis-backed, 5ms reads)
-
-**Proof points:**
-- Reduced false positives 60% vs previous rule-based system
-- Handles 10K transactions/second peak load
-- 500+ GitHub stars, adopted by 3 fintech startups
-- Conference talk: "Real-Time ML at Scale" (MLConf 2023)
+> 本文件是采购版匿名示例（演示 article-digest.md 的写法），所有数字均为占位（X / N / 某某）。
+> 真实 article-digest.md（项目根，gitignored）只放你的真实成果与口径。
 
 ---
 
-## LLM Eval Toolkit -- Evaluation Framework
+## 某品类年度降本专项
 
-**Hero metrics:** 15 built-in metrics, CI/CD integration, used by 200+ developers
+**Hero metrics:** 成本下降 X%，账期延长 Y 天，覆盖 N 家供应商
 
-**Architecture:** Pluggable metric system → test suite runner → regression detection → GitHub Actions integration → Slack alerts on regressions
+**背景与动作：** 品类原材料涨价压力 → Spend 分析与成本拆解 → 三条降本杠杆并行（年度议价 / 替代供应商导入 / 需求与规格优化）→ 结果口径按动作归因
 
-**Key decisions:**
-- Metrics as code: each metric is a Python function with clear interface
-- Deterministic testing: seeded prompts + temperature 0 for reproducible evals
-- Cost tracking: each eval run logs token usage and estimated cost
+**关键决策：**
+- 先拆成本结构再谈判，避免只有单价一个杠杆
+- 替代导入从 adjacent 品类供应商里选，缩短验证周期
+- 降本口径提前和财务对齐（比价基准、年化口径），防止结果不被承认
 
 **Proof points:**
-- Caught 3 production regressions before deployment in first month
-- Reduced eval cycle from "vibes check" to structured 15-minute CI run
-- Open source, 200+ weekly active users on PyPI
+- 成本下降 X%（议价贡献 X1 个点 / 替代导入 X2 个点 / 需求优化 X3 个点）
+- 付款账期从 Y 天延长至 Z 天，改善现金流
+- 降本动作沉淀为品类年度策略模板，复用到相邻品类
+
+---
+
+## 新供应商 0→1 开发与导入
+
+**Hero metrics:** 年开发导入 N 家，消除 N 个单一来源风险点
+
+**背景与动作：** 单一来源风险 → 寻源（B2B 平台 / 展会 / 行业协会）→ 验厂与样品确认 → 小批量试产 → 批产导入 → 纳入绩效考核
+
+**关键决策：**
+- 验厂重点看过程管控而非规模（小而稳优于大而乱）
+- 小批量试产阶段就签质量协议，避免批产扯皮
+- 每家导入都同步备选计划，供应组合保持弹性
+
+**Proof points:**
+- 完成 N 家供应商 0→1 导入，批产合格率 X%
+- 单一来源物料占比下降 X%
+- 导入流程沉淀为 checklist，团队复用

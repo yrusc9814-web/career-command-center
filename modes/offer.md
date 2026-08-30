@@ -2,6 +2,8 @@
 
 候选人贴一个职位（文本或 URL）时，**必须按顺序输出 A-F 六个 block**。
 
+> **输出守卫（最高优先级）**：本文件所有数值与档位遵守 `modes/_shared.md` 的「输出守卫 — 数值与文案」段——`cv_match_score`（0-100）/ coverage / `career_ops_score` / recommendation 五档全部来自运行时引擎（`tools/lib/{cv-match,scoring,eligibility}.mjs`），LLM 只解释不重算；高分不推荐是合法状态，decision trace 是唯一解释依据。
+
 ## Step 0 — Archetype 检测 + Tier 归类（评估前置，必须先于 Block A）
 
 ### 0.1 读 Archetype
@@ -49,17 +51,24 @@ Archetype 决定：
 
 读 `cv.md`。建一张表：JD 的每条要求 → 候选人 CV 中的具体行。
 
+> **cv_match_score（0-100）由运行时引擎产出**（`tools/lib/cv-match.mjs`，因子与权重见其 `CV_MATCH_FACTORS`）。LLM 只解释该分数（哪些因子拉高 / 拉低、按 `trace` 口径），**禁止自算或自报"匹配度 X%"**。
+
 **按 primary_archetype 调整证据优先级：**
 - execution_procurement 执行采购 → 优先：交付/跟单、交期保障（交货及时率）、单证/对账准确性、异常处理证据（紧急插单、缺料、交期延误应对）
 - sourcing 寻源 / 供应商开发 → 优先：开发数量、源头工厂、导入验证证据（0→1 案例、年开发 N 家、筛选-验证-导入闭环）
 - strategic_category 战略 / 品类采购 → 优先：品类规模、降本百分比、Should-cost/成本拆解证据（年度降本目标拆解到品类动作）
 - unknown → 通用采购证据（询比价、谈判、供应商管理、交付协同、降本）
 
-输出一个 **gaps 段落**，对每个 gap 给出缓解策略：
-1. 是 hard blocker 还是 nice-to-have？
-2. 候选人能否用相邻经验论证？
-3. 有没有作品集/GitHub 项目能填补这个 gap？
-4. 具体的缓解动作（cover letter 的一句话 / 一个快速 side project / 引用某个开源贡献等）
+输出一个 **gaps 段落**，按 Gap 四级 + 类型模型标注（权威枚举见 `_shared.md`「输出守卫」第 2 条）：
+
+1. **四级标注**：`BLOCKER`（JD 硬性要求不满足，job-side blocker）/ `HARD_GAP`（无法靠简历包装解决）/ `SOFT_GAP`（可靠改写与证据补足）/ `UNKNOWN`（JD 未披露或信息不足）
+2. **类型标注**：品类经验 / 行业经验 / 新供应商开发 / RFQ·询比价 / 商务谈判 / 降本 / 供应商管理 / 交期 / 质量异常 / 合同·账期 / ERP·SRM / 国际采购 / 管理经验 / 职级 / 学历 / 语言
+3. **缓解策略按级别分流**：
+   - `SOFT_GAP` 允许建议：改写已有经历（突出可迁移品类经验）、补量化证据、准备面试故事、准备供应商开发案例、补 ERP·SRM 叙述、补谈判降本证据
+   - `HARD_GAP` 必须诚实写明"**简历包装不能解决**"（例：无目标品类供应商资源），只给"是否仍值得投 + 如何在面试中诚实应对"的判断
+   - `UNKNOWN` 只写"当前信息不足 / JD 未披露 / 需面试确认"，禁止写成"不具备 / 没有 / 较差"
+4. **"有能力但缺资源"守卫**：能力匹配（capability matched）但缺目标品类供应商资源，必须表述为"**具有供应商开发能力，但缺目标品类供应商资源**"，禁止写成"缺乏采购 / sourcing 能力"
+5. **禁止默认建议**：补 GitHub / 开源项目 / 系统设计经验 / 技术栈 / side project —— 这些与采购岗评估无关
 
 **结构化 Capability/Evidence 输出（必须，紧随 gaps 段）：**
 
@@ -100,9 +109,8 @@ Archetype 决定：
 | **脉脉职言区（maimai.cn）** | `site:maimai.cn {公司} 薪资` 或 `{公司} 采购经理 脉脉` | 真实匿名薪酬讨论、近期发包情况 |
 | **OfferShow（offershow.cn）** | `site:offershow.cn {公司} {职级}` | 应届/社招的真实 offer 数据 |
 | **知乎** | `site:zhihu.com {公司} 薪资` 或 `如何评价 {公司}` | 详细的口碑、加班、文化讨论 |
-| **一亩三分地** | `site:1point3acres.com {公司}` | 国内大厂讨论 |
-| **leetcode.cn** | `site:leetcode.cn {公司} 面经` | 应届/社招面经 |
-| **互联网职级对标** | `互联网 职级对标 {公司}` | 反推 JD 暗示的级别对应哪个 P/T/L |
+| **职友集（jobui.com）/ 猎聘** | `{城市} 采购经理 薪资` / `{公司} 职级` | 制造/贸易/零售企业采购岗位的带宽基线（按城市 + 职级查） |
+| **面试经验** | `{公司} 采购 面试` （看准 / 知乎 / 脉脉） | 采购序列的面经、面试流程与轮次 |
 
 **Block D 输出表格：**
 
@@ -146,6 +154,8 @@ Career Score 由 `tools/lib/scoring.mjs` 产出：`career_ops_score`（1.0-5.0�
 规则：
 - 方向 = Job→Candidate Value（岗位本身对候选人的职业价值）；JD 未写证据的维度 score=null（不入分母，全 unknown 时如实输出"有效维度不足"），禁止按行业刻板印象补分；营销叙事一律不作证据。
 - **cv_match_score（0-100）由 CV Match 层产出（`tools/lib/cv-match.mjs`，因子与权重见其 `CV_MATCH_FACTORS`），不参与 Career Score**；Career Score 输出不得包含 CV Match、hard_req_coverage、简历关键词覆盖、学历、是否会 SAP、是否有某 capability。
+- **LLM 只解释不重算**：`career_ops_score`、`score_confidence`、`recommendation`（五档）全部来自运行时引擎 + `trace[]`；LLM 的职责是用人话解释各维 reason / evidence 与决策路径。
+- **高分不推荐是合法状态**：cv 84 + career 3.8 + 不推荐 = 合法（candidate-side blocker / job-side 资格 / 缺口封顶都会覆盖分数）；decision trace 是唯一解释依据，禁止看到高分自动翻案。
 
 ## Block E — 个性化方案
 
@@ -156,11 +166,18 @@ Career Score 由 `tools/lib/scoring.mjs` 产出：`career_ops_score`（1.0-5.0�
 
 **Top 5 CV 修改 + Top 5 LinkedIn/脉脉资料修改**，最大化 ATS 匹配 + HR 第一眼注意力。
 
+**优先搜寻的量化证据**（改写建议围绕这些补证据；数值一律来自 cv.md 真实经历，禁止编造）：
+年采购额 / Spend ｜ 降本金额与比例 ｜ 供应商数量（在管 / 新开发导入 / 淘汰）｜ RFQ 询比价数量 ｜ 谈判结果（价格 / 账期 / MOQ / Lead Time）｜ OTD 交货及时率 ｜ 来料合格率 / PPM ｜ 库存下降 / 呆滞处理 ｜ 缺货率 ｜ 品类规模 ｜ 项目数量 ｜ 国际采购与合同金额 ｜ 团队人数 ｜ ERP·SRM 数字化成果
+
+**建议句式 = 动作 + 规模 + 结果 + 业务影响**，示例（匿名占位）：
+> "负责某品类年度采购，管理 N 家核心供应商，通过年度议价与替代导入实现成本下降 X%，同时将账期从 Y 天延长至 Z 天。"
+
 中国大陆 CV 的特殊建议：
-- 是否需要加证件照（看公司类型决定，互联网大厂一般不需要）
-- 出生年月 / 性别 / 婚育（互联网行业可省，国企/外企看情况）
-- 项目经历的描述模式："**业务背景** → 我的角色 → 技术方案 → **量化结果**"
+- 是否需要加证件照（看公司类型决定，外企 / 制造业国企常见放照片）
+- 出生年月 / 性别 / 婚育（一般可省，国企看情况）
+- 项目 / 专项经历的描述模式："**业务背景** → 我的角色 → **采购动作** → **量化结果**"
 - 学历放显著位置（国内 HR 第一眼就要看）
+- 简历里不写真实供应商名 / 报价 / 合同细节（保密），用"某品类 / N 家供应商 / X%"表述
 
 ## Block F — 面试准备
 
@@ -169,23 +186,19 @@ Career Score 由 `tools/lib/scoring.mjs` 产出：`career_ops_score`（1.0-5.0�
 | # | JD 要求 | STAR+R 故事 | S | T | A | R | Reflection |
 |---|--------|------------|---|---|---|---|-----------|
 
-**Reflection 列**：当时学到了什么 / 现在回头看会怎么改。这是区分中级和高级的关键 — 中级讲做了什么，高级能从中提炼出 lesson。
+**STAR+R 定义**：S/T/A/R = Situation / Task / Action / Result；最后的 **R = Reflection / Relevance** — 回答"这段经历对当前 JD 的价值"。Reflection 列：当时学到了什么 / 现在回头看会怎么改 / 这段经历为什么能迁移到这个岗位。这是区分中级和高级的关键 — 中级讲做了什么，高级能从中提炼出 lesson 并挂回 JD。
 
-**Story Bank**：如果 `interview-prep/story-bank.md` 存在，检查这些故事是否已入库，没有就追加。长期下来会形成 5-10 个 master story 可以应付各种行为面试题。
+**Evidence-backed（硬规则）**：故事素材**只能来自 candidate_evidence / cv.md / article-digest.md 已有事实**；CV 无对应案例时，如实输出"**待补充真实案例**"并提示候选人补充，**禁止自动生成假 STAR、禁止编造数字与经历**。
 
-**按 archetype 选材：**
-- 数据工程 → 强调链路稳定性、数据质量、降本提效的具体数字
-- 数据仓库 → 强调建模决策、迭代取舍、查询提速对业务的影响
-- 数据治理 → 强调跨部门推动、自上而下/自下而上的策略
-- 大模型应用 → 强调 Eval 闭环、效果迭代、成本控制、业务影响
-- AI Infra → 强调性能数字、稳定性事故复盘、降本
-- 后端 → 强调高并发、可用性、复杂业务抽象
-- 平台/架构 → 强调内部用户数、采纳率、平台演进决策
-- 算法 → 强调 AB 实验设计、业务指标提升
+**Story Bank 18 类（选题池，按 JD 核心要求挑）**：降本谈判 / 新供应商 0→1 开发 / 供应商涨价应对 / 紧急交付 / 供应中断 / 单一来源风险 / 多供应商导入 / 供应商质量事故 / 供应商淘汰 / 合同商务风险 / 库存过高 / 呆滞料 / MOQ 优化 / Lead Time 优化 / 跨部门冲突 / ERP·SRM 数字化采购 / 国际物流外贸异常 / 团队管理带新人。
+
+**Story Bank 入库**：如果 `interview-prep/story-bank.md` 存在，检查这些故事是否已入库，没有就追加（`modes/story-sync.md` 依赖 Block F 作为 primary 源）。长期下来会形成 5-10 个 master story 可以应付各种行为面试题。
+
+**面试题库**：题目与答题素材方向按 `modes/interview-questions.md`（15 主题 × 4 职级）选取——先按 JD 的 primary_archetype 与 JD seniority 档位锁定主题，再按候选人在该主题下的真实证据决定讲哪个故事。**题库只出题与素材方向，答案素材同样只来自 candidate_evidence。**
 
 **还要包含：**
-- 1 个推荐主讲的 case study（哪个项目最适合主讲、怎么讲）
-- 红线问题预演（如：「为什么从上一家离职？」「为什么频繁跳槽？」「能接受 996 吗？」「家庭情况能不能加班？」 — 这些国内 HR 真的会问，要准备好得体的应对话术）
+- 1 个推荐主讲的 case study（哪段采购经历最适合主讲、怎么讲、数字口径怎么背）
+- 红线问题预演（如：「为什么从上一家离职？」「为什么频繁跳槽？」「能接受加班吗？」「家庭情况能不能加班？」 — 这些国内 HR 真的会问，要准备好得体的应对话术）
 
 ---
 

@@ -12,9 +12,9 @@
 3. **对每个 JSON 提取元信息**（title / company / real_company via HR 反推 / salary / location / deal-breaker flag）
 4. **分类到 4 个桶**：
    - **A. 完整评估**：用户确认处理的高优先级
-   - **B. 批量 Discarded**：title 过关但用户决定不做完整评估（P3 低优 / "华为"误报 / 其他 keep 类）
-   - **C. SKIP（Deal-breaker）**：真派遣 / 真华为系 / 明确命中候选人 deal-breaker
-   - **D. Title-skip**：title 过滤不过关（AI 产品经理 / 数据分析师 / 应届实习 等）
+   - **B. 批量 Discarded**：title 过关但用户决定不做完整评估（P3 低优 / 红线关键词误报 / 其他 keep 类）
+   - **C. SKIP（Deal-breaker）**：真派遣 / 命中候选人 deal-breaker 的企业 / 明确命中候选人红线
+   - **D. Title-skip**：title 过滤不过关（SQE / 跟单员 / 计划员 / 销售 / 实习 等）
 
 ### Phase 1 — 交互式确认（Token 控制）
 
@@ -52,12 +52,12 @@
   "url": "https://...",
   "page_title": "...",
   "captured_at": "2026-04-14T08:30:00.000Z",
-  "platform": "boss-zhipin | liepin | lagou | mokahr | dachang-spa | universal",
+  "platform": "boss-zhipin | liepin | lagou | mokahr | dachang-spa | universal",  // dachang-spa = 企业自有 careers SPA 的采集通道标识（代码层契约，见 tools/bookmarklets/）
   "extracted": {
-    "job_title": "高级数据工程师",
-    "company": "字节跳动",
-    "location": "北京",
-    "salary": "30k-60k",
+    "job_title": "采购专员",
+    "company": "某工程机械整机厂",
+    "location": "示例城市",
+    "salary": "6-9K",
     "department": "...",            // optional
     "seniority_experience": "...",  // optional
     "description": "...",           // 优先用这个
@@ -83,7 +83,7 @@
 ```
 **正面示例：**
 ```
-**URL：** https://www.zhipin.com/job_detail/bee0238dad00b91c03x63dm0GFBR.html?securityId=...
+**URL：** https://www.zhipin.com/job_detail/xxx.html（bookmarklet 捕获的原始网页 URL，完整 securityId 参数原样保留）
 **来源：** boss-zhipin (via /career-ops inbox, bookmarklet 捕获 2026-04-15 14:49)
 ```
 原因：报告里的 URL 是给未来的候选人点回去复查岗位用的。JSON 文件名只在本地有意义，换台电脑/下次复查就失效。
@@ -100,8 +100,8 @@ inbox 处理 — {YYYY-MM-DD}
 
 | # | 公司 | 岗位 | Score | PDF | 来源 |
 |---|------|------|-------|-----|------|
-| 003 | DeepSeek | Agent 数据策略 | 4.7/5 | ✅ | mokahr |
-| 004 | 字节 | 数据工程师 | 3.9/5 | ✅ | dachang-spa |
+| 003 | 某工程机械整机厂 | 采购主管 | 4.2/5 | ✅ | mokahr |
+| 004 | 某贸易公司 | 寻源专员 | 3.8/5 | ✅ | dachang-spa |
 | 005 | 某公司 | XX | 2.5/5 | ❌ | boss-zhipin |
 
 → 跑 npm run merge（node tools/merge-tracker.mjs）把 TSV 合并进 applications.md

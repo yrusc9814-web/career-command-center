@@ -23,13 +23,13 @@
 
 ```markdown
 ## 待处理
-- [ ] https://jobs.bytedance.com/positions/123
-- [ ] https://www.deepseek.com/careers/data-engineer | DeepSeek | 数据工程师
+- [ ] https://careers.example-oem.com/positions/123
+- [ ] https://careers.example-trader.com/jobs/procurement-specialist | 某工程机械贸易公司 | 采购专员
 - [!] https://liepin.com/job/xxx — Error: 需要登录
 
 ## 已处理
-- [x] #143 | https://jobs.bytedance.com/positions/789 | 字节跳动 | 数据开发 | 4.2/5 | PDF ✅
-- [x] #144 | https://www.zhipin.com/job_detail/xxx | 某公司 | 后端 | 2.1/5 | PDF ❌
+- [x] #143 | https://careers.example-oem.com/positions/789 | 某工程机械整机厂 | 采购专员 | 4.2/5 | PDF ✅
+- [x] #144 | https://www.zhipin.com/job_detail/xxx | 某贸易公司 | 寻源专员 | 2.1/5 | PDF ❌
 ```
 
 ## 国内门户硬跳过规则（2026-04 新增，节流关键）
@@ -41,7 +41,7 @@
 | `zhipin.com`（Boss直聘） | 反爬 + 登录墙 |
 | `lagou.com` | 反爬 + 登录墙 |
 | `liepin.com` | 登录墙 |
-| `mokahr.com` / `*.mokahr.com` | SPA + 反爬，AI 独角兽常用 |
+| `mokahr.com` / `*.mokahr.com` | SPA + 反爬，电商 / 新消费 / 供应链服务企业常用 |
 | `feishu.cn` / `*.feishu.cn` | 飞书表单反爬 |
 | `maimai.cn`（脉脉招聘） | 必须登录 |
 | `linkedin.com/jobs` | 登录墙 |
@@ -51,9 +51,9 @@
 
 ## JD 提取规则（非硬跳过域名）
 
-对不在上表里的 URL（大厂 careers 自有域、V2EX、GitHub、公众号公开页等）：
+对不在上表里的 URL（企业自有招聘域、V2EX、GitHub、公众号公开页等）：
 
-1. **大厂 careers 自有域**（`jobs.bytedance.com` / `talent.alibaba.com` / `careers.tencent.com` / `zhaopin.meituan.com` 等）：Playwright `browser_navigate` + `browser_snapshot`，**一次**
+1. **企业自有招聘域**（如 `careers.{某公司}.com` / `join.{某公司}.com` 等）：Playwright `browser_navigate` + `browser_snapshot`，**一次**
 2. **公开静态页**（V2EX / GitHub / `*.xxx.com/jobs/`）：WebFetch，**一次**
 3. 其余陌生域：WebFetch 试**一次**
 
@@ -66,7 +66,7 @@
 
 **特殊情况（沿用）：**
 - **PDF URL**：用 Read tool 读
-- **`local:` 前缀**：读本地文件。例：`local:jds/字节跳动-data-eng.md` → 读 `jds/字节跳动-data-eng.md`
+- **`local:` 前缀**：读本地文件。例：`local:jds/某工程机械整机厂-采购专员.md` → 读 `jds/某工程机械整机厂-采购专员.md`
 
 ## 自动编号
 
