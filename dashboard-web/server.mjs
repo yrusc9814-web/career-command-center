@@ -82,6 +82,7 @@ const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
 };
@@ -117,7 +118,7 @@ const server = http.createServer((req, res) => {
   const p = u.pathname;
 
   try {
-    if (req.method === 'GET' && (p === '/' || p === '/index.html' || p === '/styles.css' || p === '/app.js')) {
+    if (req.method === 'GET' && (p === '/' || p === '/index.html' || p === '/styles.css' || p === '/app.js' || p === '/lib/view-model.mjs')) {
       return serveStatic(res, p);
     }
 
@@ -203,7 +204,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Career Ops Dashboard → http://${HOST}:${PORT}`);
+  console.log(`求职决策中枢 Dashboard → http://${HOST}:${PORT}`);
   console.log('  数据源: data/search-results-*.json, inbox/, reports/, data/applications.md, config/profile.yml');
   console.log('  只读展示层；可写仅 dashboard-state.json 与 canonical 状态写回');
 });

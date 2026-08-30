@@ -26,7 +26,7 @@ function pickInput() {
     .filter(f => /^search-results-\d{8}-\d{4}\.json$/.test(f))
     .sort();
   if (!files.length) {
-    console.error('未找到 data/search-results-*.json。先运行 /career-ops browser-search 采集岗位。');
+    console.error('未找到 data/search-results-*.json。请先采集岗位（browser-search）后重试。');
     process.exit(1);
   }
   return path.join(DATA_DIR, files[files.length - 1]);
@@ -139,7 +139,7 @@ const COLUMNS = [
   ['岗位链接',        j => j.job_url],
   ['完整JD',          j => j.description],
   ['CV匹配度',        j => cvMatchText(j)],
-  ['Career Ops评分',  j => j.analysis?.career_ops_score],
+  ['综合评分',         j => j.analysis?.career_ops_score],
   ['可信度',          j => confidenceText(j)],
   ['初筛分(rule)',    j => j.analysis?.rule_score],
   ['推荐等级',        j => j.analysis?.recommendation],
@@ -174,7 +174,7 @@ async function buildExcel(data, outPath) {
       row.getCell(linkColIdx).value = { text: '打开岗位', hyperlink: linkVal };
       row.getCell(linkColIdx).font = { color: { argb: 'FF0563C1' }, underline: true };
     }
-    for (const numericName of ['Career Ops评分', '初筛分(rule)']) {
+    for (const numericName of ['综合评分', '初筛分(rule)']) {
       const idx = COLUMNS.findIndex(([n]) => n === numericName) + 1;
       const cell = row.getCell(idx);
       const raw = cell.value;

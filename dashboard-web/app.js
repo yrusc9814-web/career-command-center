@@ -1,6 +1,15 @@
-// app.js — Career Ops Dashboard 前端（纯 vanilla，只读展示 + shortlist/status 写回）
+// app.js — 求职决策中枢 Dashboard 前端（纯 vanilla，只读展示 + shortlist/status 写回）
+//
+// 三层结果彻底分离（Phase 6）：CV Match（0-100）/ Career Score（1-5）/ Recommendation
+// （Runtime 枚举）各自独立展示；分数、推荐结论、资格、blocker 全部直接消费 Runtime
+// 输出字段，前端零评分、零决策推导（展示层文案映射在 ./lib/view-model.mjs）。
 /* eslint-env browser */
 'use strict';
+
+import {
+  displayDimensions, dimStatusZh, gapLevelZh, blockerHits, gapItemText,
+  traceLines, zhMetrics, reasonZh, verdictCards, recommendationCells, recClassOf, confClassOf,
+} from './lib/view-model.mjs';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
@@ -29,7 +38,11 @@ function toast(msg) {
   t.__t = setTimeout(() => t.classList.add('hidden'), 2600);
 }
 function confClass(percent) {
-  return percent >= 85 ? 'conf-hi' : percent >= 60 ? 'conf-mid' : 'conf-lo';
+  return confClassOf(percent);
+}
+// confidence 展示守卫：percent 缺失/非有限数 → 不渲染可信度芯片（绝不显示 "null%"）
+function hasConf(c) {
+  return !!(c && c.percent != null && Number.isFinite(Number(c.percent)));
 }
 function fmtSalaryK(range) {
   if (range == null) return '—';
@@ -201,16 +214,10 @@ function renderDash() {
   const s = d.stats;
   const cfg = d.search_config;
   const rec = s.by_recommendation;
-  const recDefs = [
-    ['强烈推荐', rec['强烈推荐'] || 0, 'rc-strong'],
-    ['推荐', rec['推荐'] || 0, 'rc-good'],
-    ['一般', rec['一般'] || 0, 'rc-neutral'],
-    ['不推荐', rec['不推荐'] || 0, 'rc-neutral'],
-    ['硬红线', rec['硬红线跳过'] || 0, 'rc-neutral'],
-  ];
-  const recTotal = recDefs.reduce((n, x) => n + x[1], 0);
-  const recCells = recDefs.map(([label, n, cls]) =>
+  // 五格顺序/文案固定，数值全部来自 Runtime 聚合（不硬编码计数）
+  const recCells = recommendationCells(rec).map(([label, n, cls]) =>
     `<div class="rec-cell ${cls}"><div class="rc2-num">${n}</div><div class="rc2-label">${esc(label)}</div></div>`).join('');
+  const recTotal = recommendationCells(rec).reduce((n, x) => n + x[1], 0);
   const pct = (n) => s.total ? Math.round(n / s.total * 100) : 0;
 
   const topJobs = d.jobs.slice().sort((a, b) =>
@@ -242,8 +249,8 @@ function renderDash() {
           <div class="sg-row"><span class="k">投递跟踪</span><span>${d.tracker.rows} 行</span></div>
         </div>
         <div class="summary-group">
-          <div class="sg-row"><span class="k">平均简历匹配度</span><span>${s.avg_cv_match != null ? s.avg_cv_match + '%' : '—'}</span></div>
-          <div class="sg-row"><span class="k">平均综合评分</span><span>${s.avg_career_ops_score != null ? s.avg_career_ops_score + ' / 5' : '—'}</span></div>
+          <div class="sg-row"><span class="k">平均简历匹配度</span><span>${s.avg_cv_match != null ? s.avg_cv_match + '%' : '暂无数据'}</span></div>
+          <div class="sg-row"><span class="k">平均综合评分</span><span>${s.avg_career_ops_score != null ? s.avg_career_ops_score + ' / 5' : '暂无数据'}</span></div>
           <div class="sg-row"><span class="k">薪资</span><span>${cfg.salary_min_k ?? '?'}K–${cfg.salary_max_k ?? '?'}K</span></div>
           <div class="sg-row"><span class="k">最后运行</span><span>${esc((d.last_run_at || '—').replace('T', ' ').slice(0, 16))}</span></div>
           <div class="sg-row"><span class="k">收件箱待处理</span><span>${d.inbox_pending} 个</span></div>
@@ -254,7 +261,7 @@ function renderDash() {
       <div class="dash-h-row"><h3 class="dash-h">本轮岗位排序</h3><span class="fine">按综合评分排序，不代表建议投递</span></div>
       ${topJobs.length ? `<div class="top-jobs">${topJobs.map(topJobRow).join('')}</div>` : '<div class="fine">还没有岗位数据，运行 browser-search 采集后这里会出现本轮岗位</div>'}
     </section>
-    <div class="note-card">💡 排名与推荐来自 Career Ops 评分引擎（115 权重归一化 + 无数据维度出分母）。Dashboard 只展示结果，不自行计算。想投（⭐）只是收藏，不等于已投递；状态修改会写回 data/applications.md 的 canonical 状态。</div>`;
+    <div class="note-card">💡 排名与推荐来自本地评分引擎（冻结采购十维权重归一化，无数据维度不计入分母）。Dashboard 只展示 Runtime 结果，不自行计算、不合成总分。想投（⭐）只是收藏，不等于已投递；状态修改会写回 data/applications.md 的 canonical 状态。</div>`;
   $$('.top-job-row', $('#dashView')).forEach(row => {
     row.onclick = () => {
       state.activeJobId = row.dataset.job;
@@ -288,10 +295,7 @@ function starStat(label, num) {
     <div class="ring-value">${esc(num)}</div>
   </div>`;
 }
-// 展示层文本映射（不修改原始数据）：品牌指标名 → 中文
-function zhMetrics(s) {
-  return String(s ?? '').replace(/Career Ops Score/g, '综合评分');
-}
+// 展示层文本映射（zhMetrics）在 ./lib/view-model.mjs：Runtime 文案中的旧品牌指标名 → 中文
 // 多条建议字符串 → 逐条列表（仅在存在 ①-⑳ 明确编号边界时拆分，保留原编号）
 function listify(text) {
   const s = String(text ?? '').trim();
@@ -303,14 +307,7 @@ function listify(text) {
   }
   return `<p>${esc(s)}</p>`;
 }
-// 评分维度显示名：采购/供应链岗位将技术栈维度映射为数字化语言（底层 key/权重不变）
-function dimDisplayName(name, job) {
-  let s = String(name || '');
-  if (/采购|供应链|寻源|买手/.test(`${job.title || ''}${job.company || ''}`)) {
-    s = s.replace(/技术栈现代度/g, '数字化与工具能力');
-  }
-  return s.replace(/Comp（含工时折算）/g, '薪酬（含工时折算）');
-}
+// 评分维度显示名：统一来自 view-model DIMENSION_ZH（冻结十维，displayDimensions 已过滤退役维度）
 // JD 原文逐行排版：保留【结构标题】与编号列表，不压成大段落（保守拆分，仅识别明确标志）
 function jdHtml(text) {
   const s = String(text || '');
@@ -336,10 +333,10 @@ function topJobRow(j) {
     <span class="tj-chips">
       <span class="score-chip cv">匹配 <b>${a.cv_match_score != null ? a.cv_match_score + '%' : '—'}</b></span>
       <span class="score-chip ops">综合 <b>${a.career_ops_score ?? '—'}</b>/5</span>
-      ${conf ? `<span class="score-chip ${confClass(conf.percent)}">可信度 <b>${conf.percent}%</b> · ${esc(conf.level)}</span>` : ''}
+      ${hasConf(conf) ? `<span class="score-chip ${confClass(conf.percent)}">评分可信度 <b>${conf.percent}%</b>${conf.level != null ? ' · ' + esc(conf.level) : ''}</span>` : ''}
       ${a.recommendation ? `<span class="rec-chip rec-${esc(a.recommendation)}">${esc(a.recommendation)}</span>` : ''}
     </span>
-    <div class="tj-reason">${esc(zhMetrics(a.recommendation_reason || '—'))}</div>
+    <div class="tj-reason">${esc(reasonZh(a.recommendation_reason) || '—')}</div>
   </button>`;
 }
 
@@ -361,7 +358,7 @@ function renderRuns() {
         ${r.risk_events?.length ? `<span class="pill bad">风控 ${r.risk_events.length}</span>` : ''}
         <span class="pill">${r.job_count} 岗位</span>
       </div>
-    </button>`).join('') : `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">还没有搜索记录</div><div class="empty-sub">运行 /career-ops browser-search 后这里会出现每轮采集记录</div></div>`;
+    </button>`).join('') : `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">还没有搜索记录</div><div class="empty-sub">完成一轮岗位采集后，这里会出现每轮采集记录</div></div>`;
   $$('.run-card', $('#runsView')).forEach(btn => {
     btn.onclick = () => {
       state.activeRun = state.activeRun === btn.dataset.run ? null : btn.dataset.run;
@@ -394,7 +391,7 @@ function renderSettings() {
       <div class="kv">${d.states.map(s => `<span class="k">${s.id}</span><span>${s.zh}</span>`).join('')}</div>
       <div class="fine" style="margin-top:6px">写回数据文件时仍使用英文状态代码，界面一律显示中文。</div>
     </div>
-    <div class="note-card">本面板是 Career Ops 的本地结果展示层：不抓取 Boss、不调用 AI、不上传任何数据，仅监听 127.0.0.1:8790。</div>`;
+    <div class="note-card">本面板是本地结果展示层：不抓取 Boss、不调用 AI、不上传任何数据，仅监听 127.0.0.1:8790。</div>`;
 }
 
 // ── 岗位列表 ──
@@ -403,7 +400,7 @@ function renderList() {
   const d = state.data;
   const el = $('#jobList');
   if (!jobs.length) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">🗂️</div><div class="empty-title">没有匹配的岗位</div><div class="empty-sub">调整筛选条件或运行 /career-ops browser-search 采集新岗位</div></div>`;
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🗂️</div><div class="empty-title">没有匹配的岗位</div><div class="empty-sub">调整筛选条件，或采集新岗位后再回来查看</div></div>`;
     return;
   }
   el.innerHTML = jobs.map(j => {
@@ -426,7 +423,7 @@ function renderList() {
       <div class="job-score-row">
         <span class="score-chip cv">匹配 <b>${a.cv_match_score != null ? a.cv_match_score + '%' : '—'}</b></span>
         <span class="score-chip ops">综合 <b>${a.career_ops_score ?? '—'}</b>/5</span>
-        ${conf ? `<span class="score-chip ${confClass(conf.percent)}">可信度 <b>${conf.percent}%</b> · ${esc(conf.level)}</span>` : ''}
+        ${hasConf(conf) ? `<span class="score-chip ${confClass(conf.percent)}">评分可信度 <b>${conf.percent}%</b>${conf.level != null ? ' · ' + esc(conf.level) : ''}</span>` : ''}
         ${a.recommendation ? `<span class="rec-chip rec-${esc(a.recommendation)}">${esc(a.recommendation)}</span>` : ''}
         ${j.status ? `<span class="status-chip">${esc(j.status_zh || j.status)}</span>` : ''}
       </div>
@@ -476,7 +473,11 @@ async function selectJob(jobId) {
 function renderDetail(j) {
   const a = j.analysis;
   const conf = a.score_confidence;
-  const recCls = ['强烈推荐', '推荐'].includes(a.recommendation) ? 'rec-good' : a.recommendation === '一般' ? 'rec-mid' : 'rec-bad';
+  const dims = displayDimensions(a.score_breakdown); // 只保留冻结十维，退役维度不展示
+  const blockerList = blockerHits(a.blockers);
+  const trace = traceLines(a.decision_trace);
+  const hardGaps = Array.isArray(a.hard_gaps) ? a.hard_gaps : [];
+  const softGaps = Array.isArray(a.soft_gaps) ? a.soft_gaps : [];
   const inner = $('#detailInner');
   inner.innerHTML = `
     <div class="d-head">
@@ -491,10 +492,7 @@ function renderDetail(j) {
     </div>
 
     <div class="d-verdict">
-      <div class="v-card"><div class="v-num cv">${a.cv_match_score != null ? a.cv_match_score + '%' : '—'}</div><div class="v-label">简历匹配度</div></div>
-      <div class="v-card"><div class="v-num ops">${a.career_ops_score ?? '—'}</div><div class="v-label">综合评分 / 5</div></div>
-      <div class="v-card"><div class="v-num ${recCls}">${esc(a.recommendation || '—')}</div><div class="v-label">推荐结论</div></div>
-      <div class="v-card"><div class="v-num ${conf ? confClass(conf.percent) : ''}">${conf ? conf.percent + '%' : '—'}</div><div class="v-label">可信度${conf ? ' · ' + esc(conf.level) : ''}</div></div>
+      ${verdictCards(a).map(c => `<div class="v-card"><div class="v-num ${esc(c.cls)}">${esc(c.num)}</div><div class="v-label">${esc(c.label)}</div></div>`).join('')}
     </div>
 
     <div class="d-actions">
@@ -506,12 +504,13 @@ function renderDetail(j) {
       ${j.report_file ? `<button class="btn ghost" id="toggleReportBtn">查看完整分析</button>` : ''}
     </div>
     ${j.report_file ? `<div class="d-section hidden" id="reportSection">
+      <div class="fine" style="margin:0 0 8px">旧版存档：该报告由旧版评分引擎生成，评分维度体系已更新，以下为历史存档原文。</div>
       <div class="report-meta"><span class="fine">来源：${esc(j.report_file)}</span><a class="d-link" href="/api/report?file=${encodeURIComponent(j.report_file)}" target="_blank" rel="noopener">打开 Markdown</a></div>
       <details class="report-details" open><summary>A-F 分析原文</summary><div class="report-text" id="reportContent-${esc(j.job_id)}">加载中…</div></details></div>` : ''}
 
     <div class="d-section">
       <h3>📌 推荐原因</h3>
-      <div class="reason-box">${esc(zhMetrics(a.recommendation_reason || '—'))}</div>
+      <div class="reason-box">${esc(reasonZh(a.recommendation_reason) || '—')}</div>
       <div class="kv-mini">
         <span class="k">薪资匹配</span><span>${esc(j.salary)}</span>
         <span class="k">地点匹配</span><span class="meta-item">${esc(j.city || '')}${j.district ? ' · ' + esc(j.district) : ''}</span>
@@ -522,27 +521,32 @@ function renderDetail(j) {
 
     ${a.strengths?.length ? `<div class="d-section"><h3>✅ 主要优势</h3><ul>${a.strengths.map(s => `<li class="strength-li">${esc(s)}</li>`).join('')}</ul></div>` : ''}
     ${a.gaps?.length ? `<div class="d-section"><h3>⚠️ 主要短板</h3><ul>${a.gaps.map(g => `<li class="gap-li">${esc(g)}</li>`).join('')}</ul></div>` : ''}
+    ${blockerList.length ? `<div class="d-section"><h3>⛔ 硬性阻断（硬红线）</h3><ul>${blockerList.map(b => `<li class="gap-li">${esc(gapLevelZh('BLOCKER'))}：${esc(b.zh)}</li>`).join('')}</ul><div class="fine" style="margin-top:6px">阻断只覆盖最终推荐结论（不推荐），不修改简历匹配度与综合评分。</div></div>` : ''}
+    ${hardGaps.length ? `<div class="d-section"><h3>⛔ 硬性缺口</h3><ul>${hardGaps.map(g => `<li class="gap-li">${esc(gapItemText(g) || '信息不足（待确认）')}</li>`).join('')}</ul></div>` : ''}
+    ${softGaps.length ? `<div class="d-section"><h3>🩹 可弥补缺口</h3><ul>${softGaps.map(g => `<li class="gap-li">${esc(gapItemText(g) || '信息不足（待确认）')}</li>`).join('')}</ul></div>` : ''}
     ${a.cv_advice ? `<details class="d-section d-fold"><summary>📝 简历修改建议</summary><div class="fold-body">${listify(a.cv_advice)}</div></details>` : ''}
     ${a.interview_focus ? `<details class="d-section d-fold"><summary>🎤 面试建议</summary><div class="fold-body">${listify(a.interview_focus)}</div></details>` : ''}
     ${a.hard_redline ? `<div class="d-section"><h3>🚨 硬红线</h3><p>命中 deal_breaker / 红线条件</p></div>` : ''}
+    ${trace.length ? `<details class="d-section d-fold"><summary>🧭 推荐决策链（Runtime 透传）</summary><div class="fold-body"><ul class="plain-steps">${trace.map(l => `<li>${esc(l)}</li>`).join('')}</ul><div class="fine" style="margin-top:6px">最终推荐结论 = Runtime 决策链输出；高简历匹配 + 较高综合评分仍可能因硬性阻断而不推荐。</div></div></details>` : ''}
 
     ${a.score_breakdown ? `<details class="d-section d-fold"><summary>🧮 评分明细</summary><div class="fold-body">
+      ${dims.length ? `
       <table class="bd-table">
         <thead><tr><th>维度</th><th>得分</th><th>权重</th><th>加权值</th><th>状态</th></tr></thead>
         <tbody>
-          ${a.score_breakdown.dimensions.map(dim => `
+          ${dims.map(dim => `
             <tr class="dim-row" data-dim="${esc(dim.key)}">
-              <td>${esc(dimDisplayName(dim.name, j))}</td>
+              <td>${esc(dim.name)}</td>
               <td class="${dim.status === 'unknown' ? 'dim-unknown' : ''}">${dim.score ?? '—'}</td>
               <td>${dim.weight}</td>
               <td class="${dim.status === 'unknown' ? 'dim-unknown' : ''}">${dim.weighted_value ?? '—'}</td>
-              <td class="${dim.status === 'unknown' ? 'dim-unknown' : ''}">${dim.status === 'unknown' ? '无数据' : '已知'}</td>
+              <td class="${dim.status === 'unknown' ? 'dim-unknown' : ''}">${dimStatusZh(dim.status)}</td>
             </tr>`).join('')}
         </tbody>
-      </table>
+      </table>` : '<div class="fine">该报告为旧版评分明细（旧维度已退役，不再展示、不补算）：暂无可展示维度，暂无数据。</div>'}
       <div id="dimDetail" class="dim-detail hidden"></div>
       <div class="bd-summary">
-        有效权重 ${a.score_breakdown.effective_weight} / ${a.score_breakdown.total_weight} · 可信度 ${conf ? conf.percent + '% · ' + conf.level : '—'}<br>
+        有效权重 ${a.score_breakdown.effective_weight} / ${a.score_breakdown.total_weight} · 评分可信度（Career Score）${hasConf(conf) ? conf.percent + '% · ' + conf.level : '暂无数据'}<br>
         综合评分<br>
         = Σ(加权值) ÷ 有效权重<br>
         = <b>${a.career_ops_score ?? '—'}</b> / 5
@@ -551,7 +555,7 @@ function renderDetail(j) {
     </div></details>` : ''}
 
     <details class="d-section d-fold">
-      <summary>📄 ${j.jd_completeness === 'complete' ? '完整 JD' : '已采集 JD'}<span class="jd-comp">JD 完整度：${{ complete: '完整', partial: '部分', unknown: '未知' }[j.jd_completeness || 'unknown']}</span></summary>
+      <summary>📄 ${j.jd_completeness === 'complete' ? '完整 JD' : '已采集 JD'}<span class="jd-comp">JD 完整度：${{ complete: '完整', partial: '部分', unknown: 'JD 未披露' }[j.jd_completeness || 'unknown']}</span></summary>
       <div class="fold-body"><div class="jd-text">${jdHtml(j.jd_original || j.description)}${j.jd_completeness === 'complete' || !j.benefits ? '' : `\n\n【福利】\n${j.benefits}`}</div></div>
     </details>
 
@@ -591,11 +595,11 @@ function renderDetail(j) {
   }
   $$('.dim-row', inner).forEach(row => {
     row.onclick = () => {
-      const dim = a.score_breakdown.dimensions.find(d => d.key === row.dataset.dim);
+      const dim = dims.find(d => d.key === row.dataset.dim);
       const box = $('#dimDetail');
       box.classList.remove('hidden');
       box.innerHTML = dim
-        ? `<b>${esc(dimDisplayName(dim.name, j))}</b>（权重 ${dim.weight}）${dim.status === 'unknown' ? ' · 无证据，未计入分母' : ''}<br>依据：${esc(zhMetrics(dim.reason || '—'))}<br>证据：${esc(zhMetrics(dim.evidence || '—'))}`
+        ? `<b>${esc(dim.name)}</b>（权重 ${dim.weight}）${dim.status === 'unknown' ? ' · 暂无数据，未计入分母' : ''}<br>依据：${esc(zhMetrics(dim.reason || '暂无数据'))}<br>证据：${esc(zhMetrics(dim.evidence || '暂无数据'))}`
         : '';
     };
   });

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Career Ops · 求职决策中枢</title>
+<title>求职决策中枢</title>
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -14,7 +14,7 @@
     <div class="identity">
       <div class="avatar" id="avatar">Z</div>
       <div>
-        <div class="brand">Career Ops</div>
+        <div class="brand">求职指挥中心</div>
         <div class="tagline" id="tagline">求职决策中枢</div>
       </div>
     </div>
@@ -28,11 +28,11 @@
         <div class="nav-label">岗位决策</div>
         <button class="nav-btn" data-page="all"><span class="nav-icon">🗂️</span><span>全部岗位</span><span class="count" id="cnt-all">0</span></button>
         <button class="nav-btn" data-page="shortlist"><span class="nav-icon">⭐</span><span>想投</span><span class="count" id="cnt-short">0</span></button>
-        <button class="nav-btn" data-page="Evaluated"><span class="nav-icon">🟡</span><span>待决定</span><span class="count" id="cnt-Evaluated">0</span></button>
+        <button class="nav-btn" data-page="Evaluated"><span class="nav-icon">🟡</span><span>已分析（待决策）</span><span class="count" id="cnt-Evaluated">0</span></button>
         <button class="nav-btn" data-page="Applied"><span class="nav-icon">📤</span><span>已投递</span><span class="count" id="cnt-Applied">0</span></button>
         <button class="nav-btn" data-page="Responded"><span class="nav-icon">💬</span><span>招聘方回应</span><span class="count" id="cnt-Responded">0</span></button>
         <button class="nav-btn" data-page="Interview"><span class="nav-icon">🎤</span><span>面试</span><span class="count" id="cnt-Interview">0</span></button>
-        <button class="nav-btn" data-page="Offer"><span class="nav-icon">🎉</span><span>录用</span><span class="count" id="cnt-Offer">0</span></button>
+        <button class="nav-btn" data-page="Offer"><span class="nav-icon">🎉</span><span>Offer（录用）</span><span class="count" id="cnt-Offer">0</span></button>
         <button class="nav-btn" data-page="closed"><span class="nav-icon">🗄️</span><span>已放弃 / 淘汰</span><span class="count" id="cnt-closed">0</span></button>
       </div>
       <div class="nav-section">
@@ -104,6 +104,6 @@
 
 </main>
 <div class="toast hidden" id="toast"></div>
-<script src="/app.js"></script>
+<script type="module" src="/app.js"></script>
 </body>
 </html>

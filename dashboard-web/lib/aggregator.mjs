@@ -10,8 +10,8 @@ import path from 'node:path';
 
 export const CANONICAL_STATES = ['Evaluated', 'Applied', 'Responded', 'Interview', 'Offer', 'Rejected', 'Discarded', 'SKIP'];
 export const STATE_ZH = {
-  Evaluated: '待决定', Applied: '已投递', Responded: '招聘方已回应', Interview: '面试中',
-  Offer: '录用', Rejected: '被拒', Discarded: '已放弃', SKIP: '不投',
+  Evaluated: '已分析（待决策）', Applied: '已投递', Responded: '招聘方回应', Interview: '面试',
+  Offer: 'Offer（录用）', Rejected: '未通过', Discarded: '已放弃', SKIP: '不投',
 };
 
 const readJsonSafe = (p) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; } };
@@ -220,12 +220,25 @@ export function buildState(p) {
         notes: j.notes || null,
         analysis: {
           cv_match_score: a.cv_match_score ?? null,
-          career_ops_score: a.career_ops_score ?? a.score ?? null,
+          cv_match_confidence: a.cv_match_confidence ?? null,
+          // Career Score：Phase 3+ SoT 字段为 career_ops_score；兼容 career_score / 旧 score 别名。
+          // 只透传，不重算、不合成。
+          career_ops_score: a.career_ops_score ?? a.career_score ?? a.score ?? null,
+          career_score: a.career_ops_score ?? a.career_score ?? a.score ?? null,
           rule_score: a.rule_score ?? null,
-          score_confidence: a.score_confidence || null,
+          score_confidence: a.score_confidence || null,   // Career Score 层可信度（不与 CV Match 可信度混算）
           score_breakdown: a.score_breakdown || null,
-          recommendation: a.recommendation || null,
+          dimensions: a.dimensions || null,               // Runtime 新格式维度数据（若有）
+          recommendation: a.recommendation || null,        // Runtime 最终推荐，前端禁止重推导
           recommendation_reason: a.recommendation_reason || null,
+          decision_trace: a.decision_trace ?? a.trace ?? null, // 决策链透传（不重放、不解释）
+          blockers: a.blockers || null,                    // candidate-side blocker 布尔（只覆盖 Recommendation）
+          hard_gaps: a.hard_gaps || null,                  // §22.1 四级：HARD_GAP
+          soft_gaps: a.soft_gaps || null,                  // §22.1 四级：SOFT_GAP
+          hard_requirements: a.hard_requirements || null,  // Eligibility 明细（透传备用）
+          eligibility_status: a.eligibility_status || null,
+          taxonomy: a.taxonomy || null,                    // Archetype/品类归档（透传）
+          capability_summary: a.capability_summary || a.capabilities_summary || a.capabilities || null,
           strengths: a.strengths || [],
           gaps: a.gaps || [],
           cv_advice: a.cv_advice || null,
@@ -246,7 +259,11 @@ export function buildState(p) {
     const r = j.analysis.recommendation || '未分析';
     byRec[r] = (byRec[r] || 0) + 1;
   }
-  const avg = (arr, f) => arr.length ? Math.round(arr.reduce((s, x) => s + f(x), 0) / arr.length * 10) / 10 : null;
+  // 平均值只对存在且有限数值的岗位求平均；缺失不当作 0 分；全无效 → null（展示层显示"暂无数据"）
+  const avg = (arr, f) => {
+    const vals = arr.map(f).filter(v => typeof v === 'number' && Number.isFinite(v));
+    return vals.length ? Math.round(vals.reduce((s, x) => s + x, 0) / vals.length * 10) / 10 : null;
+  };
   const newest = runs[runs.length - 1];
   const profileJobSearch = profile?.job_search || {};
 
@@ -275,8 +292,8 @@ export function buildState(p) {
       analyzed: analyzed.length,
       shortlisted: jobs.filter(j => j.shortlisted).length,
       by_recommendation: byRec,
-      avg_cv_match: avg(analyzed, j => j.analysis.cv_match_score ?? 0),
-      avg_career_ops_score: avg(analyzed, j => j.analysis.career_ops_score ?? 0),
+      avg_cv_match: avg(analyzed, j => j.analysis.cv_match_score),
+      avg_career_ops_score: avg(analyzed, j => j.analysis.career_ops_score),
     },
     tracker: { file: 'data/applications.md', rows: appRows.length },
     inbox_pending: countInbox(inboxDir),
