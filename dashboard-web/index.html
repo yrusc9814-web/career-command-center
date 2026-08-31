@@ -14,7 +14,7 @@
     <div class="identity">
       <div class="avatar" id="avatar">Z</div>
       <div>
-        <div class="brand">求职指挥中心</div>
+        <div class="brand">Career-ops</div>
         <div class="tagline" id="tagline">求职决策中枢</div>
       </div>
     </div>
@@ -27,6 +27,7 @@
       <div class="nav-section">
         <div class="nav-label">岗位决策</div>
         <button class="nav-btn" data-page="all"><span class="nav-icon">🗂️</span><span>全部岗位</span><span class="count" id="cnt-all">0</span></button>
+        <button class="nav-btn" data-page="pending"><span class="nav-icon">📥</span><span>待处理</span><span class="count" id="cnt-pending">0</span></button>
         <button class="nav-btn" data-page="shortlist"><span class="nav-icon">⭐</span><span>想投</span><span class="count" id="cnt-short">0</span></button>
         <button class="nav-btn" data-page="Evaluated"><span class="nav-icon">🟡</span><span>已分析（待决策）</span><span class="count" id="cnt-Evaluated">0</span></button>
         <button class="nav-btn" data-page="Applied"><span class="nav-icon">📤</span><span>已投递</span><span class="count" id="cnt-Applied">0</span></button>
@@ -75,6 +76,7 @@
       <select class="input" id="statusFilter"><option value="">全部状态</option></select>
       <label class="chk"><input type="checkbox" id="shortOnly"> 只看想投</label>
       <select class="input" id="sortBy">
+        <option value="rec">排序：推荐优先</option>
         <option value="score">排序：综合评分</option>
         <option value="cv">排序：简历匹配度</option>
         <option value="salary">排序：薪资</option>

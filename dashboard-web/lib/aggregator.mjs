@@ -68,7 +68,9 @@ export function parseApplications(text) {
   const lines = text.split(/\r?\n/);
   const headerIdx = lines.findIndex(l => l.includes('|') && /company/i.test(l) && /role/i.test(l));
   if (headerIdx === -1) return [];
-  const header = lines[headerIdx].split('|').map(c => c.trim().toLowerCase()).filter(c => c.length > 0);
+  // 'Job ID' 表头归一为 job_id（岗位身份列；8 状态 schema 的向后兼容扩展）
+  const header = lines[headerIdx].split('|').map(c => c.trim().toLowerCase()).filter(c => c.length > 0)
+    .map(c => (c === 'job id' ? 'job_id' : c));
   const rows = [];
   for (const line of lines.slice(headerIdx + 2)) {
     if (!line.includes('|')) break;
@@ -99,8 +101,43 @@ export function matchTrackerRow(rows, job) {
   }) || null;
 }
 
-/** 原位更新 applications.md 中某行 Status（不增删行、不动其他列） */
-export function updateApplicationsStatus(text, { company, role, status }) {
+// ---------------------------------------------------------------------------
+// 岗位身份（DASHBOARD_JOB_IDENTITY_FINAL_FIX）：
+// 单张岗位卡的稳定身份 = job_id（平台岗位唯一 ID，Boss 取自 URL，重抓稳定、跨帖唯一）。
+// tracker 行身份匹配按优先级分层短路（禁止 fuzzy role 参与人工状态匹配）：
+//   1) Job ID 列精确匹配 job.job_id —— 有命中即返回，不再看更低层
+//   2) 无 Job ID 的 legacy 行：URL 列包含该 job 的稳定链接段（job_detail/<job_id>）
+//   3) legacy 且两者皆无：normalizeCompany 相同 + Role 精确相等（严格等值，非模糊）
+// 每层命中多行 → 返回多行，由调用方 AMBIGUOUS/DUPLICATE 拒绝；全层无命中 → 空数组。
+// ---------------------------------------------------------------------------
+export function findTrackerRows(rows, job) {
+  const nCompany = normalizeCompany(job.company);
+  const roleExact = String(job.title || '').trim().toLowerCase();
+  const jid = String(job.job_id || '').trim();
+
+  // 层 1：Job ID 精确
+  if (jid) {
+    const byId = rows.filter(r => String(r.job_id || '').trim() === jid);
+    if (byId.length > 0) return byId;
+  }
+  const legacy = rows.filter(r => !String(r.job_id || '').trim());
+
+  // 层 2：legacy URL 含 job_detail/<job_id>
+  if (jid) {
+    const byUrl = legacy.filter(r => String(r.url || '').includes(`job_detail/${jid}`));
+    if (byUrl.length > 0) return byUrl;
+  }
+
+  // 层 3：legacy 公司归一互相包含 + role 精确相等
+  return legacy.filter(r => {
+    const rc = normalizeCompany(r.company);
+    const rr = String(r.role || '').trim().toLowerCase();
+    return rc && nCompany && (rc === nCompany || rc.includes(nCompany) || nCompany.includes(rc)) && rr && rr === roleExact;
+  });
+}
+
+/** 原位更新 applications.md 中某行 Status（不增删行、不动其他列）；jobId 提供时回填 Job ID 列 */
+export function updateApplicationsStatus(text, { company, role, status, job_id }) {
   const lines = text.split(/\r?\n/);
   const headerIdx = lines.findIndex(l => l.includes('|') && /company/i.test(l) && /role/i.test(l));
   if (headerIdx === -1) return { text, updated: false };
@@ -108,20 +145,22 @@ export function updateApplicationsStatus(text, { company, role, status }) {
   const statusCol = header.indexOf('status');
   const companyCol = header.indexOf('company');
   const roleCol = header.indexOf('role');
+  const jobIdCol = header.indexOf('job id');
   let updated = false;
   const nTarget = normalizeCompany(company);
-  const roleLc = String(role || '').toLowerCase();
+  const roleLc = String(role || '').trim().toLowerCase();
   for (let i = headerIdx + 2; i < lines.length; i++) {
     const line = lines[i];
     if (!line.includes('|')) break;
     const cells = line.split('|');
     const inner = cells.slice(1, -1);
     const rc = normalizeCompany(inner[companyCol]);
-    const rr = String(inner[roleCol] || '').toLowerCase();
+    const rr = String(inner[roleCol] || '').trim().toLowerCase();
     const match = (rc.includes(nTarget) || nTarget.includes(rc)) &&
       (rr === roleLc || rr.includes(roleLc) || roleLc.includes(rr));
     if (match) {
       inner[statusCol] = status;
+      if (job_id && jobIdCol !== -1) inner[jobIdCol] = job_id;
       lines[i] = `| ${inner.map(c => c.trim()).join(' | ')} |`;
       updated = true;
       break;
@@ -130,8 +169,9 @@ export function updateApplicationsStatus(text, { company, role, status }) {
   return { text: lines.join('\n'), updated };
 }
 
-export function buildTsvLine({ num, date, company, role, status, score, pdf, report, notes }) {
-  return [num, date, company, role, status, score, pdf, report, notes].join('\t');
+export function buildTsvLine({ num, date, company, role, status, score, pdf, report, notes, job_id }) {
+  // 10 列：job_id 插在 role 后（与 applications.md 的 Job ID 列一致）；旧 9 列调用方兼容（job_id undefined → 空串落位）
+  return [num, date, company, role, job_id ?? '', status, score, pdf, report, notes].join('\t');
 }
 
 export function nextReportNum(reportsDir) {
@@ -189,7 +229,9 @@ export function buildState(p) {
   }
   for (const { run, j } of jobsById.values()) {
       const a = j.analysis || {};
-      const trackerRow = matchTrackerRow(appRows, j);
+      // 岗位身份匹配（job_id → URL → 公司+精确岗位名）；歧义（多行命中）不广播状态，status 保持 null 由人工处理
+      const trackerMatches = findTrackerRows(appRows, j);
+      const trackerRow = trackerMatches.length === 1 ? trackerMatches[0] : null;
       const rowReport = trackerRow?.report?.match(/\(([^)]+\.md)\)/)?.[1] || null;
       const jdOriginal = loadInboxJd(history, inboxDir, j.job_id);
       const jdText = jdOriginal || String(j.description || '').trim();
@@ -317,35 +359,66 @@ export function makeStatusHandler({ dataDir, additionsDir, mergeCommand }) {
     if (!CANONICAL_STATES.includes(status)) {
       return { ok: false, error: `非法状态：${status}（canonical: ${CANONICAL_STATES.join('/')}）` };
     }
+    if (!job.job_id) {
+      return { ok: false, error: 'JOB_NOT_FOUND', detail: '岗位缺少稳定 job_id，拒绝模糊写回' };
+    }
     const appsPath = path.join(dataDir, 'applications.md');
     let appsText = readTextSafe(appsPath);
     if (appsText == null) {
-      appsText = '# Applications Tracker\n\n| # | Date | Company | Role | Score | Status | PDF | Report | Notes |\n|---|------|---------|------|-------|--------|-----|--------|-------|\n';
+      appsText = '# Applications Tracker\n\n| # | Date | Company | Role | Job ID | Score | Status | PDF | Report | Notes |\n|---|------|---------|------|--------|-------|--------|-----|--------|-------|\n';
     }
-    const { text: newText, updated } = updateApplicationsStatus(appsText, {
-      company: job.company, role: job.title, status,
-    });
-    if (updated) {
+
+    // ── 岗位身份匹配（唯一 SoT = findTrackerRows：job_id → URL → 公司+精确岗位名，禁 fuzzy）──
+    const appRows = parseApplications(appsText);
+    const matched = findTrackerRows(appRows, job);
+    if (matched.length > 1) {
+      return { ok: false, error: 'AMBIGUOUS_JOB_MATCH', matches: matched.map(m => `#${m['#']} ${m.company} / ${m.role}`) };
+    }
+    const existing = matched[0] || null;
+
+    if (existing) {
+      // 已有岗位：原位只改目标行并回填 Job ID（legacy 行补齐身份）
+      const { text: newText, updated } = updateApplicationsStatus(appsText, {
+        company: existing.company || job.company, role: existing.role || job.title, status, job_id: job.job_id,
+      });
+      if (!updated) {
+        return { ok: false, error: 'TRACKER_ROW_NOT_UPDATED', detail: `tracker 命中 #${existing['#']} 但原位更新失败（company=${job.company} role=${job.title}）` };
+      }
       fs.writeFileSync(appsPath, newText, 'utf8');
-      return { ok: true, how: 'updated-in-place' };
+      // 写后验证：重新读盘解析必须看到该 job_id 行的新状态
+      const verifyRows = parseApplications(readTextSafe(appsPath) || '');
+      const verify = findTrackerRows(verifyRows, job)[0] || null;
+      if (!verify || verify.status !== status) {
+        return { ok: false, error: 'POST_WRITE_VERIFY_FAILED', detail: `期望 ${status}，实际 ${verify ? verify.status : '未找到'}` };
+      }
+      return { ok: true, how: 'updated-in-place', status };
     }
-    // 不在 tracker → 走合规管道：TSV + merge-tracker
+
+    // ── 新岗位首次写入：TSV + merge-tracker 管道（行携带 Job ID，同公司不同岗位各自成行）──
     fs.mkdirSync(additionsDir, { recursive: true });
-    const num = String(nextReportNum(path.join(dataDir, '..', 'reports'))).padStart(3, '0');
+    const maxNum = appRows.reduce((m, r) => Math.max(m, parseInt(r['#'], 10) || 0), 0);
+    const num = String(maxNum + 1).padStart(3, '0');
     const date = new Date().toISOString().slice(0, 10);
     const tsv = buildTsvLine({
       num, date,
       company: job.company,
       role: job.title,
+      job_id: job.job_id,
       status,
       score: job.analysis?.career_ops_score ? `${job.analysis.career_ops_score}/5` : '-/5',
       pdf: '❌',
-      report: job.report_file ? `[${num}](${job.report_file})` : '-',
+      report: '-',
       notes: 'via dashboard status change',
     });
     const tsvPath = path.join(additionsDir, `dashboard-${job.job_id}.tsv`);
     fs.writeFileSync(tsvPath, tsv + '\n', 'utf8');
     const res = mergeCommand(); // 同步执行 node tools/merge-tracker.mjs
-    return { ok: true, how: 'tsv+merge', tsv: path.basename(tsvPath), merge: res };
+    // 写后验证：merge 后该 job_id 必须以目标状态出现，否则向调用方报错（不静默）
+    const afterText = readTextSafe(appsPath) || '';
+    const verify = findTrackerRows(parseApplications(afterText), job)[0] || null;
+    if (!verify || verify.status !== status) {
+      return { ok: false, error: 'POST_WRITE_VERIFY_FAILED', detail: `merge 后未在 tracker 找到目标岗位的 ${status} 状态`, merge: res };
+    }
+    return { ok: true, how: 'tsv+merge', status, tsv: path.basename(tsvPath), merge: res };
   };
 }

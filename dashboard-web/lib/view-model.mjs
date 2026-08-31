@@ -194,6 +194,42 @@ export function confClassOf(percent) {
   return percent >= 85 ? 'conf-hi' : percent >= 60 ? 'conf-mid' : 'conf-lo';
 }
 
+// ---------------------------------------------------------------------------
+// 6.1 概览"本轮岗位排序"（仅展示排序，不重算任何 Runtime 结果）
+// 优先级：Recommendation（引擎枚举顺序）→ Career Score 降序 → CV Match 降序
+// → 三者完全相同时保持原始稳定顺序。未知 Recommendation 不报错、不当作"不推荐"，
+// 恒排在全部已知等级之后（rank = KNOWN 之后的最大值），同组保持稳定顺序。
+// SoT：tools/lib/scoring.mjs RECOMMENDATION_LEVELS = ['强烈推荐','推荐','一般','不推荐','硬红线跳过']
+// ---------------------------------------------------------------------------
+export const RECOMMENDATION_RANK = Object.freeze({
+  '强烈推荐': 0,
+  '推荐': 1,
+  '一般': 2,
+  '不推荐': 3,
+  '硬红线跳过': 4, // 引擎唯一枚举（scoring.mjs）
+  '硬红线': 4,     // 展示层别名容错（recommendationCells 同款文案）
+  'SKIP': 4,       // canonical 状态别名容错
+});
+const UNKNOWN_REC_RANK = 5;
+
+export function rankJobs(jobs) {
+  const list = (Array.isArray(jobs) ? jobs : []).map((j, i) => ({ j, i }));
+  list.sort((x, y) => {
+    const a = x.j.analysis || {}, b = y.j.analysis || {};
+    const rx = RECOMMENDATION_RANK[a.recommendation] ?? UNKNOWN_REC_RANK;
+    const ry = RECOMMENDATION_RANK[b.recommendation] ?? UNKNOWN_REC_RANK;
+    if (rx !== ry) return rx - ry;
+    const cx = (a.career_ops_score != null && Number.isFinite(Number(a.career_ops_score))) ? Number(a.career_ops_score) : -1;
+    const cy = (b.career_ops_score != null && Number.isFinite(Number(b.career_ops_score))) ? Number(b.career_ops_score) : -1;
+    if (cx !== cy) return cy - cx;
+    const vx = (a.cv_match_score != null && Number.isFinite(Number(a.cv_match_score))) ? Number(a.cv_match_score) : -1;
+    const vy = (b.cv_match_score != null && Number.isFinite(Number(b.cv_match_score))) ? Number(b.cv_match_score) : -1;
+    if (vx !== vy) return vy - vx;
+    return x.i - y.i;
+  });
+  return list.map(x => x.j);
+}
+
 // confidence 展示守卫：percent/level 缺失（null/undefined/非有限数）→ "—" / 省略，绝不显示 "null%"
 const confPercentText = (c) =>
   (c && c.percent != null && String(c.percent).trim() !== '' && Number.isFinite(Number(c.percent)))

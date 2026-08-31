@@ -66,17 +66,35 @@ const content = readFileSync(APPS_FILE, 'utf-8');
 const lines = content.split('\n');
 
 const entries = [];
+// 列布局自适应：12 列新布局（含 Job ID，位于 Role 后）与旧 9/11 列 legacy 布局。
+// 判定依据：该行 cell 数与表头（若含 Job ID 列则 +1 偏移）。
+const headerLine = lines.find(l => l.startsWith('|') && /company/i.test(l) && /role/i.test(l));
+const hasJobIdCol = !!headerLine && /job id/i.test(headerLine);
 for (const line of lines) {
   if (!line.startsWith('|')) continue;
+  if (headerLine && line === headerLine) continue;
+  if (/^\|\s*-{2,}/.test(line) || line.includes('---')) continue;
   const parts = line.split('|').map(s => s.trim());
-  if (parts.length < 9) continue;
-  const num = parseInt(parts[1]);
-  if (isNaN(num)) continue;
-  entries.push({
-    num, date: parts[2], company: parts[3], role: parts[4],
-    score: parts[5], status: parts[6], pdf: parts[7], report: parts[8],
-    notes: parts[9] || '',
-  });
+  if (hasJobIdCol) {
+    // | # | Date | Company | Role | Job ID | Score | Status | PDF | URL | Report | Notes | Closed At |
+    if (parts.length < 9) continue;
+    const num = parseInt(parts[1]);
+    if (isNaN(num)) continue;
+    entries.push({
+      num, date: parts[2], company: parts[3], role: parts[4], job_id: parts[5] || '',
+      score: parts[6], status: parts[7], pdf: parts[8], report: parts[10] || '',
+      notes: parts[11] || '', url: parts[9] || '',
+    });
+  } else {
+    if (parts.length < 9) continue;
+    const num = parseInt(parts[1]);
+    if (isNaN(num)) continue;
+    entries.push({
+      num, date: parts[2], company: parts[3], role: parts[4],
+      score: parts[5], status: parts[6], pdf: parts[7], report: parts[8],
+      notes: parts[9] || '', job_id: '',
+    });
+  }
 }
 
 console.log(`\n📊 Checking ${entries.length} entries in applications.md\n`);
@@ -108,11 +126,13 @@ for (const e of entries) {
 if (badStatuses === 0) ok('All statuses are canonical');
 
 // --- Check 2: Duplicates ---
+// key 必须保留中文字符：此前 [^a-z0-9] 会把纯中文公司/岗位剥成空串，
+// 导致任意两条中文行 key 相同（"::"）被误报 duplicates。
 const companyRoleMap = new Map();
 let dupes = 0;
 for (const e of entries) {
-  const key = e.company.toLowerCase().replace(/[^a-z0-9]/g, '') + '::' +
-    e.role.toLowerCase().replace(/[^a-z0-9 ]/g, '');
+  const key = e.company.toLowerCase().replace(/\s+/g, '') + '::' +
+    e.role.toLowerCase().replace(/\s+/g, '');
   if (!companyRoleMap.has(key)) companyRoleMap.set(key, []);
   companyRoleMap.get(key).push(e);
 }

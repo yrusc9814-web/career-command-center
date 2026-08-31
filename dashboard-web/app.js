@@ -9,6 +9,7 @@
 import {
   displayDimensions, dimStatusZh, gapLevelZh, blockerHits, gapItemText,
   traceLines, zhMetrics, reasonZh, verdictCards, recommendationCells, recClassOf, confClassOf,
+  rankJobs,
 } from './lib/view-model.mjs';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -23,6 +24,7 @@ const state = {
   page: 'dash',
   activeRun: null,     // run file filter
   activeJobId: null,
+  statusMutating: null, // per-job 写回锁（job_id），期间禁止第二次状态写入
   cache: {},
 };
 
@@ -91,10 +93,11 @@ function filteredJobs() {
   let jobs = d.jobs;
   if (state.activeRun) jobs = jobs.filter(j => j.run_file === state.activeRun);
   if (state.page === 'shortlist') jobs = jobs.filter(j => j.shortlisted);
+  else if (state.page === 'pending') jobs = jobs.filter(j => !j.status); // 待处理 = 无任何人工状态（tracker 无行）
   else if (state.page === 'closed') jobs = jobs.filter(j => ['Rejected', 'Discarded', 'SKIP'].includes(j.status));
   else if (['Evaluated', 'Applied', 'Responded', 'Interview', 'Offer'].includes(state.page)) {
     jobs = jobs.filter(j => j.status === state.page);
-  } else if (state.page !== 'all') jobs = []; // dash/runs/settings don't show list
+  } else if (!['all', 'pending', 'shortlist', 'closed'].includes(state.page)) jobs = []; // dash/runs/settings don't show list
 
   const q = $('#searchInput').value.trim().toLowerCase();
   const district = $('#districtFilter').value;
@@ -111,6 +114,7 @@ function filteredJobs() {
   if (shortOnly) jobs = jobs.filter(j => j.shortlisted);
 
   const by = $('#sortBy').value;
+  if (by === 'rec') return rankJobs(jobs); // 默认：与 Dashboard Top 同一 SoT
   const cmp = {
     score: (a, b) => (b.analysis.career_ops_score ?? -1) - (a.analysis.career_ops_score ?? -1),
     cv: (a, b) => (b.analysis.cv_match_score ?? -1) - (a.analysis.cv_match_score ?? -1),
@@ -126,12 +130,14 @@ function renderNav() {
   const d = state.data;
   const counts = {
     all: d.jobs.length,
+    pending: d.jobs.filter(j => !j.status).length,
     short: d.stats.shortlisted,
     runs: d.runs.length,
     closed: d.jobs.filter(j => ['Rejected', 'Discarded', 'SKIP'].includes(j.status)).length,
   };
   for (const s of d.states) counts[s.id] = d.jobs.filter(j => j.status === s.id).length;
   $('#cnt-all').textContent = counts.all;
+  $('#cnt-pending').textContent = counts.pending;
   $('#cnt-short').textContent = counts.short;
   $('#cnt-runs').textContent = counts.runs;
   $('#cnt-closed').textContent = counts.closed;
@@ -142,7 +148,7 @@ function renderNav() {
 function pageLabel() {
   const d = state.data;
   const names = {
-    dash: '概览', all: '全部岗位', shortlist: '⭐ 想投', runs: '搜索记录', settings: '数据与设置',
+    dash: '概览', all: '全部岗位', pending: '待处理', shortlist: '⭐ 想投', runs: '搜索记录', settings: '数据与设置',
     closed: '已放弃 / 淘汰',
   };
   if (names[state.page]) return names[state.page];
@@ -154,7 +160,7 @@ function renderAll() {
   const d = state.data;
   renderNav();
   $('#pageTitle').textContent = pageLabel();
-  const isList = ['all', 'shortlist', 'closed', ...d.states.map(s => s.id)].includes(state.page);
+  const isList = ['all', 'pending', 'shortlist', 'closed', ...d.states.map(s => s.id)].includes(state.page);
   // 概览/记录/设置：隐藏右侧单岗位详情栏，中栏扩展为完整内容区
   $('#shell').classList.toggle('wide', !isList);
   $('#detailPanel').classList.toggle('hidden', !isList);
@@ -175,7 +181,7 @@ function renderAll() {
   // 选项动态填充
   const districts = [...new Set(d.jobs.map(j => j.district).filter(Boolean))];
   fillSelect($('#districtFilter'), districts, '全部区域');
-  fillSelect($('#statusFilter'), d.states.map(s => s.id), '全部状态', s => s.zh);
+  fillSelect($('#statusFilter'), d.states, '全部状态', s => s.zh, s => s.id);
   if (state.activeJobId) {
     const job = d.jobs.find(j => j.job_id === state.activeJobId);
     if (job) renderDetail(job); else { state.activeJobId = null; renderEmptyDetail(); }
@@ -187,11 +193,17 @@ function renderAll() {
   }
 }
 
-function fillSelect(sel, values, label, fmt) {
+function fillSelect(sel, values, label, fmt, valOf) {
+  // values 支持原始值数组或对象数组；valOf 提取 option value，fmt 提取用户可见文字。
+  // 两者缺一不可——对象数组只传 fmt 会导致 option value 有值但 label 为空（空 option）。
+  const getVal = valOf ?? (v => v);
+  const getFmt = fmt ?? (v => v);
   const cur = sel.value;
   sel.innerHTML = `<option value="">${esc(label)}</option>` +
-    values.map(v => `<option value="${esc(v)}">${esc(fmt ? fmt(v) : v)}</option>`).join('');
-  if (values.includes(cur)) sel.value = cur;
+    values.map(v => `<option value="${esc(getVal(v))}">${esc(getFmt(v))}</option>`).join('');
+  const curVal = cur instanceof Object ? '' : cur;
+  const valList = values.map(getVal);
+  if (valList.includes(curVal)) sel.value = curVal;
 }
 
 function updateFilterState(isList) {
@@ -220,10 +232,9 @@ function renderDash() {
   const recTotal = recommendationCells(rec).reduce((n, x) => n + x[1], 0);
   const pct = (n) => s.total ? Math.round(n / s.total * 100) : 0;
 
-  const topJobs = d.jobs.slice().sort((a, b) =>
-    (b.analysis.career_ops_score ?? -1) - (a.analysis.career_ops_score ?? -1) ||
-    (b.analysis.cv_match_score ?? -1) - (a.analysis.cv_match_score ?? -1)
-  ).slice(0, 5);
+  // 展示排序（仅排序，不改数据）：Recommendation 优先 → Career Score 降序 → CV Match 降序；
+  // 默认预览前 10 个（<=10 全显示，>10 只显示前 10），不新增任何更多入口或切换控件。
+  const topJobs = rankJobs(d.jobs).slice(0, 10);
 
   $('#dashView').innerHTML = `
     <section class="dash-card">
@@ -258,7 +269,7 @@ function renderDash() {
       </div>
     </section>
     <section class="dash-card">
-      <div class="dash-h-row"><h3 class="dash-h">本轮岗位排序</h3><span class="fine">按综合评分排序，不代表建议投递</span></div>
+      <div class="dash-h-row"><h3 class="dash-h">本轮岗位排序</h3><span class="fine">推荐优先，其次按综合评分排序</span></div>
       ${topJobs.length ? `<div class="top-jobs">${topJobs.map(topJobRow).join('')}</div>` : '<div class="fine">还没有岗位数据，运行 browser-search 采集后这里会出现本轮岗位</div>'}
     </section>
     <div class="note-card">💡 排名与推荐来自本地评分引擎（冻结采购十维权重归一化，无数据维度不计入分母）。Dashboard 只展示 Runtime 结果，不自行计算、不合成总分。想投（⭐）只是收藏，不等于已投递；状态修改会写回 data/applications.md 的 canonical 状态。</div>`;
@@ -573,15 +584,29 @@ function renderDetail(j) {
     toast(j.shortlisted ? '已取消想投' : '⭐ 已加入想投');
     await refresh();
   };
+  // 状态写回：per-job mutation 锁（防连续 change 互相覆盖）；
+  // 成功后 await refresh() 全量重拉 /api/state 并 renderAll → 导航计数/列表/待处理全部从最新 SoT 重新派生；
+  // 失败则恢复 select 旧值并明确报错，绝不乐观伪更新。
   $('#statusSelect').onchange = async (ev) => {
     const status = ev.target.value;
     if (!status) return;
+    if (state.statusMutating) { ev.target.value = j.status || ''; return; } // 上一次写回尚未完成
+    state.statusMutating = j.job_id;
+    const sel = ev.target;
+    sel.disabled = true;
     const zh = (state.data.states.find(x => x.id === status) || {}).zh || status;
     try {
       const r = await api('/api/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ job_id: j.job_id, status }) });
+      if (r && r.ok === false) throw new Error(r.error + (r.detail ? `：${r.detail}` : ''));
       toast(`状态已写回：${zh}${r.how === 'tsv+merge' ? '（经 TSV+merge 管道）' : ''}`);
-      await refresh();
-    } catch (e) { toast(`写回失败：${e.message}`); ev.target.value = j.status || ''; }
+      await refresh(); // 全量重派生所有计数与列表（不做任何手工 +/-）
+    } catch (e) {
+      toast(`写回失败：${e.message}`);
+      sel.value = j.status || ''; // 恢复真实旧状态
+    } finally {
+      sel.disabled = false;
+      state.statusMutating = null;
+    }
   };
   const toggleReport = $('#toggleReportBtn');
   if (toggleReport) {

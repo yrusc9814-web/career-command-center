@@ -19,7 +19,7 @@ import {
   DIMENSION_ZH, RETIRED_DIM_KEYS, displayDimensions, dimStatusZh,
   GAP_LEVEL_ZH, gapLevelZh, blockerHits, gapItemText, BLOCKER_ZH,
   traceLines, unknownZh, zhMetrics, reasonZh,
-  verdictCards, recommendationCells, recClassOf, confClassOf,
+  verdictCards, recommendationCells, recClassOf, confClassOf, rankJobs,
 } from '../../dashboard-web/lib/view-model.mjs';
 // 冻结 SoT 只读引用：仅校验展示映射与之一致，不做任何计算
 import { SCORING_RUBRIC } from '../../tools/lib/scoring.mjs';
@@ -305,9 +305,13 @@ test('P17 canonical 状态映射与中文保留', () => {
 test('P18 用户可见区域清理 Career Ops 旧产品名；zhMetrics 清理 Runtime 文案', () => {
   const html = readWeb('index.html');
   const app = readWeb('app.js');
-  assert.ok(!/Career Ops|career-ops/i.test(html), 'index.html 不得残留 Career Ops');
-  assert.ok(!/Career Ops|career-ops/i.test(app), 'app.js 不得残留 Career Ops');
-  assert.ok(html.includes('求职指挥中心'));
+  // 品牌主标题已更名 Career-ops（用户裁决 2026-08-31）；"Career Ops"（带空格）仍禁残留，
+  // zhMetrics 指标名清理语义不变。
+  assert.ok(!/Career Ops/i.test(html), 'index.html 不得残留 "Career Ops"（带空格旧品牌）');
+  assert.ok(!/Career Ops/i.test(app), 'app.js 不得残留 "Career Ops"（带空格旧品牌）');
+  assert.ok(html.includes('<div class="brand">Career-ops</div>'), '主标题必须为 Career-ops（逐字）');
+  assert.ok(html.includes('求职决策中枢'), '副标题保持不变');
+  assert.ok(!html.includes('求职指挥中心'), '旧主标题不再出现在品牌位置');
   // Runtime 文案里的旧品牌指标名 → 中文（不修改数据）
   assert.equal(zhMetrics('职级严重倒退（Career Ops Score 2.24/5）'), '职级严重倒退（综合评分 2.24/5）');
   assert.equal(zhMetrics('Career Score 3.8/5'), '综合评分 3.8/5');
@@ -607,4 +611,188 @@ test('P31 reasonZh 推荐原因去内部术语：调试括号段移除 + 措辞�
   // 接线锁定：app.js 两处 recommendation_reason 展示点（列表行 + 详情 reason-box）均用 reasonZh
   const app = readWeb('app.js');
   assert.equal(app.split('reasonZh(a.recommendation_reason)').length - 1, 2);
+});
+
+// ---------------------------------------------------------------------------
+// 33. 本轮岗位排序（Recommendation → Career Score → CV Match）与 Top 10（用户裁决 2026-08-31）
+// 排序为纯展示层行为：只读 recommendation/career_ops_score/cv_match_score，不重算、不改数据。
+// ---------------------------------------------------------------------------
+
+const mkRanked = (id, rec, career, cv) => ({
+  job_id: id, title: '采购专员', company: `示例公司${id}`,
+  salary: '8-12K', city: '示例市', district: '示例区',
+  job_url: `https://www.zhipin.com/job_detail/${id}.html`,
+  analysis: { recommendation: rec, career_ops_score: career, cv_match_score: cv },
+});
+
+test('R1 推荐排在Career Score更高的"不推荐"之前（用户示例：3.8/84 不推荐 vs 3.76/100 推荐）', () => {
+  const a = mkRanked('a', '不推荐', 3.8, 84);
+  const b = mkRanked('b', '推荐', 3.76, 100);
+  const out = rankJobs([a, b]);
+  assert.equal(out[0].job_id, 'b');
+  assert.equal(out[0].analysis.cv_match_score, 100);   // 数据不被修改
+  assert.equal(out[0].analysis.career_ops_score, 3.76);
+  assert.equal(out[0].analysis.recommendation, '推荐');
+  assert.equal(out[1].analysis.career_ops_score, 3.8); // A 分数原样保留
+  assert.equal(out[1].analysis.recommendation, '不推荐');
+});
+
+test('R2-R5 五级枚举全序：强烈推荐>推荐>一般>不推荐>硬红线跳过', () => {
+  const strong = mkRanked('s', '强烈推荐', 2.0, 10);
+  const good = mkRanked('g', '推荐', 2.1, 20);
+  const mid = mkRanked('m', '一般', 2.2, 30);
+  const bad = mkRanked('b', '不推荐', 2.3, 40);
+  const red = mkRanked('r', '硬红线跳过', 2.4, 50);
+  const out = rankJobs([bad, red, mid, strong, good]).map(j => j.job_id);
+  assert.deepEqual(out, ['s', 'g', 'm', 'b', 'r']);
+});
+
+test('R6 同 Recommendation：Career Score 高者优先', () => {
+  const out = rankJobs([mkRanked('lo', '推荐', 3.0, 90), mkRanked('hi', '推荐', 4.1, 50)]);
+  assert.equal(out[0].job_id, 'hi');
+});
+
+test('R7 同 Recommendation 同 Career Score：CV Match 高者优先', () => {
+  const out = rankJobs([mkRanked('lo', '推荐', 3.5, 60), mkRanked('hi', '推荐', 3.5, 88)]);
+  assert.equal(out[0].job_id, 'hi');
+});
+
+test('R8 三键完全相同：保持原始稳定顺序', () => {
+  const a = mkRanked('a', '一般', 3.0, 70);
+  const b = mkRanked('b', '一般', 3.0, 70);
+  const c = mkRanked('c', '一般', 3.0, 70);
+  const out = rankJobs([c, a, b]).map(j => j.job_id);
+  assert.deepEqual(out, ['c', 'a', 'b']);
+});
+
+test('R9 未知 Recommendation：不崩溃、不当作不推荐，排在全部已知等级之后且保持稳定', () => {
+  const unknown1 = mkRanked('u1', '某些新枚举', 5.0, 100);
+  const unknown2 = mkRanked('u2', undefined, 5.0, 100);
+  const known = mkRanked('k', '不推荐', 1.0, 10);
+  const out = rankJobs([unknown1, unknown2, known]).map(j => j.job_id);
+  assert.deepEqual(out, ['k', 'u1', 'u2']);
+});
+
+test('R10-R12 Top N：默认最多 10；<=10 全显示；>10 只显示前 10（rankJobs 供 app.js slice(0,10)）', () => {
+  // 16 岗：5 推荐（Career 递减）+ 11 不推荐（Career 递减）
+  // 预期排序：5 个推荐占前 5（Career 降序），随后不推荐按 Career 降序补满 Top 10
+  const many = [];
+  for (let i = 0; i < 5; i++) many.push(mkRanked('g' + i, '推荐', 4.5 - i * 0.1, 90 - i));
+  for (let i = 0; i < 11; i++) many.push(mkRanked('b' + i, '不推荐', 3.0 - i * 0.1, 80 - i));
+  const ranked = rankJobs(many);
+  const top10 = ranked.slice(0, 10);
+  assert.equal(top10.length, 10); // >10 只显示前 10
+  assert.ok(top10.slice(0, 5).every(j => j.analysis.recommendation === '推荐'));   // 推荐档在前
+  assert.ok(top10.slice(5).every(j => j.analysis.recommendation === '不推荐'));   // 其余由不推荐档按分数补位
+  assert.equal(top10[5].analysis.career_ops_score, 3.0); // 不推荐档内部 Career 降序
+  const few = rankJobs(many.slice(0, 7));
+  assert.equal(few.length, 7); // <=10 全显示（rankJobs 不截断，截断由展示层 slice 控制）
+});
+
+test('R13-R15 Top 列表接线：无"查看全部"/展开收起/分页；每项保留 data-job 点击进入全部岗位详情', () => {
+  const app = readWeb('app.js');
+  assert.ok(!app.includes('查看全部'), '不得新增查看全部按钮');
+  assert.ok(!/展开|收起/.test(app), '不得新增展开/收起逻辑');
+  assert.ok(app.includes('rankJobs(d.jobs).slice(0, 10)'), 'Top 列表 = rankJobs + slice(0,10)');
+  // 点击接线不变：top-job-row onclick → activeJobId + page='all'
+  assert.ok(app.includes("state.activeJobId = row.dataset.job;"));
+  assert.ok(app.includes("state.page = 'all';"));
+});
+
+test('R16-R19 品牌与排序说明文案（index.html / app.js）', () => {
+  const html = readWeb('index.html');
+  const app = readWeb('app.js');
+  assert.ok(html.includes('<div class="brand">Career-ops</div>'), '主标题逐字 Career-ops');
+  assert.ok(!html.includes('CareerOps') && !html.includes('career-ops">career'), '不得出现 CareerOps/career-ops 变体');
+  assert.ok(html.includes('<div class="tagline" id="tagline">求职决策中枢</div>'), '副标题不变');
+  assert.ok(!html.includes('求职指挥中心'), '旧主标题不再出现');
+  assert.ok(app.includes('推荐优先，其次按综合评分排序'), '排序说明新文案');
+  assert.ok(!app.includes('按综合评分排序，不代表建议投递'), '旧排序说明移除');
+});
+
+// ---------------------------------------------------------------------------
+// 34. 待处理队列 + 状态筛选 + 统一排序（用户裁决 2026-08-31，DASHBOARD_PENDING_AND_FILTER_FIX）
+// 待处理 SoT：job.status === null（tracker/applications.md 无该岗位行 = 尚无人工状态）。
+// 新抓取岗位天然无 tracker 行 → 自动入队；写回任一 canonical 状态 → 立即出队；
+// crawler 重抓只更新 results/inbox 数据，绝不写 tracker → 人工状态不被覆盖。
+// ---------------------------------------------------------------------------
+
+import { STATE_ZH as STATE_ZH_AGG, CANONICAL_STATES as CANON_AGG } from '../../dashboard-web/lib/aggregator.mjs';
+
+test('PF1 状态筛选 option 有 value 必有非空 label（回归：fillSelect 对象数组曾生成空 option）', () => {
+  const app = readWeb('app.js');
+  // 状态筛选现在传对象数组 + valOf（s => s.id），不允许再出现 fmt 取 undefined 的调用
+  assert.ok(app.includes("fillSelect($('#statusFilter'), d.states, '全部状态', s => s.zh, s => s.id)"),
+    '状态筛选必须显式传 valOf 与 fmt');
+  assert.ok(!app.includes("d.states.map(s => s.id), '全部状态', s => s.zh"), '旧错误调用已移除');
+  // fillSelect 契约：对象数组必须有 valOf
+  assert.ok(/function fillSelect\(sel, values, label, fmt, valOf\)/.test(app));
+});
+
+test('PF2 STATE_ZH 八个 canonical 状态中文映射全部非空（下拉与导航共用）', () => {
+  assert.deepEqual(Object.keys(STATE_ZH_AGG).sort(), [...CANON_AGG].sort());
+  for (const s of CANON_AGG) {
+    assert.ok(typeof STATE_ZH_AGG[s] === 'string' && STATE_ZH_AGG[s].trim().length > 0, `${s} 中文显示缺失`);
+  }
+});
+
+test('PF3 待处理语义：status=null 即待处理；八个 canonical 均不算待处理', () => {
+  // aggregator 无 tracker 行 → status: null（buildState 对已分析岗位的默认值）
+  const st = stateWith(PHASE6_RUN);
+  for (const j of st.jobs) assert.equal(j.status, null); // fixture 未写 tracker → 全部待处理
+  const pending = st.jobs.filter(j => !j.status);
+  assert.equal(pending.length, st.jobs.length);
+  // 有 tracker 行的岗位必须带 canonical status（dashboard.test 已覆盖写回链路）
+  assert.ok(CANON_AGG.every(s => !['pending', 'new'].includes(s)), '不得引入第二套 pending 状态');
+});
+
+test('PF4 待处理生命周期：写回状态后立即出队；全部岗位仍包含；crawler 重抓不恢复', () => {
+  // 模拟 aggregator 输入：tracker 有 job-a 行（Evaluated）
+  const run = JSON.parse(JSON.stringify(PHASE6_RUN));
+  run.jobs[0].job_id = 'job-a';
+  writeRun(run, 'search-results-20260831-1200.json');
+  fs.writeFileSync(path.join(dir, 'data', 'applications.md'), [
+    '# Applications Tracker', '',
+    '| # | Date | Company | Role | Score | Status | PDF | Report | Notes |',
+    '|---|------|---------|------|-------|--------|-----|--------|-------|',
+    `| 1 | 2026-08-31 | 示例零部件制造公司 | 采购专员 | 3.0/5 | Evaluated | ❌ | - | test |`,
+    '',
+  ].join('\n'), 'utf8');
+  const st = buildState(baseArgs(dir));
+  const withStatus = st.jobs.filter(j => j.status != null);
+  const pending = st.jobs.filter(j => j.status == null);
+  assert.equal(withStatus.length, 1, 'tracker 命中的岗位有状态');
+  assert.equal(pending.length, st.jobs.length - 1, '其余保持待处理');
+  // crawler 重抓（同 job 再写一轮 results），tracker 行不变 → 状态不被覆盖
+  writeRun(run, 'search-results-20260831-1300.json');
+  const st2 = buildState(baseArgs(dir));
+  assert.equal(st2.jobs.find(j => j.job_id === 'job-a').status, 'Evaluated', '人工状态优先于重抓');
+});
+
+test('PF5 待处理接线：导航/计数/过滤/标题（index.html + app.js）', () => {
+  const html = readWeb('index.html');
+  const app = readWeb('app.js');
+  // 导航顺序：全部岗位 → 待处理（正下方）
+  const iAll = html.indexOf('data-page="all"');
+  const iPending = html.indexOf('data-page="pending"');
+  const iShort = html.indexOf('data-page="shortlist"');
+  assert.ok(iAll !== -1 && iPending > iAll && iPending < iShort, '待处理必须位于全部岗位正下方');
+  assert.ok(html.includes('<span>待处理</span>'), '导航名称逐字为待处理');
+  assert.ok(html.includes('id="cnt-pending"'), '导航计数元素存在');
+  // 过滤与计数接线
+  assert.ok(app.includes("state.page === 'pending'"), 'pending 页面过滤分支');
+  assert.ok(!app.includes("state.page === 'pending' jobs = jobs.filter(j => j.status"), '不得用已处理状态过滤');
+  assert.ok(app.includes("jobs = jobs.filter(j => !j.status)"), '待处理 = 无人工状态');
+  assert.ok(app.includes("$('#cnt-pending').textContent = counts.pending;"), '计数接线');
+  assert.ok(app.includes("pending: '待处理'"), '页面标题');
+  // 待处理页排序走统一 SoT（filteredJobs 默认 rec 分支）
+  assert.ok(app.includes("if (by === 'rec') return rankJobs(jobs);"), '全部岗位默认排序复用 rankJobs');
+  assert.ok(html.includes('<option value="rec">排序：推荐优先</option>'), '排序控件默认项语义');
+});
+
+test('PF6 排序控件默认选中"推荐优先"且 Dashboard/全部岗位共用 rankJobs', () => {
+  const html = readWeb('index.html');
+  const app = readWeb('app.js');
+  assert.ok(html.includes('<select class="input" id="sortBy">\n        <option value="rec"'), 'sortBy 首个 option 为 rec（HTML 默认选中）');
+  assert.equal(app.split('rankJobs(').length - 1 >= 2, true, 'rankJobs 至少两处调用（Top 列表 + filteredJobs）');
 });

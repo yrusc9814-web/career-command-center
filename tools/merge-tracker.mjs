@@ -97,7 +97,7 @@ function parseAppLine(line) {
   // 11-col layout (2026-04-20): | # | Date | Company | Role | Score | Status | PDF | URL | Report | Notes | Closed At |
   // 9-col legacy layout:         | # | Date | Company | Role | Score | Status | PDF | Report | Notes |
   const hasExtended = cellCount >= 11;
-  return {
+  const row = {
     num,
     date: parts[2],
     company: parts[3],
@@ -111,6 +111,15 @@ function parseAppLine(line) {
     closedAt: hasExtended ? (parts[11] || '') : '',
     raw: line,
   };
+  // job_id 提取：Boss 岗位 ID 形态（16-32 位字母数字混合、非 URL）作为独立单元格存在于行内
+  for (let i = 1; i < parts.length - 1; i++) {
+    const c = parts[i];
+    if (c && !/^https?:/.test(c) && /^[0-9A-Za-z]{16,32}$/.test(c) && /[0-9]/.test(c) && /[A-Za-z]/.test(c) && c !== row.company && c !== row.role) {
+      row.job_id = c;
+      break;
+    }
+  }
+  return row;
 }
 
 /**
@@ -169,6 +178,7 @@ function parseTsvContent(content, filename) {
       pdf: parts[6],
       report: parts[7],
       notes: parts[8] || '',
+      job_id: '',
     };
   } else {
     // Tab-separated
@@ -202,16 +212,23 @@ function parseTsvContent(content, filename) {
       statusCol = col4; scoreCol = col5;
     }
 
+    // 10 列新格式：num, date, company, role, job_id, status, score, pdf, report, notes
+    // 9 列旧格式：无 job_id（身份走 legacy 匹配）
+    const hasJobIdCol = parts.length >= 10;
+    const tsvJobId = hasJobIdCol ? (parts[4] || '').trim() : '';
+    const statusIdx = hasJobIdCol ? 5 : 4;
+    const scoreIdx = hasJobIdCol ? 6 : 5;
     addition = {
       num: parseInt(parts[0]),
       date: parts[1],
       company: parts[2],
       role: parts[3],
-      status: validateStatus(statusCol),
-      score: scoreCol,
-      pdf: parts[6],
-      report: parts[7],
-      notes: parts[8] || '',
+      job_id: tsvJobId,
+      status: validateStatus(hasJobIdCol ? parts[5] : statusCol),
+      score: hasJobIdCol ? parts[6] : scoreCol,
+      pdf: hasJobIdCol ? parts[7] : parts[6],
+      report: hasJobIdCol ? parts[8] : parts[7],
+      notes: (hasJobIdCol ? parts[9] : parts[8]) || '',
     };
   }
 
@@ -368,36 +385,71 @@ for (const file of tsvFiles) {
   if (!addition) { skipped++; continue; }
 
   // Check for duplicate by:
-  // 1. Exact report number match
-  // 2. Company + role fuzzy match
+  // 1. report number match（仅在 company 归一相同时才视为同一岗位——report num 不是岗位身份，
+  //    不同岗位共用编号时禁止跨岗位命中）
+  // 2. exact entry num match（同样要求 company 归一相同）
+  // 3. company + role fuzzy match（归一化公司 + 岗位模糊匹配）
+  // 任一匹配规则命中多行（歧义）→ 拒绝合并该 TSV，不修改任何数据。
+  const normAdditionCompany = normalizeCompany(addition.company);
+  const byCompany = (app) => normalizeCompany(app.company) === normAdditionCompany;
   const reportNum = extractReportNum(addition.report);
   let duplicate = null;
+  let ambiguous = false;
+
+  // 身份优先级 1：job_id 精确（dashboard 写回携带；report num / tracker num / fuzzy 均不得单独决定身份）
+  if (addition.job_id) {
+    const hits = existingApps.filter(app => (app.job_id || '').trim() === addition.job_id);
+    if (hits.length > 1) ambiguous = true;
+    else if (hits.length === 1) duplicate = hits[0];
+  }
 
   if (reportNum) {
-    // Check if this report number already exists
-    duplicate = existingApps.find(app => {
-      const existingReportNum = extractReportNum(app.report);
-      return existingReportNum === reportNum;
-    });
+    const hits = existingApps.filter(app => byCompany(app) && extractReportNum(app.report) === reportNum);
+    if (hits.length > 1) ambiguous = true;
+    else if (hits.length === 1) duplicate = hits[0];
   }
 
-  if (!duplicate) {
-    // Exact entry number match
-    duplicate = existingApps.find(app => app.num === addition.num);
+  if (!duplicate && !ambiguous) {
+    const hits = existingApps.filter(app => byCompany(app) && app.num === addition.num);
+    if (hits.length > 1) ambiguous = true;
+    else if (hits.length === 1) duplicate = hits[0];
   }
 
-  if (!duplicate) {
-    // Company + role fuzzy match
-    const normCompany = normalizeCompany(addition.company);
-    duplicate = existingApps.find(app => {
-      if (normalizeCompany(app.company) !== normCompany) return false;
-      return roleFuzzyMatch(addition.role, app.role);
-    });
+  if (!duplicate && !ambiguous) {
+    const hits = existingApps.filter(app => byCompany(app) && roleFuzzyMatch(addition.role, app.role));
+    if (hits.length > 1) ambiguous = true;
+    else if (hits.length === 1) duplicate = hits[0];
+  }
+
+  // 编号与既有岗位冲突但公司不同 → 不是同一岗位，禁止覆盖；换新行号安全追加
+  const numTakenByOther = existingApps.find(app => app.num === addition.num && !byCompany(app));
+
+  if (ambiguous) {
+    console.warn(`⚠️  AMBIGUOUS_JOB_MATCH: ${addition.company} — ${addition.role} 命中多条 tracker 行，拒绝合并（未修改任何数据）`);
+    skipped++;
+    continue;
   }
 
   if (duplicate) {
     const newScore = parseScore(addition.score);
     const oldScore = parseScore(duplicate.score);
+
+    // 同一 job_id 再次合并（dashboard/crawler 重写）：人工状态以最新一次写回为准
+    if (addition.job_id && (duplicate.job_id || '') === addition.job_id) {
+      const lineIdx = appLines.indexOf(duplicate.raw);
+      if (lineIdx >= 0) {
+        const cells = duplicate.raw.split('|').map(x => x.trim());
+        const statusIdx = cells.findIndex((c, i) => i > 0 && /^(Evaluated|Applied|Responded|Interview|Offer|Rejected|Discarded|SKIP)$/.test(c));
+        if (statusIdx > 0) {
+          cells[statusIdx] = addition.status;
+          appLines[lineIdx] = `| ${cells.slice(1, -1).join(' | ')} |`;
+          updated++;
+          console.log(`🔁 job_id 更新: #${duplicate.num} ${addition.company} — ${addition.role} → ${addition.status}`);
+        }
+      }
+      skipped++; // 行已在 tracker，仅状态同步
+      continue;
+    }
 
     if (newScore > oldScore) {
       console.log(`🔄 Update: #${duplicate.num} ${addition.company} — ${addition.role} (${oldScore}→${newScore})`);
@@ -406,7 +458,9 @@ for (const file of tsvFiles) {
         // Preserve existing URL / Closed At; auto-fill Closed At if transitioning to terminal
         const TERMINAL = new Set(['Rejected', 'Discarded', 'SKIP', 'Offer']);
         const keepClosedAt = duplicate.closedAt || (TERMINAL.has(duplicate.status) ? addition.date : '');
-        const updatedLine = `| ${duplicate.num} | ${addition.date} | ${addition.company} | ${addition.role} | ${addition.score} | ${duplicate.status} | ${duplicate.pdf} | ${duplicate.url || ''} | ${addition.report} | Re-eval ${addition.date} (${oldScore}→${newScore}). ${addition.notes} | ${keepClosedAt} |`;
+        const dupJobId = (duplicate.job_id || '').trim();
+        const dupTail = dupJobId ? ` | ${dupJobId} |` : ' |';
+        const updatedLine = `| ${duplicate.num} | ${addition.date} | ${addition.company} | ${addition.role} | ${addition.score} | ${duplicate.status} | ${duplicate.pdf} | ${duplicate.url || ''} | ${addition.report} | Re-eval ${addition.date} (${oldScore}→${newScore}). ${addition.notes} | ${keepClosedAt}${dupTail} |`;
         appLines[lineIdx] = updatedLine;
         updated++;
       }
@@ -415,15 +469,19 @@ for (const file of tsvFiles) {
       skipped++;
     }
   } else {
-    // New entry — use the number from the TSV
-    const entryNum = addition.num > maxNum ? addition.num : ++maxNum;
-    if (addition.num > maxNum) maxNum = addition.num;
+    // New entry — num taken by a different company → allocate a safe fresh number（绝不覆盖他人）
+    const entryNum = numTakenByOther ? ++maxNum : (addition.num > maxNum ? addition.num : ++maxNum);
+    if (entryNum > maxNum) maxNum = entryNum;
+    if (numTakenByOther) {
+      console.log(`⚠️  Num #${addition.num} belongs to another company (安全分配新编号 #${entryNum})`);
+    }
 
     // Auto-set Closed At for new entries that arrive already in a terminal state.
     const TERMINAL = new Set(['Rejected', 'Discarded', 'SKIP', 'Offer']);
     const closedAt = TERMINAL.has(addition.status) ? addition.date : '';
     const url = addition.url || '';
-    const newLine = `| ${entryNum} | ${addition.date} | ${addition.company} | ${addition.role} | ${addition.score} | ${addition.status} | ${addition.pdf} | ${url} | ${addition.report} | ${addition.notes} | ${closedAt} |`;
+    // 12 列布局：Job ID 在 role 之后（与表头 | # | Date | Company | Role | Job ID | Score | Status | PDF | URL | Report | Notes | Closed At | 一致）
+    const newLine = `| ${entryNum} | ${addition.date} | ${addition.company} | ${addition.role} | ${addition.job_id || ''} | ${addition.score} | ${addition.status} | ${addition.pdf} | ${url} | ${addition.report} | ${addition.notes} | ${closedAt} |`;
     newLines.push(newLine);
     added++;
     console.log(`➕ Add #${entryNum}: ${addition.company} — ${addition.role} (${addition.score})`);
