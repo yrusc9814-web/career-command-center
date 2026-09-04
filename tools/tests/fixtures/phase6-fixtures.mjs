@@ -6,12 +6,12 @@
 //   - 岗位/公司/城市/人名全部为"示例"占位，job_id 固定 fixture-00N，job_url = null。
 //
 // 三个夹具对应三种必须同时成立并正确展示的语义：
-//   fixture-001  CV 58 + Career 2.24 + 不推荐 —— 原因围绕：严重职级下降、薪资、工作制、
+//   fixture-001  CV 58 + Career 31（旧 2.24 → (2.24−1)×25）+ 不推荐 —— 原因围绕：严重职级下降、薪资、工作制、
 //                真实采购能力（纯执行下单，无供应商决策权）。
-//   fixture-002  CV 48 + Career 2.8 + 不推荐 —— 必须表达"有供应商开发/寻源（sourcing）
+//   fixture-002  CV 48 + Career 45（旧 2.8 → (2.8−1)×25）+ 不推荐 —— 必须表达"有供应商开发/寻源（sourcing）
 //                能力"；真正硬缺口 = 目标品类（生鲜）供应商资源与渠道，禁止写成
 //                "缺少采购能力 / 缺 sourcing 能力"。
-//   fixture-003  CV 84 + Career 3.8 + 不推荐 —— 高 CV Match + 较高 Career Score +
+//   fixture-003  CV 84 + Career 70（旧 3.8 → (3.8−1)×25）+ 不推荐 —— 高 CV Match + 较高 Career Score +
 //                candidate-side blocker 同时成立；不推荐来自 blocker/决策链，
 //                与"岗位价值不足"无关。
 
@@ -29,33 +29,33 @@ export const FIXTURE_001 = {
   analysis: {
     cv_match_score: 58,
     cv_match_confidence: { percent: 88, level: '高' },
-    career_ops_score: 2.24,
-    career_score: 2.24,
+    career_ops_score: 31.0,
+    career_score: 31.0,
     rule_score: null,
     score_confidence: { percent: 90, level: '高' },
     score_breakdown: {
-      total_weight: 100, effective_weight: 90, weighted_sum: 201.6,
+      total_weight: 100, effective_weight: 90, weighted_sum: 2715,
       dimensions: [
-        { key: 'compensation', name: '薪酬竞争力', weight: 20, score: 1.5, weighted_value: 30, status: 'known', reason: '带宽低于候选人区间下沿，工时折算后时薪缩水', evidence: 'JD 薪资段' },
-        { key: 'workload_workstyle', name: '工作制与强度', weight: 15, score: 1, weighted_value: 15, status: 'known', reason: 'JD 明示大小周排班', evidence: 'JD 作息段' },
-        { key: 'role_seniority', name: '职级质量与职责范围', weight: 13, score: 1, weighted_value: 13, status: 'known', reason: '纯执行下单跟单，明显低于候选人现职级', evidence: 'JD 职责段' },
-        { key: 'career_growth', name: '成长空间', weight: 10, score: 3.7, weighted_value: 37, status: 'known', reason: '有上升叙事但无机制证据', evidence: 'JD 晋升段' },
-        { key: 'category_domain_value', name: '品类与行业价值', weight: 10, score: 3.66, weighted_value: 36.6, status: 'known', reason: '相邻品类（secondary）', evidence: 'JD 品类' },
-        { key: 'procurement_ownership', name: '采购自主权', weight: 9, score: 1, weighted_value: 9, status: 'known', reason: '纯执行下单，无供应商决策权', evidence: 'JD 职责动词（协助/跟进）' },
+        { key: 'compensation', name: '薪酬竞争力', weight: 20, score: 12.5, weighted_value: 250, status: 'known', reason: '带宽低于候选人区间下沿，工时折算后时薪缩水', evidence: 'JD 薪资段' },
+        { key: 'workload_workstyle', name: '工作制与强度', weight: 15, score: 0, weighted_value: 0, status: 'known', reason: 'JD 明示大小周排班', evidence: 'JD 作息段' },
+        { key: 'role_seniority', name: '职级质量与职责范围', weight: 13, score: 0, weighted_value: 0, status: 'known', reason: '纯执行下单跟单，明显低于候选人现职级', evidence: 'JD 职责段' },
+        { key: 'career_growth', name: '成长空间', weight: 10, score: 67.5, weighted_value: 675, status: 'known', reason: '有上升叙事但无机制证据', evidence: 'JD 晋升段' },
+        { key: 'category_domain_value', name: '品类与行业价值', weight: 10, score: 66.5, weighted_value: 665, status: 'known', reason: '相邻品类（secondary）', evidence: 'JD 品类' },
+        { key: 'procurement_ownership', name: '采购自主权', weight: 9, score: 0, weighted_value: 0, status: 'known', reason: '纯执行下单，无供应商决策权', evidence: 'JD 职责动词（协助/跟进）' },
         { key: 'company_stability', name: '公司与业务稳定性', weight: 7, score: null, weighted_value: null, status: 'unknown', reason: '工商信息未披露', evidence: null },
-        { key: 'location_fit', name: '地点与通勤', weight: 8, score: 4, weighted_value: 32, status: 'known', reason: '目标城市其他区，通勤可接受', evidence: 'JD 地址段' },
-        { key: 'digital_tooling', name: '数字化与工具成熟度', weight: 5, score: 4, weighted_value: 20, status: 'known', reason: '有 ERP 日常使用', evidence: 'JD 工具要求段' },
-        { key: 'hiring_process_quality', name: '招聘流程质量', weight: 3, score: 3, weighted_value: 9, status: 'known', reason: '常规直招无异常', evidence: 'JD 元数据' },
+        { key: 'location_fit', name: '地点与通勤', weight: 8, score: 75, weighted_value: 600, status: 'known', reason: '目标城市其他区，通勤可接受', evidence: 'JD 地址段' },
+        { key: 'digital_tooling', name: '数字化与工具成熟度', weight: 5, score: 75, weighted_value: 375, status: 'known', reason: '有 ERP 日常使用', evidence: 'JD 工具要求段' },
+        { key: 'hiring_process_quality', name: '招聘流程质量', weight: 3, score: 50, weighted_value: 150, status: 'known', reason: '常规直招无异常', evidence: 'JD 元数据' },
       ],
     },
     recommendation: '不推荐',
-    recommendation_reason: '职级严重倒退（Career Ops Score 2.24/5）；同时命中 salary_floor_breach、work_schedule_blocker',
+    recommendation_reason: '职级严重倒退（Career Score 31.0/100）；同时命中 salary_floor_breach、work_schedule_blocker',
     decision_trace: [
       { step: 0, rule: 'hard_redline_or_deal_breakers', input: { hard_redline: false, deal_breakers_hit: false }, outcome: 'miss' },
       { step: 1, rule: 'candidate_side_blocker', input: { severe_level_downgrade: true, salary_floor_breach: true, work_schedule_blocker: true }, outcome: 'severe_level_downgrade+salary_floor_breach+work_schedule_blocker' },
       { step: 2, rule: 'job_side_ineligible', input: { eligibility_ineligible: false, eligibility_status: 'eligible' }, outcome: 'miss' },
-      { step: 3, rule: 'decision_matrix', input: { career_ops_score: 2.24, cv_match_score: 58 }, outcome: '不推荐' },
-      { step: 5, rule: 'career_below_3_with_gaps', input: { career_ops_score: 2.24, has_hard_gap: true, eligibility_status: 'eligible' }, outcome: '不推荐' },
+      { step: 3, rule: 'decision_matrix', input: { career_ops_score: 31.0, cv_match_score: 58 }, outcome: '不推荐' },
+      { step: 5, rule: 'career_below_50_with_gaps', input: { career_ops_score: 31.0, has_hard_gap: true, eligibility_status: 'eligible' }, outcome: '不推荐' },
     ],
     blockers: {
       current_employer_conflict: false, salary_floor_breach: true, severe_level_downgrade: true,
@@ -88,33 +88,33 @@ export const FIXTURE_002 = {
   analysis: {
     cv_match_score: 48,
     cv_match_confidence: { percent: 80, level: '中' },
-    career_ops_score: 2.8,
-    career_score: 2.8,
+    career_ops_score: 45.0,
+    career_score: 45.0,
     rule_score: null,
     score_confidence: { percent: 72, level: '中' },
     score_breakdown: {
-      total_weight: 100, effective_weight: 100, weighted_sum: 280,
+      total_weight: 100, effective_weight: 100, weighted_sum: 4500.25,
       dimensions: [
-        { key: 'compensation', name: '薪酬竞争力', weight: 20, score: 2.5, weighted_value: 50, status: 'known', reason: '带宽贴近候选人区间下沿', evidence: 'JD 薪资段' },
-        { key: 'workload_workstyle', name: '工作制与强度', weight: 15, score: 3, weighted_value: 45, status: 'known', reason: '未提及且无强加班信号', evidence: 'JD 作息段' },
-        { key: 'role_seniority', name: '职级质量与职责范围', weight: 13, score: 3, weighted_value: 39, status: 'known', reason: '高级专员级，独立负责完整品类执行', evidence: 'JD 职责段' },
-        { key: 'career_growth', name: '成长空间', weight: 10, score: 3, weighted_value: 30, status: 'known', reason: '有上升叙事但无机制证据', evidence: 'JD 晋升段' },
-        { key: 'category_domain_value', name: '品类与行业价值', weight: 10, score: 2, weighted_value: 20, status: 'known', reason: '生鲜品类与既有履历为相邻迁移', evidence: 'JD 品类 vs 档案' },
-        { key: 'procurement_ownership', name: '采购自主权', weight: 9, score: 3.5, weighted_value: 31.5, status: 'known', reason: '独立负责供应商开发与谈判参与', evidence: 'JD 职责动词（负责/开发）' },
-        { key: 'company_stability', name: '公司与业务稳定性', weight: 7, score: 3, weighted_value: 21, status: 'known', reason: '存续 5 年+中型企业，单一信源无负面', evidence: '工商信息' },
-        { key: 'location_fit', name: '地点与通勤', weight: 8, score: 3, weighted_value: 24, status: 'known', reason: '目标城市其他区，通勤增加', evidence: 'JD 地址段' },
-        { key: 'digital_tooling', name: '数字化与工具成熟度', weight: 5, score: 2, weighted_value: 10, status: 'known', reason: '以 Excel+手工单据为主', evidence: 'JD 工具要求段' },
-        { key: 'hiring_process_quality', name: '招聘流程质量', weight: 3, score: 3.17, weighted_value: 9.5, status: 'known', reason: '常规直招无异常', evidence: 'JD 元数据' },
+        { key: 'compensation', name: '薪酬竞争力', weight: 20, score: 37.5, weighted_value: 750, status: 'known', reason: '带宽贴近候选人区间下沿', evidence: 'JD 薪资段' },
+        { key: 'workload_workstyle', name: '工作制与强度', weight: 15, score: 50, weighted_value: 750, status: 'known', reason: '未提及且无强加班信号', evidence: 'JD 作息段' },
+        { key: 'role_seniority', name: '职级质量与职责范围', weight: 13, score: 50, weighted_value: 650, status: 'known', reason: '高级专员级，独立负责完整品类执行', evidence: 'JD 职责段' },
+        { key: 'career_growth', name: '成长空间', weight: 10, score: 50, weighted_value: 500, status: 'known', reason: '有上升叙事但无机制证据', evidence: 'JD 晋升段' },
+        { key: 'category_domain_value', name: '品类与行业价值', weight: 10, score: 0, weighted_value: 0, status: 'known', reason: '生鲜品类与既有履历为相邻迁移', evidence: 'JD 品类 vs 档案' },
+        { key: 'procurement_ownership', name: '采购自主权', weight: 9, score: 62.5, weighted_value: 562.5, status: 'known', reason: '独立负责供应商开发与谈判参与', evidence: 'JD 职责动词（负责/开发）' },
+        { key: 'company_stability', name: '公司与业务稳定性', weight: 7, score: 50, weighted_value: 350, status: 'known', reason: '存续 5 年+中型企业，单一信源无负面', evidence: '工商信息' },
+        { key: 'location_fit', name: '地点与通勤', weight: 8, score: 50, weighted_value: 400, status: 'known', reason: '目标城市其他区，通勤增加', evidence: 'JD 地址段' },
+        { key: 'digital_tooling', name: '数字化与工具成熟度', weight: 5, score: 25, weighted_value: 125, status: 'known', reason: '以 Excel+手工单据为主', evidence: 'JD 工具要求段' },
+        { key: 'hiring_process_quality', name: '招聘流程质量', weight: 3, score: 54.25, weighted_value: 162.75, status: 'known', reason: '常规直招无异常', evidence: 'JD 元数据' },
       ],
     },
     recommendation: '不推荐',
-    recommendation_reason: '决策矩阵：Career Ops Score 2.8/5（career 2.0-2.9）× CV Match 48/100（cv 40-59）→ 不推荐',
+    recommendation_reason: '决策矩阵：Career Score 45.0/100（career_score 25-49）× CV Match 48/100（cv 40-59）→ 不推荐',
     dimensions: { primary: '生鲜/食品品类采购', known_categories: ['生鲜'], effective_weight: 100 },
     decision_trace: [
       { step: 0, rule: 'hard_redline_or_deal_breakers', input: { hard_redline: false, deal_breakers_hit: false }, outcome: 'miss' },
       { step: 1, rule: 'candidate_side_blocker', input: {}, outcome: 'miss' },
       { step: 2, rule: 'job_side_ineligible', input: { eligibility_ineligible: false, eligibility_status: 'eligible_with_gaps' }, outcome: 'miss' },
-      { step: 3, rule: 'decision_matrix', input: { career_ops_score: 2.8, cv_match_score: 48 }, outcome: '不推荐' },
+      { step: 3, rule: 'decision_matrix', input: { career_ops_score: 45.0, cv_match_score: 48 }, outcome: '不推荐' },
       { step: 4, rule: 'eligible_with_gaps_downgrade_cap', input: { eligibility_status: 'eligible_with_gaps', base: '不推荐' }, outcome: '不推荐' },
     ],
     blockers: {
@@ -148,27 +148,27 @@ export const FIXTURE_003 = {
   analysis: {
     cv_match_score: 84,
     cv_match_confidence: { percent: 92, level: '高' },
-    career_ops_score: 3.8,
-    career_score: 3.8,
+    career_ops_score: 70.0,
+    career_score: 70.0,
     rule_score: null,
     score_confidence: { percent: 100, level: '高' },
     score_breakdown: {
-      total_weight: 100, effective_weight: 100, weighted_sum: 380,
+      total_weight: 100, effective_weight: 100, weighted_sum: 6999.75,
       dimensions: [
-        { key: 'compensation', name: '薪酬竞争力', weight: 20, score: 4, weighted_value: 80, status: 'known', reason: '落在候选人区间中段，13薪加分', evidence: 'JD 薪资段' },
-        { key: 'workload_workstyle', name: '工作制与强度', weight: 15, score: 4, weighted_value: 60, status: 'known', reason: '标准工时，无强加班信号', evidence: 'JD 作息段' },
-        { key: 'role_seniority', name: '职级质量与职责范围', weight: 13, score: 4, weighted_value: 52, status: 'known', reason: '主管级，独立背品类 KPI，职责含寻源策略', evidence: 'JD 职责段+汇报线' },
-        { key: 'career_growth', name: '成长空间', weight: 10, score: 4, weighted_value: 40, status: 'known', reason: '写明晋升窗口且业务扩张', evidence: 'JD 晋升段' },
-        { key: 'category_domain_value', name: '品类与行业价值', weight: 10, score: 4, weighted_value: 40, status: 'known', reason: '主路径品类（primary archetype）', evidence: 'JD 品类 vs 档案' },
-        { key: 'procurement_ownership', name: '采购自主权', weight: 9, score: 4.5, weighted_value: 40.5, status: 'known', reason: '完整 sourcing/品类 ownership', evidence: 'JD 职责动词（负责/主导）' },
-        { key: 'company_stability', name: '公司与业务稳定性', weight: 7, score: 4, weighted_value: 28, status: 'known', reason: '规模企业+多年经营+多客户', evidence: '工商信息+详情页' },
-        { key: 'location_fit', name: '地点与通勤', weight: 8, score: 1, weighted_value: 8, status: 'known', reason: '工作地点与候选人显式地点约束冲突', evidence: 'JD 地址段' },
-        { key: 'digital_tooling', name: '数字化与工具成熟度', weight: 5, score: 4, weighted_value: 20, status: 'known', reason: '成熟 ERP+SRM', evidence: 'JD 工具要求段' },
-        { key: 'hiring_process_quality', name: '招聘流程质量', weight: 3, score: 3.83, weighted_value: 11.5, status: 'known', reason: '流程与时限透明', evidence: 'JD 元数据' },
+        { key: 'compensation', name: '薪酬竞争力', weight: 20, score: 75, weighted_value: 1500, status: 'known', reason: '落在候选人区间中段，13薪加分', evidence: 'JD 薪资段' },
+        { key: 'workload_workstyle', name: '工作制与强度', weight: 15, score: 75, weighted_value: 1125, status: 'known', reason: '标准工时，无强加班信号', evidence: 'JD 作息段' },
+        { key: 'role_seniority', name: '职级质量与职责范围', weight: 13, score: 75, weighted_value: 975, status: 'known', reason: '主管级，独立背品类 KPI，职责含寻源策略', evidence: 'JD 职责段+汇报线' },
+        { key: 'career_growth', name: '成长空间', weight: 10, score: 75, weighted_value: 750, status: 'known', reason: '写明晋升窗口且业务扩张', evidence: 'JD 晋升段' },
+        { key: 'category_domain_value', name: '品类与行业价值', weight: 10, score: 75, weighted_value: 750, status: 'known', reason: '主路径品类（primary archetype）', evidence: 'JD 品类 vs 档案' },
+        { key: 'procurement_ownership', name: '采购自主权', weight: 9, score: 87.5, weighted_value: 787.5, status: 'known', reason: '完整 sourcing/品类 ownership', evidence: 'JD 职责动词（负责/主导）' },
+        { key: 'company_stability', name: '公司与业务稳定性', weight: 7, score: 75, weighted_value: 525, status: 'known', reason: '规模企业+多年经营+多客户', evidence: '工商信息+详情页' },
+        { key: 'location_fit', name: '地点与通勤', weight: 8, score: 0, weighted_value: 0, status: 'known', reason: '工作地点与候选人显式地点约束冲突', evidence: 'JD 地址段' },
+        { key: 'digital_tooling', name: '数字化与工具成熟度', weight: 5, score: 75, weighted_value: 375, status: 'known', reason: '成熟 ERP+SRM', evidence: 'JD 工具要求段' },
+        { key: 'hiring_process_quality', name: '招聘流程质量', weight: 3, score: 70.75, weighted_value: 212.25, status: 'known', reason: '流程与时限透明', evidence: 'JD 元数据' },
       ],
     },
     recommendation: '不推荐',
-    recommendation_reason: 'JD 工作地点与候选人显式地点约束冲突（Career Ops Score 3.8/5）',
+    recommendation_reason: 'JD 工作地点与候选人显式地点约束冲突（Career Score 70.0/100）',
     decision_trace: [
       { step: 0, rule: 'hard_redline_or_deal_breakers', input: { hard_redline: false, deal_breakers_hit: false }, outcome: 'miss' },
       { step: 1, rule: 'candidate_side_blocker', input: { location_blocker: true }, outcome: 'location_blocker' },
@@ -190,7 +190,9 @@ export const FIXTURE_003 = {
   },
 };
 
-// 真实旧格式形态（Phase 3 前已评分报告）：四值字段存在且范围合法（照常展示，不整体降级），
+// 真实旧格式形态（Phase 3 前已评分报告；legacy 兼容夹具，保留旧 1-5 量纲字面量 2.58 ——
+// 用于锁定 aggregator/loader 对旧数据不崩溃，不作为新制契约。Round 1 后真实数据已全部迁移）：
+// 四值字段存在且范围合法（照常展示，不整体降级），
 // 旧 115 权重 score_breakdown 为退役维度（不进评分明细），但完全没有 Phase 4+ 新字段
 // （decision_trace / blockers / hard_gaps / soft_gaps / cv_match_confidence / taxonomy /
 //  capability_summary / dimensions / hard_requirements / eligibility_status / career_score）。

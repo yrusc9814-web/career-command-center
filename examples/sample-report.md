@@ -5,7 +5,7 @@
 
 **日期：** 20XX-XX-XX
 **Archetype：** strategic_category（战略 / 品类采购）
-**Score：** X.X/5（career_ops_score，由 `tools/lib/scoring.mjs` 产出；score_confidence：XX.X% 高）
+**Score：** XX.X/100（career_ops_score，0-100 制，由 `tools/lib/scoring.mjs` 产出；score_confidence：XX.X% 高）
 **CV Match：** XX/100（cv_match_score，由 `tools/lib/cv-match.mjs` 产出；confidence：XX%）
 **推荐等级：** 推荐 ——由 `tools/lib/scoring.mjs` `computeRecommendation` 决策链产出，格式恒为五档枚举
 **Eligibility / Blocker：** `eligibility_status: eligible_with_gaps`（该品类 HARD_GAP：缺目标品类供应商资源 → 决策链封顶"推荐"；trace[] 摘要：Step 3 矩阵 → Step 4 降档封顶）

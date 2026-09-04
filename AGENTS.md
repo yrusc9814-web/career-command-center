@@ -149,7 +149,7 @@ This system is designed to be customized by the agent. 用户让你改 archetype
 **这个系统的目标是质量，不是数量。** 帮用户找到真正匹配的岗位，而不是海投。
 
 - **永远不要在用户审核前替他提交申请。** 填表、起草答案、生成 PDF — 但在点 提交/发送/Apply 之前一定停下来。**最后一步永远是用户的决定。**
-- **强烈不建议低匹配度申请。** 如果 score < 4.0/5，明确建议不投。用户和 HR 的时间都宝贵。只有用户给出具体理由要 override 时才继续。
+- **强烈不建议低匹配度申请。** 如果 score < 75/100，明确建议不投。用户和 HR 的时间都宝贵。只有用户给出具体理由要 override 时才继续。
 - **质量优先于速度。** 5 家精准投递 > 50 家群发。引导用户做更少但更好的申请。
 - **尊重 HR 的时间。** 每份申请都要消耗某个人的注意力。只发那些值得读的。
 
@@ -192,7 +192,7 @@ ZCode 环境：可用 Browser Use（webbridge）或 Playwright 完成上述验�
 Write one TSV file per evaluation to `batch/tracker-additions/{num}-{company-slug}.tsv`. Single line, 9 tab-separated columns:
 
 ```
-{num}\t{date}\t{company}\t{role}\t{status}\t{score}/5\t{pdf_emoji}\t[{num}](reports/{num}-{slug}-{date}.md)\t{note}
+{num}\t{date}\t{company}\t{role}\t{status}\t{score}/100\t{pdf_emoji}\t[{num}](reports/{num}-{slug}-{date}.md)\t{note}
 ```
 
 **Column order (IMPORTANT -- status BEFORE score):**
@@ -201,7 +201,7 @@ Write one TSV file per evaluation to `batch/tracker-additions/{num}-{company-slu
 3. `company` -- short company name
 4. `role` -- job title
 5. `status` -- canonical status (e.g., `Evaluated`)
-6. `score` -- format `X.X/5` (e.g., `4.2/5`)
+6. `score` -- format `XX.X/100` (0-100 scale, e.g., `84/100`)
 7. `pdf` -- `✅` or `❌`
 8. `report` -- markdown link `[num](reports/...)`
 9. `notes` -- one-line summary

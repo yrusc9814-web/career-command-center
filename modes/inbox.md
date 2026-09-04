@@ -100,9 +100,9 @@ inbox 处理 — {YYYY-MM-DD}
 
 | # | 公司 | 岗位 | Score | PDF | 来源 |
 |---|------|------|-------|-----|------|
-| 003 | 某工程机械整机厂 | 采购主管 | 4.2/5 | ✅ | mokahr |
-| 004 | 某贸易公司 | 寻源专员 | 3.8/5 | ✅ | dachang-spa |
-| 005 | 某公司 | XX | 2.5/5 | ❌ | boss-zhipin |
+| 003 | 某工程机械整机厂 | 采购主管 | 84/100 | ✅ | mokahr |
+| 004 | 某贸易公司 | 寻源专员 | 76/100 | ✅ | dachang-spa |
+| 005 | 某公司 | XX | 50/100 | ❌ | boss-zhipin |
 
 → 跑 npm run merge（node tools/merge-tracker.mjs）把 TSV 合并进 applications.md
 ```

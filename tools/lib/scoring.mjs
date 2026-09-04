@@ -13,13 +13,28 @@
 //   - tech_modernity/process_speed 分别由 digital_tooling / hiring_process_quality
 //     接管；culture 并入 workload_workstyle——均为新定义，不是旧维度的别名计算。
 //
-// 1/3/5 评分细则唯一 SoT = 本文件 SCORING_RUBRIC（§23.2 定义卡逐字）；prompt 层
+// 1/3/5 评分细则唯一 SoT = 本文件 SCORING_RUBRIC；prompt 层
 // （modes/offer.md、batch/batch-prompt.md）文本与其同步，prompt 只列 key+中文名+权重+指向。
 //
 // 数学与输出 schema（与上一版完全一致，仅总权重 115→100）：
 //   career_ops_score = Σ(score_i × weight_i) / Σ(valid_weight_i)
 //   unknown 维度（score=null）不进入分子与分母，输出 score_confidence = effective/total。
 //   阈值 ≥85/≥60 维持不变。Dashboard 只展示本引擎的结果，不自行计算。
+//
+// Round 1 量纲迁移（2026-09-03）：Career Score 正式数据契约 1-5 → 0-100。
+// Round 1B 修正（2026-09-03）：正式映射改为仿射等价 new = (old − 1) × 25（真正 0-100），
+//   覆盖 Round 1 错误的线性 new = old × 20（那个把范围变成 20-100）。差异：
+//   - 维度分与 career_ops_score 统一真 0-100（旧 1/3/5 定义卡 → 0/50/100）；
+//   - 维度合法输入区间 [0,100]（旧 [1,5] 的仿射像：0 = 原 1 分，100 = 原 5 分）；
+//   - 所有 recommendation 阈值等价迁移：4.5/4.0/3.0/2.0 → 87.5/75/50/25，
+//     Step 5 career<3.0 → career<50；
+//   - score_confidence 一直就是 0-100（effective/total×100），本轮无迁移；
+//   - score_scale: '0-100' + score_scale_version: 2 随输出落盘（schema 版本标记，
+//     区分 legacy 1-5 / Round1 错误 20-100 / 正式 true 0-100；旧 1-5 数据必须先跑
+//     tools/migrate-score-scale.mjs，禁止运行时任何模糊猜测）；
+//   - decision matrix / trace / recommendation_reason 文案同步换新量纲
+//     （career_score ≥75 / Career Score 79/100），用户可见文案仍由
+//     dashboard-web/lib/view-model.mjs reasonZh() 统一转译。
 //
 // Phase 4（2026-08-29）：computeRecommendation 扩展为 §22.4 决策链唯一 SoT——
 // Step 0-5 优先级链 + 决策矩阵（行=career 档 × 列=cv 档）+ 缺口封顶，全部只在本文件
@@ -41,9 +56,9 @@ export const SCORING_RUBRIC = [
   {
     key: 'compensation', name: '薪酬竞争力', weight: 20,
     rubric: {
-      '1': '带宽触/低于用户区间下沿，或工时折算后时薪明显缩水',
-      '3': '落在用户区间中段、总包结构正常',
-      '5': '中位≥区间上限或市场中位上沿，且 13薪/期权等总包加分',
+      '0': '带宽触/低于用户区间下沿，或工时折算后时薪明显缩水',
+      '50': '落在用户区间中段、总包结构正常',
+      '100': '中位≥区间上限或市场中位上沿，且 13薪/期权等总包加分',
     },
     evidence_hint: 'JD 薪资福利段 + 同城同职级外部基准',
     unknown_rule: 'JD 未写→null',
@@ -51,9 +66,9 @@ export const SCORING_RUBRIC = [
   {
     key: 'workload_workstyle', name: '工作制与强度', weight: 15,
     rubric: {
-      '1': 'JD 明示大小周/早班分拣/长加班',
-      '3': '未提及且无强加班信号',
-      '5': '明确双休+标准工时原文',
+      '0': 'JD 明示大小周/早班分拣/长加班',
+      '50': '未提及且无强加班信号',
+      '100': '明确双休+标准工时原文',
     },
     evidence_hint: 'JD 作息段/小提示/福利',
     unknown_rule: '未写→null（禁行业刻板印象）',
@@ -61,9 +76,9 @@ export const SCORING_RUBRIC = [
   {
     key: 'role_seniority', name: '职级质量与职责范围', weight: 13,
     rubric: {
-      '1': '纯执行（下单/跟单），低于候选人现职级',
-      '3': '高级专员级，独立负责完整品类执行无带人',
-      '5': '主管级带人或独立背品类 KPI，职责含策略（寻源策略/供应商结构）',
+      '0': '纯执行（下单/跟单），低于候选人现职级',
+      '50': '高级专员级，独立负责完整品类执行无带人',
+      '100': '主管级带人或独立背品类 KPI，职责含策略（寻源策略/供应商结构）',
     },
     evidence_hint: 'JD title+职责段+汇报线',
     unknown_rule: 'title 模糊且职责缺失→null',
@@ -71,9 +86,9 @@ export const SCORING_RUBRIC = [
   {
     key: 'career_growth', name: '成长空间', weight: 10,
     rubric: {
-      '1': '职责静态/业务收缩/单一品类无扩展',
-      '3': '有上升叙事但无机制证据',
-      '5': '写明晋升机制+时间窗（调薪/评审窗口）且业务扩张',
+      '0': '职责静态/业务收缩/单一品类无扩展',
+      '50': '有上升叙事但无机制证据',
+      '100': '写明晋升机制+时间窗（调薪/评审窗口）且业务扩张',
     },
     evidence_hint: 'JD 晋升段+公司规模/业务线',
     unknown_rule: '无叙事→null',
@@ -81,9 +96,9 @@ export const SCORING_RUBRIC = [
   {
     key: 'category_domain_value', name: '品类与行业价值', weight: 10,
     rubric: {
-      '1': '品类对目标履历无迁移价值',
-      '3': '相邻品类（secondary/adjacent）',
-      '5': '主路径品类（primary archetype）',
+      '0': '品类对目标履历无迁移价值',
+      '50': '相邻品类（secondary/adjacent）',
+      '100': '主路径品类（primary archetype）',
     },
     evidence_hint: 'JD 品类/行业 vs profile archetypes',
     unknown_rule: '品类不明→null',
@@ -91,9 +106,9 @@ export const SCORING_RUBRIC = [
   {
     key: 'procurement_ownership', name: '采购自主权', weight: 9,
     rubric: {
-      '1': '纯执行下单，权限极低，无供应商决策权',
-      '3': '独立负责部分供应商/品类，有谈判与选择参与权',
-      '5': '完整 sourcing/supplier strategy/category ownership',
+      '0': '纯执行下单，权限极低，无供应商决策权',
+      '50': '独立负责部分供应商/品类，有谈判与选择参与权',
+      '100': '完整 sourcing/supplier strategy/category ownership',
     },
     evidence_hint: 'JD 职责动词（"负责/决策" vs "协助/跟进"）',
     unknown_rule: '无职责段→null',
@@ -101,9 +116,9 @@ export const SCORING_RUBRIC = [
   {
     key: 'company_stability', name: '公司与业务稳定性', weight: 7,
     rubric: {
-      '1': '成立<2 年/经营异常/裁员信号',
-      '3': '存续 5 年+中型企业，单一信源无负面',
-      '5': '规模大或细分头部+多年经营+自有产能/多客户',
+      '0': '成立<2 年/经营异常/裁员信号',
+      '50': '存续 5 年+中型企业，单一信源无负面',
+      '100': '规模大或细分头部+多年经营+自有产能/多客户',
     },
     evidence_hint: '工商信息+详情页+外部信源',
     unknown_rule: '工商缺失→null',
@@ -111,9 +126,9 @@ export const SCORING_RUBRIC = [
   {
     key: 'location_fit', name: '地点与通勤', weight: 8,
     rubric: {
-      '1': '非目标城市或需外派驻厂',
-      '3': '目标城市其他区，通勤显著增加',
-      '5': '目标区且通勤不恶化',
+      '0': '非目标城市或需外派驻厂',
+      '50': '目标城市其他区，通勤显著增加',
+      '100': '目标区且通勤不恶化',
     },
     evidence_hint: 'JD 地址段',
     unknown_rule: '地址不明→null',
@@ -121,9 +136,9 @@ export const SCORING_RUBRIC = [
   {
     key: 'digital_tooling', name: '数字化与工具成熟度', weight: 5,
     rubric: {
-      '1': '纯 Excel+手工单据',
-      '3': '有 ERP 日常使用',
-      '5': '成熟 ERP+SRM/数字化采购平台或采购系统建设投入',
+      '0': '纯 Excel+手工单据',
+      '50': '有 ERP 日常使用',
+      '100': '成熟 ERP+SRM/数字化采购平台或采购系统建设投入',
     },
     evidence_hint: 'JD 工具要求段+公司系统描述',
     unknown_rule: '无描述→null',
@@ -131,9 +146,9 @@ export const SCORING_RUBRIC = [
   {
     key: 'hiring_process_quality', name: '招聘流程质量', weight: 3,
     rubric: {
-      '1': '长期挂岗/重复发布/中介代招/付费陷阱',
-      '3': '常规直招无异常',
-      '5': '流程与时限透明或猎头/内推渠道',
+      '0': '长期挂岗/重复发布/中介代招/付费陷阱',
+      '50': '常规直招无异常',
+      '100': '流程与时限透明或猎头/内推渠道',
     },
     evidence_hint: 'JD 元数据+渠道+面试观察',
     unknown_rule: '无证据→null（继承 process_speed 教训，故仅 3 分）',
@@ -157,8 +172,8 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 function validScore(v) {
   if (v === null || v === undefined) return null;
   const n = Number(v);
-  if (!Number.isFinite(n)) return null;          // NaN/Infinity/非数字 → unknown
-  return clamp(Math.round(n * 100) / 100, 1, 5); // 有限数值夹到 [1,5]，null 永不变 0
+  if (!Number.isFinite(n)) return null;           // NaN/Infinity/非数字 → unknown
+  return clamp(Math.round(n * 100) / 100, 0, 100); // 有限数值夹到 [0,100]（旧 [1,5] 的 (x−1)×25 像），null 永不变 0
 }
 
 /**
@@ -194,7 +209,7 @@ export function computeScore(dimInputs) {
   });
 
   const careerOpsScore = effectiveWeight > 0
-    ? clamp(round(weightedSum / effectiveWeight, 2), 1, 5)
+    ? clamp(round(weightedSum / effectiveWeight, 2), 0, 100)
     : null;
 
   const percent = round((effectiveWeight / TOTAL_WEIGHT) * 100, 1);
@@ -202,6 +217,8 @@ export function computeScore(dimInputs) {
 
   return {
     career_ops_score: careerOpsScore,
+    score_scale: '0-100', // Round 1B schema 标记：正式数值量纲（旧 1-5 数据须先迁移）
+    score_scale_version: 2, // 2 = true 0-100（Round1 的 ×20 错误态无此字段，可据此识别）
     score_confidence: { percent, level: confidenceLevel },
     score_breakdown: {
       total_weight: TOTAL_WEIGHT,
@@ -212,12 +229,12 @@ export function computeScore(dimInputs) {
   };
 }
 
-/** 分数档位（仅当无 blocker 时作为 Recommendation 基础档） */
+/** 分数档位（仅当无 blocker 时作为 Recommendation 基础档；阈值 = 旧 4.5/4.0/3.0 的 (x−1)×25 仿射像） */
 export function scoreBand(score) {
   if (score === null || score === undefined) return '不推荐';
-  if (score >= 4.5) return '强烈推荐';
-  if (score >= 4.0) return '推荐';
-  if (score >= 3.0) return '一般';
+  if (score >= 87.5) return '强烈推荐';
+  if (score >= 75) return '推荐';
+  if (score >= 50) return '一般';
   return '不推荐';
 }
 
@@ -227,31 +244,33 @@ export function scoreBand(score) {
 // ---------------------------------------------------------------------------
 
 // 决策矩阵（§22.4 冻结表）：行 = career_ops_score 档位，列 = cv_match_score 档位。
-// 值 = [recommendation 枚举, 挑战岗标注]；"挑战岗"只出现在 ≥4.0 行且只写入
+// 值 = [recommendation 枚举, 挑战岗标注]；"挑战岗"只出现在 ≥75 行且只写入
 // recommendation_reason（recommendation 本体恒为 RECOMMENDATION_LEVELS 五档枚举）。
-// 歧义格裁决（Phase 4）：career 3.0-3.9 × cv 60-79 = 推荐（与 legacy band 最接近，
+// 歧义格裁决（Phase 4）：career_score 60-79 × cv 60-79 = 推荐（与 legacy band 最接近，
 // 无"挑战岗"标注）。cv_match_score 缺失/非有限数值 → 不查矩阵，回落 scoreBand（legacy）。
+// Round 1B 量纲迁移：行界 = 旧 4.0/3.0/2.0 的 (x−1)×25 仿射像 = 75/50/25，格子语义与旧表逐格等价。
+// 注意小数边界：行归属由比较运算决定（≥75 / ≥50 / ≥25），74.99 仍属 50-74 档。
 const RECOMMENDATION_MATRIX = Object.freeze({
-  'ge4.0':   { ge80: ['强烈推荐', ''], '60_79': ['推荐', '挑战岗'], '40_59': ['一般', '挑战岗'], lt40: ['不推荐', ''] },
-  '3.0-3.9': { ge80: ['推荐', ''], '60_79': ['推荐', ''], '40_59': ['一般', ''], lt40: ['不推荐', ''] },
-  '2.0-2.9': { ge80: ['一般', ''], '60_79': ['一般', ''], '40_59': ['不推荐', ''], lt40: ['不推荐', ''] },
-  'lt2.0':   { ge80: ['不推荐', ''], '60_79': ['不推荐', ''], '40_59': ['不推荐', ''], lt40: ['不推荐', ''] },
+  'ge75':    { ge80: ['强烈推荐', ''], '60_79': ['推荐', '挑战岗'], '40_59': ['一般', '挑战岗'], lt40: ['不推荐', ''] },
+  '50-74':   { ge80: ['推荐', ''], '60_79': ['推荐', ''], '40_59': ['一般', ''], lt40: ['不推荐', ''] },
+  '25-49':   { ge80: ['一般', ''], '60_79': ['一般', ''], '40_59': ['不推荐', ''], lt40: ['不推荐', ''] },
+  'lt25':    { ge80: ['不推荐', ''], '60_79': ['不推荐', ''], '40_59': ['不推荐', ''], lt40: ['不推荐', ''] },
   // career_ops_score 不可判定（null/非数值）→ '不推荐'（理由"有效维度不足"）
-  unknown:   { ge80: ['不推荐', ''], '60_79': ['不推荐', ''], '40_59': ['不推荐', ''], lt40: ['不推荐', ''] },
+  'unknown': { ge80: ['不推荐', ''], '60_79': ['不推荐', ''], '40_59': ['不推荐', ''], lt40: ['不推荐', ''] },
 });
 
 const CAREER_ROW_LABEL = Object.freeze({
-  'ge4.0': 'career ≥4.0', '3.0-3.9': 'career 3.0-3.9', '2.0-2.9': 'career 2.0-2.9',
-  'lt2.0': 'career <2.0', unknown: 'career 未知（有效维度不足）',
+  'ge75': 'career_score ≥75', '50-74': 'career_score 50-74', '25-49': 'career_score 25-49',
+  'lt25': 'career_score <25', unknown: 'career_score 未知（有效维度不足）',
 });
 const CV_COL_LABEL = Object.freeze({ ge80: 'cv ≥80', '60_79': 'cv 60-79', '40_59': 'cv 40-59', lt40: 'cv <40' });
 
 function careerRowOf(career) {
   if (career === null) return 'unknown';
-  if (career >= 4.0) return 'ge4.0';
-  if (career >= 3.0) return '3.0-3.9';
-  if (career >= 2.0) return '2.0-2.9';
-  return 'lt2.0';
+  if (career >= 75) return 'ge75';
+  if (career >= 50) return '50-74';
+  if (career >= 25) return '25-49';
+  return 'lt25';
 }
 
 function cvColOf(cv) {
@@ -279,7 +298,7 @@ const capAtRecommend = (level) => (level === '强烈推荐' ? '推荐' : level);
  *   Step 3  查矩阵（仅当 cv_match_score 为有限数值；否则回落 scoreBand = legacy 路径）
  *   Step 4  eligibility_status='eligible_with_gaps' → 降一档后封顶"推荐"
  *   Step 5  has_hard_gap → 封顶"推荐"（Phase 4.1 guard：仅 eligibility_status='eligible'
- *           或缺省 legacy 调用时生效，见 Step 5 内注释）；career < 3.0 时无论 ④⑤ 仍为'不推荐'
+ *           或缺省 legacy 调用时生效，见 Step 5 内注释）；career < 50 时无论 ④⑤ 仍为'不推荐'
  *
  * 兼容性（Phase 3 legacy）：
  *   - 全部 Phase 4 新入参可选，缺省（false/null/缺字段）= Phase 3 旧行为；
@@ -332,7 +351,7 @@ export function computeRecommendation(input = {}) {
 
   const scoreText = career_ops_score === null || career_ops_score === undefined
     ? '有效维度不足，无法给出可信分数'
-    : `Career Ops Score ${career_ops_score}/5`;
+    : `Career Score ${career_ops_score}/100`;
 
   // 矩阵查表用的数值归一（scoreText/reason 保留调用方原值格式）
   const careerNum = (career_ops_score === null || career_ops_score === undefined || !Number.isFinite(Number(career_ops_score)))
@@ -402,9 +421,9 @@ export function computeRecommendation(input = {}) {
       const [level, tag] = RECOMMENDATION_MATRIX[row][col];
       base = level;
       if (careerNum === null) {
-        parts.push('有效维度不足，无法给出可信分数（Career Ops Score 缺失，矩阵不适用）');
+        parts.push('有效维度不足，无法给出可信分数（Career Score 缺失，矩阵不适用）');
       } else {
-        parts.push(`决策矩阵：Career Ops Score ${career_ops_score}/5（${CAREER_ROW_LABEL[row]}）× CV Match ${cvNum}/100（${CV_COL_LABEL[col]}）→ ${level}${tag ? `（${tag}）` : ''}`);
+        parts.push(`决策矩阵：Career Score ${career_ops_score}/100（${CAREER_ROW_LABEL[row]}）× CV Match ${cvNum}/100（${CV_COL_LABEL[col]}）→ ${level}${tag ? `（${tag}）` : ''}`);
       }
     } else {
       base = scoreBand(career_ops_score);
@@ -414,9 +433,9 @@ export function computeRecommendation(input = {}) {
       { career_ops_score, cv_match_score: cvNum }, base);
 
     const gapsPresent = eligibility_status === 'eligible_with_gaps' || !!has_hard_gap;
-    const careerBelow3 = careerNum !== null && careerNum < 3.0;
+    const careerBelow3 = careerNum !== null && careerNum < 50; // 旧 career<3.0 的 (x−1)×25 等价阈值
 
-    // --- Step 4：eligible_with_gaps → 降一档后封顶"推荐"（career<3.0 由 Step 5 兜底为不推荐）---
+    // --- Step 4：eligible_with_gaps → 降一档后封顶"推荐"（career<50 由 Step 5 兜底为不推荐）---
     if (eligibility_status === 'eligible_with_gaps') {
       const post = capAtRecommend(GAP_DOWNGRADE[base]);
       record(4, 'eligible_with_gaps_downgrade_cap', { eligibility_status, base }, post);
@@ -426,7 +445,7 @@ export function computeRecommendation(input = {}) {
       base = post;
     }
 
-    // --- Step 5：has_hard_gap 封顶"推荐"（Phase 4.1 防御性 guard）；career < 3.0 时无论 ④⑤ 仍为'不推荐' ---
+    // --- Step 5：has_hard_gap 封顶"推荐"（Phase 4.1 防御性 guard）；career < 50 时无论 ④⑤ 仍为'不推荐' ---
     // guard（Phase 4.1 P2-2；DESIGN FREEZE §22.4 裁决②"has_hard_gap（且 eligibility=eligible）→
     // 仅封顶推荐"）：封顶仅在语义合法状态生效。显式传入 eligibility_status 的调用方仅
     // 'eligible' 时应用——'eligible_with_gaps' 已有 Step 4 降一档封顶路径（has_hard_gap 不叠加
@@ -441,8 +460,8 @@ export function computeRecommendation(input = {}) {
         eligibility_status === 'eligible_with_gaps' ? 'eligible_with_gaps' : null,
         has_hard_gap ? 'HARD_GAP' : null,
       ].filter(Boolean).join('+');
-      parts.push(`存在资格缺口（${gapDesc}）且 Career Ops Score ${career_ops_score}/5 < 3.0 → 不推荐`);
-      record(5, 'career_below_3_with_gaps', { career_ops_score, has_hard_gap: !!has_hard_gap, eligibility_status }, '不推荐');
+      parts.push(`存在资格缺口（${gapDesc}）且 Career Score ${career_ops_score}/100 < 50 → 不推荐`);
+      record(5, 'career_below_50_with_gaps', { career_ops_score, has_hard_gap: !!has_hard_gap, eligibility_status }, '不推荐');
     } else if (hardGapCapApplies) {
       const post = capAtRecommend(base);
       record(5, 'has_hard_gap_cap', { has_hard_gap, base }, post);

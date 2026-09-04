@@ -11,7 +11,7 @@
    c. **提取 JD** — **单次尝试**：国内大厂 careers 域用 Playwright `browser_navigate` + `browser_snapshot`；公开页（V2EX / GitHub / 公众号）用 WebFetch。**失败就停**，不要 fallback 到下一级工具
    d. 不可访问 / 反爬 / 登录墙 → 标 `- [!] 需人工取 JD（截图/复制）`，继续下一个
    e. JD 拿到后跑完整 auto-pipeline：A-F 评估 → Report .md → PDF（score ≥ 3.0）→ Tracker
-   f. **从 "待处理" 移到 "已处理"**：`- [x] #NNN | URL | 公司 | 岗位 | Score/5 | PDF ✅/❌`
+   f. **从 "待处理" 移到 "已处理"**：`- [x] #NNN | URL | 公司 | 岗位 | Score/100 | PDF ✅/❌`
 3. **串行处理**：Playwright 不能并行（共享浏览器）；WebFetch 也不建议并行 — 串行便于出错时停下、便于看 token 消耗。
 4. **结束时**显示汇总表：
 
@@ -28,8 +28,8 @@
 - [!] https://liepin.com/job/xxx — Error: 需要登录
 
 ## 已处理
-- [x] #143 | https://careers.example-oem.com/positions/789 | 某工程机械整机厂 | 采购专员 | 4.2/5 | PDF ✅
-- [x] #144 | https://www.zhipin.com/job_detail/xxx | 某贸易公司 | 寻源专员 | 2.1/5 | PDF ❌
+- [x] #143 | https://careers.example-oem.com/positions/789 | 某工程机械整机厂 | 采购专员 | 84/100 | PDF ✅
+- [x] #144 | https://www.zhipin.com/job_detail/xxx | 某贸易公司 | 寻源专员 | 42/100 | PDF ❌
 ```
 
 ## 国内门户硬跳过规则（2026-04 新增，节流关键）

@@ -190,10 +190,12 @@ function parseTsvContent(content, filename) {
 
     // Detect column order: some TSVs have (status, score), others have (score, status)
     // Heuristic: if col4 looks like a score and col5 looks like a status, they're swapped
+    // Round 1 起 score canonical = 0-100 制 `XX.X/100`；legacy `X.XX/5` 行仍可识别
     const col4 = parts[4].trim();
     const col5 = parts[5].trim();
-    const col4LooksLikeScore = /^\d+\.?\d*\/5$/.test(col4) || col4 === 'N/A' || col4 === 'DUP';
-    const col5LooksLikeScore = /^\d+\.?\d*\/5$/.test(col5) || col5 === 'N/A' || col5 === 'DUP';
+    const scoreLike = (v) => /^\d+\.?\d*\/(100|5)$/.test(v) || v === 'N/A' || v === 'DUP';
+    const col4LooksLikeScore = scoreLike(col4);
+    const col5LooksLikeScore = scoreLike(col5);
     const col4LooksLikeStatus = /^(evaluated|applied|responded|interview|offer|rejected|discarded|skip|dup|repost|condicional|hold|monitor)/i.test(col4);
     const col5LooksLikeStatus = /^(evaluated|applied|responded|interview|offer|rejected|discarded|skip|dup|repost|condicional|hold|monitor)/i.test(col5);
 

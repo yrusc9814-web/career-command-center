@@ -206,7 +206,8 @@ test('P11 offers.md 含新十维（权重和 100）且无旧维度残留', () =>
   }
   assert.ok(text.includes('禁止'), 'offers.md 应禁止合成总分');
   assert.ok(text.includes('CV Match（0-100'), 'offers.md 应有三列分离的 CV Match 0-100');
-  assert.ok(text.includes('Career Score（1-5'), 'offers.md 应有三列分离的 Career Score 1-5');
+  // Round 1 起 Career Score 正式量纲 0-100（旧 1-5 已迁移）
+  assert.ok(text.includes('Career Score（0-100'), 'offers.md 应有三列分离的 Career Score 0-100');
   assert.ok(!/cv_match\s*[（(]?\s*1-5/.test(text), 'offers.md 不应再用 1-5 版 cv_match');
 });
 

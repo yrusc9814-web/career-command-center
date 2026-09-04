@@ -503,66 +503,67 @@ test('C24 两模块输出互不引用对方字段；维度/因子互斥', () => 
 });
 
 test('C25 三岗位分层 sanity：Career Score 显式给分（每维人工按 RUBRIC 评）与 CV Match 独立共存，blocker 只压 Recommendation', () => {
-  // fixture-001：comp/工作制/职级三高权重维全低 + digital/hiring 无证据 → 2.24（92% 高）；
+  // fixture-001：comp/工作制/职级三高权重维全低 + digital/hiring 无证据 → 30.98（92% 高）；
+  //      （true 0-100 = 旧 2.24 的仿射量纲；重算 2850/92 = 30.98，(2.2391−1)×25 ≈ 30.98 一致）
   //      CV Match 58；severe_level_downgrade blocker 压 Recommendation，分数不动
   const dims001 = [
-    { key: 'compensation', score: 1.5, reason: '5-8K 低于带宽下沿且大小周折算缩水' },
-    { key: 'workload_workstyle', score: 1, reason: 'JD 明示大小周' },
-    { key: 'role_seniority', score: 1, reason: '纯执行专员岗，低于现职级' },
-    { key: 'career_growth', score: 3, reason: '有上升叙事无机制证据' },
-    { key: 'category_domain_value', score: 3, reason: '汽配出口属相邻品类' },
-    { key: 'procurement_ownership', score: 3, reason: '独立询比价议价，有谈判参与权' },
-    { key: 'location_fit', score: 5, reason: '目标城市目标区' },
-    { key: 'company_stability', score: 3, reason: '存续小企业，单一信源无负面' },
+    { key: 'compensation', score: 12.5, reason: '5-8K 低于带宽下沿且大小周折算缩水' },
+    { key: 'workload_workstyle', score: 0, reason: 'JD 明示大小周' },
+    { key: 'role_seniority', score: 0, reason: '纯执行专员岗，低于现职级' },
+    { key: 'career_growth', score: 50, reason: '有上升叙事无机制证据' },
+    { key: 'category_domain_value', score: 50, reason: '汽配出口属相邻品类' },
+    { key: 'procurement_ownership', score: 50, reason: '独立询比价议价，有谈判参与权' },
+    { key: 'location_fit', score: 100, reason: '目标城市目标区' },
+    { key: 'company_stability', score: 50, reason: '存续小企业，单一信源无负面' },
     { key: 'digital_tooling', score: null, reason: 'JD 无采购系统描述（营销叙事不作证据）' },
     { key: 'hiring_process_quality', score: null, reason: '无证据' },
   ];
   const career001 = evaluate(dims001, { severe_level_downgrade: true });
-  assert.equal(career001.career_ops_score, 2.24); // 206/92
+  assert.equal(career001.career_ops_score, 30.98); // 2850/92
   assert.deepEqual(career001.score_confidence, { percent: 92, level: '高' });
   assert.equal(career001.recommendation, '不推荐');
   const cv001 = computeCvMatch({ jdText: JD_001, cvText: CV_MAIN, jdTitle: '采购专员', candidate: CAND });
   assert.equal(cv001.cv_match_score, 58);
 
-  // fixture-002：workload 无证据不入分母（禁行业刻板印象）→ 2.8（77% 中）；CV Match 48
+  // fixture-002：workload 无证据不入分母（禁行业刻板印象）→ 44.97（77% 中）；CV Match 48
   const dims002 = [
-    { key: 'compensation', score: 2.5, reason: '区间上段但低于主管市场中位' },
+    { key: 'compensation', score: 37.5, reason: '区间上段但低于主管市场中位' },
     { key: 'workload_workstyle', score: null, reason: 'JD 未写作息，不臆测' },
-    { key: 'role_seniority', score: 3.5, reason: '专员/主管双通道可平级' },
-    { key: 'career_growth', score: 3, reason: '有上升叙事无机制证据' },
-    { key: 'category_domain_value', score: 1, reason: '生鲜对机械履历无迁移价值' },
-    { key: 'procurement_ownership', score: 3, reason: '独立开发上新品项' },
-    { key: 'location_fit', score: 4, reason: '同城邻近区' },
-    { key: 'company_stability', score: 3, reason: '存续中型民企' },
+    { key: 'role_seniority', score: 62.5, reason: '专员/主管双通道可平级' },
+    { key: 'career_growth', score: 50, reason: '有上升叙事无机制证据' },
+    { key: 'category_domain_value', score: 0, reason: '生鲜对机械履历无迁移价值' },
+    { key: 'procurement_ownership', score: 50, reason: '独立开发上新品项' },
+    { key: 'location_fit', score: 75, reason: '同城邻近区' },
+    { key: 'company_stability', score: 50, reason: '存续中型民企' },
     { key: 'digital_tooling', score: null, reason: '无描述' },
     { key: 'hiring_process_quality', score: null, reason: '无证据' },
   ];
   const career002 = evaluate(dims002, {});
-  assert.equal(career002.career_ops_score, 2.8); // 215.5/77
+  assert.equal(career002.career_ops_score, 44.97); // 3462.5/77
   assert.deepEqual(career002.score_confidence, { percent: 77, level: '中' });
   const cv002 = computeCvMatch({ jdText: JD_002, cvText: CV_MAIN, jdTitle: '采购专员/采购主管', candidate: CAND });
   assert.equal(cv002.cv_match_score, 48);
 
-  // fixture-003：品类/工作制/成长全优 + digital 无描述 → 3.8（92% 高）；CV Match 84；
+  // fixture-003：品类/工作制/成长全优 + digital 无描述 → 69.97（92% 高）；CV Match 84；
   //      current_employer_conflict 只压 Recommendation，career_ops_score 与 cv_match_score 均不变
   const dims003 = [
-    { key: 'compensation', score: 3.5, reason: '8-12K·13薪+期权，总包结构正常偏上' },
-    { key: 'workload_workstyle', score: 5, reason: '明确双休+标准工时原文' },
-    { key: 'role_seniority', score: 1.5, reason: '专员级，低于现职级' },
-    { key: 'career_growth', score: 4, reason: '季度调薪晋升窗口且业务扩张' },
-    { key: 'category_domain_value', score: 5, reason: '主路径品类（工程机械）' },
-    { key: 'procurement_ownership', score: 3, reason: '组织报价核价，有谈判参与权' },
-    { key: 'location_fit', score: 5, reason: '同区通勤不恶化' },
-    { key: 'company_stability', score: 4, reason: '细分头部+多年经营+自有产能' },
+    { key: 'compensation', score: 62.5, reason: '8-12K·13薪+期权，总包结构正常偏上' },
+    { key: 'workload_workstyle', score: 100, reason: '明确双休+标准工时原文' },
+    { key: 'role_seniority', score: 12.5, reason: '专员级，低于现职级' },
+    { key: 'career_growth', score: 75, reason: '季度调薪晋升窗口且业务扩张' },
+    { key: 'category_domain_value', score: 100, reason: '主路径品类（工程机械）' },
+    { key: 'procurement_ownership', score: 50, reason: '组织报价核价，有谈判参与权' },
+    { key: 'location_fit', score: 100, reason: '同区通勤不恶化' },
+    { key: 'company_stability', score: 75, reason: '细分头部+多年经营+自有产能' },
     { key: 'digital_tooling', score: null, reason: '无工具描述（营销叙事不作证据）' },
     { key: 'hiring_process_quality', score: null, reason: '无证据' },
   ];
   const career003 = evaluate(dims003, { current_employer_conflict: true });
   const career003NoBlocker = evaluate(dims003, {});
-  assert.equal(career003.career_ops_score, 3.8); // 349.5/92
-  assert.equal(career003NoBlocker.career_ops_score, 3.8); // blocker 不影响 Career Score
+  assert.equal(career003.career_ops_score, 69.97); // 6437.5/92
+  assert.equal(career003NoBlocker.career_ops_score, 69.97); // blocker 不影响 Career Score
   assert.equal(career003.recommendation, '不推荐');
-  assert.equal(career003NoBlocker.recommendation, '一般'); // scoreBand(3.8)
+  assert.equal(career003NoBlocker.recommendation, '一般'); // scoreBand(69.97)
   assert.deepEqual(career003.score_confidence, { percent: 92, level: '高' });
   const cv003 = computeCvMatch({ jdText: JD_003, cvText: CV_MAIN, jdTitle: '采购专员', candidate: CAND });
   assert.equal(cv003.cv_match_score, 84);

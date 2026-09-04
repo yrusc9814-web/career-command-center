@@ -81,7 +81,7 @@
 ```
 ## [公司] — [岗位] 申请回答
 
-基于：Report #NNN | Score: X.X/5 | Archetype: [type]
+基于：Report #NNN | Score: XX.X/100 | Archetype: [type]
 
 ---
 

@@ -48,7 +48,7 @@
    - F: Interview prep (STAR+R stories from the 18-class Story Bank, questions from `modes/interview-questions.md`)
 5. **Score (engine, `tools/lib/`)**:
    - CV Match: `cv_match_score` 0-100 (14 factors, Primary 55 / Secondary 30 / Low 15 — `cv-match.mjs`)
-   - Career Score: `career_ops_score` 1.0-5.0 across 10 dimensions (total weight 100, unknown dims excluded from denominator — `scoring.mjs`)
+   - Career Score: `career_ops_score` true 0-100 across 10 dimensions (Round 1B affine migration (x-1)*25, 2026-09-03; previously 1.0-5.0) (total weight 100, unknown dims excluded from denominator — `scoring.mjs`)
    - Recommendation: five levels via `computeRecommendation` decision chain (matrix + hard redlines + blockers + gap caps, with `trace[]` — `scoring.mjs`; evidence assembled by `eligibility.mjs`)
 6. **Report**: Save as `reports/{num}-{company}-{date}.md`
 7. **PDF**: Generate ATS-optimized CV (`tools/generate-pdf.mjs`)

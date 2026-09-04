@@ -329,7 +329,7 @@ const forwardDirect = (eligibility, scores, extra = {}) => computeRecommendation
 });
 
 test('E13 单一 SoT：decide().recommendation 与直接调 computeRecommendation 同参结果 deepEqual（fixture-002）', () => {
-  const scores = { cv_match_score: 48, career_ops_score: 2.7 }; // Phase 3 产出值，逐字引用
+  const scores = { cv_match_score: 48, career_ops_score: 42.5 }; // true 0-100（旧 2.7 → (2.7−1)×25）
   const d = decide({ jdText: JD_002, cvText: CV_MAIN, candidate: CAND, scores });
   assert.deepEqual(d.recommendation, forwardDirect(d.eligibility, scores));
   // 决策来自 Step 2（job-side ineligible）
@@ -340,7 +340,7 @@ test('E13 单一 SoT：decide().recommendation 与直接调 computeRecommendatio
 });
 
 test('E14 blocker 不污染分数：decide 不输出任何分数字段，scores 输入前后 deepEqual 不变', () => {
-  const scores = { cv_match_score: 48, career_ops_score: 2.7 };
+  const scores = { cv_match_score: 48, career_ops_score: 42.5 };
   const snapshot = JSON.parse(JSON.stringify(scores));
   const d = decide({ jdText: JD_002, cvText: CV_MAIN, candidate: CAND, scores });
   assert.deepEqual(scores, snapshot); // 输入对象未被改动
@@ -357,7 +357,7 @@ test('E14 blocker 不污染分数：decide 不输出任何分数字段，scores 
 // ---------------------------------------------------------------------------
 
 test('E15 fixture-001 汽配出口采购岗：主管→专员 2 档 = severe_level_downgrade → Step 1 不推荐；eligibility 仍 eligible；分数不被触碰', () => {
-  const scores = { cv_match_score: 58, career_ops_score: 2.24 }; // Phase 3 产出值（cv-match.test C21 = 58）
+  const scores = { cv_match_score: 58, career_ops_score: 31.0 }; // true 0-100（旧 2.24 → 31；cv-match.test C21 = 58）
   const d = decide({
     jdText: JD_001, cvText: CV_MAIN, candidate: CAND,
     jdFacts: { jdTitle: '采购专员' }, scores,
@@ -368,19 +368,19 @@ test('E15 fixture-001 汽配出口采购岗：主管→专员 2 档 = severe_lev
   assert.equal(d.blockers.severe_level_downgrade, true);
   // Step 1 短路：不查矩阵、不回落 scoreBand → 输出不含任何分数路径
   assert.equal(d.recommendation.recommendation, '不推荐');
-  assert.equal(d.recommendation.recommendation_reason, '职级严重倒退（Career Ops Score 2.24/5）');
+  assert.equal(d.recommendation.recommendation_reason, '职级严重倒退（Career Score 31/100）');
   assert.ok(!d.recommendation.trace.some(t => t.step === 3), 'Step 1 命中后不得再走矩阵/band 路径');
   assert.equal(d.recommendation.trace.find(t => t.step === 1).outcome, 'severe_level_downgrade');
   // 单一 SoT：与直接调 computeRecommendation 同参逐字节一致
   const direct = computeRecommendation({
-    career_ops_score: 2.24, cv_match_score: 58, eligibility_status: 'eligible',
+    career_ops_score: 31.0, cv_match_score: 58, eligibility_status: 'eligible',
     eligibility_ineligible: false, has_hard_gap: false, ...d.eligibility.blockers,
   });
   assert.deepEqual(d.recommendation, direct);
 });
 
 test('E16 fixture-002 生鲜品类采购岗："生鲜供应商资源"=explicit+硬筛+不可替代+候选缺失 → job-side BLOCKER → ineligible → 不推荐；capability 层 sourcing 仍 matched', () => {
-  const scores = { cv_match_score: 48, career_ops_score: 2.7 }; // Phase 3 产出值（cv-match.test C22 = 48）
+  const scores = { cv_match_score: 48, career_ops_score: 42.5 }; // true 0-100（旧 2.7 → 42.5；cv-match.test C22 = 48）
   const d = decide({ jdText: JD_002, cvText: CV_MAIN, candidate: CAND, scores });
   const blockerReq = d.eligibility.hard_requirements.find(r => r.level === 'BLOCKER');
   assert.ok(blockerReq, '应存在 job-side BLOCKER');
@@ -400,7 +400,7 @@ test('E16 fixture-002 生鲜品类采购岗："生鲜供应商资源"=explicit+�
 });
 
 test('E17 fixture-003 工程机械采购岗：现雇主冲突（示例集团（XYZ）vs 示例集团）→ Step 1 不推荐；cv 84/career 3.8 逐字不变；无冲突对照 → 矩阵 3.8×84 → 推荐', () => {
-  const scores = { cv_match_score: 84, career_ops_score: 3.8 }; // Phase 3 产出值（cv-match.test C23 = 84）
+  const scores = { cv_match_score: 84, career_ops_score: 70.0 }; // true 0-100（旧 3.8 → 70；cv-match.test C23 = 84）
   // 冲突情形：Step 1 覆盖双高
   const dConflict = decide({
     jdText: JD_003, cvText: CV_MAIN,
@@ -411,10 +411,10 @@ test('E17 fixture-003 工程机械采购岗：现雇主冲突（示例集团（X
   assert.equal(dConflict.blockers.current_employer_conflict, true);
   assert.equal(dConflict.blockers.severe_level_downgrade, false); // 本公司内向下兼岗：仅雇主冲突（Phase 3 语义）
   assert.equal(dConflict.recommendation.recommendation, '不推荐');
-  assert.equal(dConflict.recommendation.recommendation_reason, '现任雇主/关联主体岗位，不构成外部跳槽机会（Career Ops Score 3.8/5）');
+  assert.equal(dConflict.recommendation.recommendation_reason, '现任雇主/关联主体岗位，不构成外部跳槽机会（Career Score 70/100）');
   assert.ok(!dConflict.recommendation.trace.some(t => t.step === 3), 'Step 1 短路，不查矩阵');
-  // 无冲突对照：矩阵 3.8（3.0-3.9）× 84（≥80）→ 推荐。
-  // （legacy band(3.8)=一般 —— §22.4 冻结矩阵把该格升级为"推荐"，老对照 band=一般 由矩阵取代）
+  // 无冲突对照：矩阵 70（50-74）× 84（≥80）→ 推荐。
+  // （legacy band(76)=一般 —— §22.4 冻结矩阵把该格升级为"推荐"，老对照 band=一般 由矩阵取代）
   const dClean = decide({
     jdText: JD_003, cvText: CV_MAIN, candidate: CAND,
     jdFacts: { company: '其他示例公司' }, scores,
@@ -422,8 +422,8 @@ test('E17 fixture-003 工程机械采购岗：现雇主冲突（示例集团（X
   assert.equal(dClean.blockers.current_employer_conflict, false);
   assert.equal(dClean.recommendation.recommendation, '推荐');
   assert.ok(dClean.recommendation.recommendation_reason.includes('决策矩阵'));
-  // 分数逐字不变：trace step 3 的输入即原始分数（84 / 3.8），decide 未做任何改写
-  assert.deepEqual(dClean.recommendation.trace.find(t => t.step === 3).input, { career_ops_score: 3.8, cv_match_score: 84 });
+  // 分数逐字不变：trace step 3 的输入即原始分数（84 / 70），decide 未做任何改写
+  assert.deepEqual(dClean.recommendation.trace.find(t => t.step === 3).input, { career_ops_score: 70.0, cv_match_score: 84 });
   // 单一 SoT
   assert.deepEqual(dConflict.recommendation, forwardDirect(dConflict.eligibility, scores));
   assert.deepEqual(dClean.recommendation, forwardDirect(dClean.eligibility, scores));
@@ -438,14 +438,14 @@ test('E18 eligible_with_gaps 降一档封顶（强烈推荐→推荐）：可替
   const jd = '任职要求：必须熟悉生鲜品类采购，有相关采购经验。';
   const d = decide({
     jdText: jd, cvText: CV_MAIN, candidate: CAND,
-    scores: { cv_match_score: 90, career_ops_score: 4.8 },
+    scores: { cv_match_score: 90, career_ops_score: 95.0 },
   });
   assert.equal(d.eligibility.eligibility_status, 'eligible_with_gaps');
   assert.equal(d.eligibility.has_hard_gap, true);
-  // 矩阵 4.8×90 = 强烈推荐 → 降一档封顶"推荐"
+  // 矩阵 95×90 = 强烈推荐 → 降一档封顶"推荐"
   assert.equal(d.recommendation.recommendation, '推荐');
   assert.ok(d.recommendation.recommendation_reason.includes('降一档'));
-  assert.deepEqual(d.recommendation, forwardDirect(d.eligibility, { cv_match_score: 90, career_ops_score: 4.8 }));
+  assert.deepEqual(d.recommendation, forwardDirect(d.eligibility, { cv_match_score: 90, career_ops_score: 95.0 }));
 });
 
 test('E19 hard_requirements 的四级枚举与委派：travel/schedule/location 委派 candidate-side blocker 层，不产生 job-side 级别', () => {

@@ -125,18 +125,18 @@ Archetype 决定：
 
 **如果查不到数据，明说"未查到，建议向脉脉/知乎匿名提问"，不要编造。**
 
-**Comp Score（1-5）：**
-- 5 = 头部分位，明显高于市场
-- 4 = 高于市场
-- 3 = 市场中位
-- 2 = 略低于市场
-- 1 = 明显低于市场或工时严重不匹配
+**Comp Score（0-100）：**
+- 100 = 头部分位，明显高于市场
+- 75 = 高于市场
+- 50 = 市场中位
+- 25 = 略低于市场
+- 0 = 明显低于市场或工时严重不匹配
 
-> 细则权威：`tools/lib/scoring.mjs` 的 `SCORING_RUBRIC`（`compensation` 维 1/3/5 定义）；大小周/工时折算计入 `workload_workstyle` 维，不在 comp 内重复计。
+> 细则权威：`tools/lib/scoring.mjs` 的 `SCORING_RUBRIC`（`compensation` 维 0/50/100 定义）；大小周/工时折算计入 `workload_workstyle` 维，不在 comp 内重复计。
 
 ## Career Score — 评分引擎维度（10 维 × 权重 100）
 
-Career Score 由 `tools/lib/scoring.mjs` 产出：`career_ops_score`（1.0-5.0）+ `score_confidence`（effective_weight/total_weight，≥85% 高 / ≥60% 中）+ `score_breakdown`。**1/3/5 评分细则唯一权威 = 同文件 `SCORING_RUBRIC`**（每维 1/3/5 定义、证据来源与 unknown 规则）；prompt 不复制细则全文，只按下列 key+中文名+权重为每维提供打分输入（score + reason + evidence）：
+Career Score 由 `tools/lib/scoring.mjs` 产出：`career_ops_score`（0-100）+ `score_confidence`（effective_weight/total_weight，≥85% 高 / ≥60% 中）+ `score_breakdown`。**0/50/100 评分细则唯一权威 = 同文件 `SCORING_RUBRIC`**（每维 0/50/100 定义、证据来源与 unknown 规则）；prompt 不复制细则全文，只按下列 key+中文名+权重为每维提供打分输入（score 取真 0-100 制，锚点 0/50/100，即旧 1/3/5 的 (x−1)×25；+ reason + evidence）：
 
 | key | 维度 | 权重 |
 |---|---|---:|
@@ -155,7 +155,7 @@ Career Score 由 `tools/lib/scoring.mjs` 产出：`career_ops_score`（1.0-5.0�
 - 方向 = Job→Candidate Value（岗位本身对候选人的职业价值）；JD 未写证据的维度 score=null（不入分母，全 unknown 时如实输出"有效维度不足"），禁止按行业刻板印象补分；营销叙事一律不作证据。
 - **cv_match_score（0-100）由 CV Match 层产出（`tools/lib/cv-match.mjs`，因子与权重见其 `CV_MATCH_FACTORS`），不参与 Career Score**；Career Score 输出不得包含 CV Match、hard_req_coverage、简历关键词覆盖、学历、是否会 SAP、是否有某 capability。
 - **LLM 只解释不重算**：`career_ops_score`、`score_confidence`、`recommendation`（五档）全部来自运行时引擎 + `trace[]`；LLM 的职责是用人话解释各维 reason / evidence 与决策路径。
-- **高分不推荐是合法状态**：cv 84 + career 3.8 + 不推荐 = 合法（candidate-side blocker / job-side 资格 / 缺口封顶都会覆盖分数）；decision trace 是唯一解释依据，禁止看到高分自动翻案。
+- **高分不推荐是合法状态**：cv 84 + career 71 + 不推荐 = 合法（candidate-side blocker / job-side 资格 / 缺口封顶都会覆盖分数）；decision trace 是唯一解释依据，禁止看到高分自动翻案。
 
 ## Block E — 个性化方案
 
@@ -218,7 +218,7 @@ Career Score 由 `tools/lib/scoring.mjs` 产出：`career_ops_score`（1.0-5.0�
 
 **日期：** {YYYY-MM-DD}
 **Archetype：** {检测到的}
-**Score：** {X.X/5}
+**Score：** {XX.X/100}
 **推荐等级：** {强烈推荐 | 推荐 | 一般 | 不推荐 | 硬红线跳过}——由 `tools/lib/scoring.mjs` `computeRecommendation` 决策链产出，格式恒为五档枚举
 **Eligibility / Blocker：** `eligibility_status`（eligible / eligible_with_gaps / ineligible / unknown）+ 命中 blocker（candidate-side：现任雇主/薪资底线/职级倒退/地点/工作制/出差；job-side：硬要求 BLOCKER，见 hard_requirements[]）+ `trace[]` 摘要（Step 0-5 命中路径；由 `tools/lib/eligibility.mjs` 组装证据，决策链唯一 SoT = `computeRecommendation`）
 **URL：** {岗位原始 URL}
@@ -249,7 +249,7 @@ Career Score 由 `tools/lib/scoring.mjs` 产出：`career_ops_score`（1.0-5.0�
 （Block F 的完整内容）
 
 ## G) Draft Application Answers
-（仅当 score >= 4.5 — 申请表答案的草稿）
+（仅当 score >= 87.5 — 申请表答案的草稿）
 
 ---
 
@@ -266,7 +266,7 @@ Career Score 由 `tools/lib/scoring.mjs` 产出：`career_ops_score`（1.0-5.0�
 - 日期
 - 公司
 - 岗位
-- Score（X.X/5）
+- Score（XX.X/100）
 - 状态：`Evaluated`（已评估）
 - PDF：✅ 或 ❌
 - Report：相对链接 `[NNN](reports/NNN-slug-date.md)`

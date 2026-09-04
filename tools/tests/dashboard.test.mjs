@@ -34,7 +34,7 @@ const RESULTS = {
       job_url: 'https://www.zhipin.com/job_detail/a.html', collected_at: '2026-08-27T13:00:00+08:00',
       notes: null,
       analysis: {
-        cv_match_score: 72, career_ops_score: 2.58, rule_score: 5.0,
+        cv_match_score: 72, career_ops_score: 39.5, rule_score: 5.0,
         score_confidence: { percent: 95.7, level: '高' },
         score_breakdown: {
           total_weight: 115, effective_weight: 110, weighted_sum: 284,
@@ -43,7 +43,7 @@ const RESULTS = {
             { key: 'process_speed', name: '流程速度', weight: 5, score: null, weighted_value: null, status: 'unknown', reason: '无证据', evidence: null },
           ],
         },
-        recommendation: '不推荐', recommendation_reason: '职级严重倒退（Career Ops Score 2.58/5）',
+        recommendation: '不推荐', recommendation_reason: '职级严重倒退（Career Score 39.5/100）',
         strengths: ['s1'], gaps: ['g1'], cv_advice: 'adv', interview_focus: 'int', hard_redline: false,
       },
     },
@@ -56,7 +56,7 @@ const RESULTS = {
       job_url: 'https://www.zhipin.com/job_detail/b.html', collected_at: '2026-08-27T13:10:00+08:00',
       notes: null,
       analysis: {
-        cv_match_score: 55, career_ops_score: 2.96, rule_score: 5.0,
+        cv_match_score: 55, career_ops_score: 49, rule_score: 5.0,
         score_confidence: { percent: 82.6, level: '中' }, score_breakdown: null,
         recommendation: '不推荐', recommendation_reason: 'reason-b',
         strengths: [], gaps: [], cv_advice: null, interview_focus: null, hard_redline: false,
@@ -69,8 +69,8 @@ const APPS = `# Applications Tracker
 
 | # | Date | Company | Role | Score | Status | PDF | Report | Notes |
 |---|------|---------|------|-------|--------|-----|--------|-------|
-| 1 | 2026-08-27 | 示例公司 | 采购专员 | 2.58/5 | SKIP | ❌ | [001](reports/001-example-2026-08-27.md) | note1 |
-| 2 | 2026-08-27 | 示例供应链公司 | 采购专员/采购主管 | 2.96/5 | SKIP | ❌ | [002](reports/002-example-2026-08-27.md) | note2 |
+| 1 | 2026-08-27 | 示例公司 | 采购专员 | 39.5/100 | SKIP | ❌ | [001](reports/001-example-2026-08-27.md) | note1 |
+| 2 | 2026-08-27 | 示例供应链公司 | 采购专员/采购主管 | 49/100 | SKIP | ❌ | [002](reports/002-example-2026-08-27.md) | note2 |
 `;
 
 let dir;
@@ -99,13 +99,13 @@ test('D1 正常聚合：3 项核心指标与 tracker 关联', () => {
   assert.equal(s.jobs.length, 2);
   const a = s.jobs[0];
   assert.equal(a.analysis.cv_match_score, 72);
-  assert.equal(a.analysis.career_ops_score, 2.58);
+  assert.equal(a.analysis.career_ops_score, 39.5);
   assert.equal(a.analysis.recommendation, '不推荐');
   assert.equal(a.status, 'SKIP');
   assert.equal(a.status_zh, '不投');
   assert.equal(a.report_file, 'reports/001-example-2026-08-27.md');
   assert.equal(s.stats.avg_cv_match, 63.5);
-  assert.equal(s.stats.avg_career_ops_score, 2.8);
+  assert.equal(s.stats.avg_career_ops_score, 44.3); // (39.5+49)/2 = 44.25 → 既有 1 位小数展示舍入
 });
 
 test('D2 空数据启动不崩（空目录 → 空状态）', () => {
@@ -128,7 +128,7 @@ test('D3 null 不变 0：无 confidence/breakdown 的岗位保持 null', () => {
   const b = s.jobs[1];
   assert.equal(b.analysis.score_confidence, null);
   assert.equal(b.analysis.score_breakdown, null);
-  assert.equal(b.analysis.career_ops_score, 2.96); // 不因 null 变 0
+  assert.equal(b.analysis.career_ops_score, 49); // 不因 null 变 0
 });
 
 test('D4 shortlist 聚合与 last_viewed', () => {
@@ -152,7 +152,7 @@ test('D6 状态原位写回：只改 Status 列，其他列不动', () => {
   assert.equal(updated, true);
   const rows = parseApplications(text);
   assert.equal(rows[1].status, 'Evaluated');
-  assert.equal(rows[1].score, '2.96/5');
+  assert.equal(rows[1].score, '49/100');
   assert.equal(rows[1].company, '示例供应链公司');
   assert.equal(rows[0].status, 'SKIP'); // 另一行不受影响
   assert.ok(text.includes('| 2 | 2026-08-27 |'));
@@ -177,16 +177,16 @@ test('D8 非法状态被拒绝', () => {
 });
 
 test('D9 TSV 生成 10 列制表符分隔（Job ID 在 role 后）', () => {
-  const line = buildTsvLine({ num: '004', date: '2026-08-27', company: 'X', role: 'Y', job_id: 'JOB123', status: 'Evaluated', score: '4.0/5', pdf: '❌', report: '-', notes: 'n' });
+  const line = buildTsvLine({ num: '004', date: '2026-08-27', company: 'X', role: 'Y', job_id: 'JOB123', status: 'Evaluated', score: '75/100', pdf: '❌', report: '-', notes: 'n' });
   const cols = line.split('\t');
   assert.equal(cols.length, 10);
   assert.equal(cols[0], '004');
   assert.equal(cols[3], 'Y');
   assert.equal(cols[4], 'JOB123'); // Job ID 紧随 role
   assert.equal(cols[5], 'Evaluated'); // status BEFORE score
-  assert.equal(cols[6], '4.0/5');
+  assert.equal(cols[6], '75/100');
   // 旧 9 列调用兼容：不传 job_id → 空位落格
-  const legacy = buildTsvLine({ num: '001', date: 'd', company: 'X', role: 'Y', status: 'SKIP', score: '1/5', pdf: '❌', report: '-', notes: 'n' });
+  const legacy = buildTsvLine({ num: '001', date: 'd', company: 'X', role: 'Y', status: 'SKIP', score: '0/100', pdf: '❌', report: '-', notes: 'n' });
   assert.equal(legacy.split('\t').length, 10);
   assert.equal(legacy.split('\t')[4], '');
 });
@@ -206,8 +206,8 @@ test('SW1 同 report num 不同岗位：更新 B 时 A 完全不变（P0 事故�
 
 | # | Date | Company | Role | Score | Status | PDF | Report | Notes |
 |---|------|---------|------|-------|--------|-----|--------|-------|
-| 4 | 2026-08-31 | 岗位A公司（甲乙丙丁贸易有限公司） | 采购专员 | 3.39/5 | Evaluated | ❌ | [004](reports/003-lincheng-2026-08-27.md) | via dashboard status change |
-| 5 | 2026-08-31 | 岗位B公司（某集团有限公司） | 外协采购主管 | 3.76/5 | SKIP | ❌ | [004](reports/003-lincheng-2026-08-27.md) | via dashboard status change |
+| 4 | 2026-08-31 | 岗位A公司（甲乙丙丁贸易有限公司） | 采购专员 | 59.75/100 | Evaluated | ❌ | [004](reports/003-lincheng-2026-08-27.md) | via dashboard status change |
+| 5 | 2026-08-31 | 岗位B公司（某集团有限公司） | 外协采购主管 | 69/100 | SKIP | ❌ | [004](reports/003-lincheng-2026-08-27.md) | via dashboard status change |
 `;
   fs.writeFileSync(path.join(dir, 'data', 'applications.md'), apps, 'utf8');
   const apply = makeStatusHandler({ dataDir: path.join(dir, 'data'), additionsDir: path.join(dir, 'batch/tracker-additions'), mergeCommand: () => ({ ok: true }) });
@@ -220,7 +220,7 @@ test('SW1 同 report num 不同岗位：更新 B 时 A 完全不变（P0 事故�
   const b = rows.find(x => x.company.includes('岗位B公司'));
   assert.equal(a.status, 'Evaluated', '岗位 A 必须完全不变');
   assert.equal(a.company.includes('岗位A公司'), true, '岗位 A 公司字段不被覆盖');
-  assert.equal(a.score, '3.39/5', '岗位 A 分数不被覆盖');
+  assert.equal(a.score, '59.75/100', '岗位 A 分数不被覆盖');
   assert.equal(b.status, 'Applied', '岗位 B 正确更新');
   // 写后验证已在 handler 内断言（POST_WRITE_VERIFY_FAILED 会走 ok:false）
 });
@@ -244,8 +244,8 @@ test('SW3 身份匹配唯一：只更新目标 company/title 行', () => {
 
 | # | Date | Company | Role | Score | Status | PDF | Report | Notes |
 |---|------|---------|------|-------|--------|-----|--------|-------|
-| 1 | 2026-08-27 | 目标公司（某某机械有限公司） | 采购专员 | 2.58/5 | SKIP | ❌ | [001](reports/001-x.md) | n1 |
-| 2 | 2026-08-27 | 另一家公司（其他贸易有限公司） | 采购工程师 | 2.96/5 | SKIP | ❌ | [002](reports/002-x.md) | n2 |
+| 1 | 2026-08-27 | 目标公司（某某机械有限公司） | 采购专员 | 39.5/100 | SKIP | ❌ | [001](reports/001-x.md) | n1 |
+| 2 | 2026-08-27 | 另一家公司（其他贸易有限公司） | 采购工程师 | 49/100 | SKIP | ❌ | [002](reports/002-x.md) | n2 |
 `;
   fs.writeFileSync(path.join(dir, 'data', 'applications.md'), apps, 'utf8');
   const apply = makeStatusHandler({ dataDir: path.join(dir, 'data'), additionsDir: path.join(dir, 'batch/tracker-additions'), mergeCommand: () => ({ ok: true }) });
@@ -261,8 +261,8 @@ test('SW4 匹配歧义：命中多行必须拒绝且不修改任何数据', () =
 
 | # | Date | Company | Role | Score | Status | PDF | Report | Notes |
 |---|------|---------|------|-------|--------|-----|--------|-------|
-| 1 | 2026-08-27 | 同名公司 | 采购专员 | 2.58/5 | SKIP | ❌ | - | n1 |
-| 2 | 2026-08-27 | 同名公司 | 采购专员 | 2.96/5 | Applied | ❌ | - | n2 |
+| 1 | 2026-08-27 | 同名公司 | 采购专员 | 39.5/100 | SKIP | ❌ | - | n1 |
+| 2 | 2026-08-27 | 同名公司 | 采购专员 | 49/100 | Applied | ❌ | - | n2 |
 `;
   fs.writeFileSync(path.join(dir, 'data', 'applications.md'), apps, 'utf8');
   const before = fs.readFileSync(path.join(dir, 'data', 'applications.md'), 'utf8');
@@ -399,8 +399,8 @@ test('ID6 job_id 已在 tracker：applyStatus 只更新对应行', () => {
 
 | # | Date | Company | Role | Job ID | Score | Status | PDF | Report | Notes |
 |---|------|---------|------|--------|-------|--------|-----|--------|-------|
-| 1 | 2026-08-31 | 测试科技 | 采购专员 | testjob0001aaaaaaaaaaaa | 2.9/5 | Applied | ❌ | - | t |
-| 2 | 2026-08-31 | 测试科技 | 采购 | testjob0002bbbbbbbbbbbb | 3.0/5 | SKIP | ❌ | - | t |
+| 1 | 2026-08-31 | 测试科技 | 采购专员 | testjob0001aaaaaaaaaaaa | 47.5/100 | Applied | ❌ | - | t |
+| 2 | 2026-08-31 | 测试科技 | 采购 | testjob0002bbbbbbbbbbbb | 50/100 | SKIP | ❌ | - | t |
 `;
   fs.writeFileSync(path.join(dir, 'data', 'applications.md'), apps, 'utf8');
   const apply = makeStatusHandler({ dataDir: path.join(dir, 'data'), additionsDir: path.join(dir, 'batch/tracker-additions'), mergeCommand: () => ({ ok: true }) });
@@ -416,7 +416,7 @@ test('ID7 不存在 tracker：新增独立行（同公司另一岗位保持 pend
 
 | # | Date | Company | Role | Job ID | Score | Status | PDF | Report | Notes |
 |---|------|---------|------|--------|-------|--------|-----|--------|-------|
-| 1 | 2026-08-31 | 测试科技 | 采购 | testjob0002bbbbbbbbbbbb | 3.0/5 | Evaluated | ❌ | - | t |
+| 1 | 2026-08-31 | 测试科技 | 采购 | testjob0002bbbbbbbbbbbb | 50/100 | Evaluated | ❌ | - | t |
 `;
   fs.writeFileSync(path.join(dir, 'data', 'applications.md'), apps, 'utf8');
   const appsPath = path.join(dir, 'data', 'applications.md');
@@ -445,7 +445,7 @@ test('ID8 legacy 行唯一匹配：URL 层命中（无 Job ID 列的旧行）', 
 
 | # | Date | Company | Role | Score | Status | PDF | Report | Notes |
 |---|------|---------|------|-------|--------|-----|--------|-------|
-| 1 | 2026-08-27 | 示例科技公司 | 采购专员 | 2.58/5 | SKIP | ❌ | https://www.zhipin.com/job_detail/testjob0003cccccccccccc.html | [001](r.md) | n |
+| 1 | 2026-08-27 | 示例科技公司 | 采购专员 | 39.5/100 | SKIP | ❌ | https://www.zhipin.com/job_detail/testjob0003cccccccccccc.html | [001](r.md) | n |
 `;
   fs.writeFileSync(path.join(dir, 'data', 'applications.md'), apps, 'utf8');
   const rows = parseApplications(apps);
@@ -458,8 +458,8 @@ test('ID9 legacy 行多义：拒绝自动状态广播', () => {
 
 | # | Date | Company | Role | Score | Status | PDF | Report | Notes |
 |---|------|---------|------|-------|--------|-----|--------|-------|
-| 1 | 2026-08-27 | 同名公司 | 采购专员 | 2.58/5 | SKIP | ❌ | - | n1 |
-| 2 | 2026-08-27 | 同名公司 | 采购专员 | 2.96/5 | Applied | ❌ | - | n2 |
+| 1 | 2026-08-27 | 同名公司 | 采购专员 | 39.5/100 | SKIP | ❌ | - | n1 |
+| 2 | 2026-08-27 | 同名公司 | 采购专员 | 49/100 | Applied | ❌ | - | n2 |
 `;
   fs.writeFileSync(path.join(dir, 'data', 'applications.md'), apps, 'utf8');
   const before = fs.readFileSync(path.join(dir, 'data', 'applications.md'), 'utf8');
@@ -477,8 +477,8 @@ test('ST1-ST5 同公司多岗位状态独立 + crawler 重抓保持（buildState
 
 | # | Date | Company | Role | Job ID | Score | Status | PDF | Report | Notes |
 |---|------|---------|------|--------|-------|--------|-----|--------|-------|
-| 1 | 2026-08-31 | 测试科技 | 采购 | testjob0002bbbbbbbbbbbb | 3.0/5 | Evaluated | ❌ | - | t |
-| 2 | 2026-08-31 | 测试科技 | 采购专员 | testjob0001aaaaaaaaaaaa | 2.9/5 | Applied | ❌ | - | t |
+| 1 | 2026-08-31 | 测试科技 | 采购 | testjob0002bbbbbbbbbbbb | 50/100 | Evaluated | ❌ | - | t |
+| 2 | 2026-08-31 | 测试科技 | 采购专员 | testjob0001aaaaaaaaaaaa | 47.5/100 | Applied | ❌ | - | t |
 `, 'utf8');
   // ST4: crawler 重抓采购专员（新 run 文件，时间变化）
   const rerun = {

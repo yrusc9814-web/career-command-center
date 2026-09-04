@@ -6,7 +6,7 @@
 >
 > - **16 个 mode 文件** 全部翻译为中文，按国内招聘流程重写（含新增 `inbox` mode）
 > - **3 个采购 archetype**（执行采购 / 寻源与供应商开发 / 战略与品类采购）+ 采购六档职级序列（助理 / 专员 / 高级专员 / 主管 / 经理 / 总监·负责人）
-> - **四层决策架构**：Eligibility / Blocker → CV Match（0-100）→ Career Score（1-5，十维 × 权重 100）→ Recommendation（五档 + decision trace），全部由运行时引擎（`tools/lib/`）产出
+> - **四层决策架构**：Eligibility / Blocker → CV Match（0-100）→ Career Score（0-100，十维 × 权重 100）→ Recommendation（五档 + decision trace），全部由运行时引擎（`tools/lib/`）产出
 > - **薪酬调研源** 从 Glassdoor / Levels.fyi / Blind 切换到 **看准网 / 脉脉 / OfferShow / 知乎 / 职友集 / 猎聘**
 > - **公司调研源** 改用 脉脉职言区 / 天眼查 / 企查查 / 招投标公告 / 行业媒体 / 小红书
 > - **🔑 Bookmarklet + Local Inbox 工作流**（新）：一键绕过 Boss 直聘 / 猎聘 / Mokahr / 企业 SPA 的反爬 + 反复制 + 登录墙 — 浏览器点按钮 → 本地服务器接收 JSON → Claude 批量评估。**国内 JD 取数的正确范式**
@@ -46,7 +46,7 @@
 
 **career-ops-china 把 Claude Code 变成一个中国大陆求职指挥中心**：贴一个岗位 JD 进来，AI 会自动跑完整 6 块评估（A-F），生成针对该岗位的 ATS 优化简历 PDF，把申请入库追踪。再加上薪资调研、面试题库与故事库、谈判话术、批量扫描、申请表助手、脉脉/微信 触达消息生成等十几个独立 mode。
 
-> ⚠️ **这不是海投工具，是过滤器**。系统对 < 4.0/5 分的岗位会强烈不建议申请。所有动作的最后一步永远是用户决定是否提交。
+> ⚠️ **这不是海投工具，是过滤器**。系统对 < 75/100 分的岗位会强烈不建议申请。所有动作的最后一步永远是用户决定是否提交。
 
 ### 适合谁
 
@@ -145,7 +145,7 @@ flowchart TD
 |----|------|------|
 | **Eligibility / Blocker** | `eligibility_status`（eligible / eligible_with_gaps / ineligible / unknown）+ hard_requirements[] + candidate-side blocker | `tools/lib/eligibility.mjs` |
 | **CV Match** | `cv_match_score` 0-100（14 因子：Primary 55 / Secondary 30 / Low 15）+ confidence | `tools/lib/cv-match.mjs` |
-| **Career Score** | `career_ops_score` 1.0-5.0（十维 × 权重 100，unknown 不入分母）+ confidence | `tools/lib/scoring.mjs` |
+| **Career Score** | `career_ops_score` 0-100（十维 × 权重 100，unknown 不入分母；Round 1 起为 0-100 制）+ confidence | `tools/lib/scoring.mjs` |
 | **Recommendation** | 五档（强烈推荐 / 推荐 / 一般 / 不推荐 / 硬红线跳过）= 决策矩阵 + 硬红线 + blocker + 缺口封顶，附 `trace[]` | `tools/lib/scoring.mjs` `computeRecommendation` |
 
 十维维度表（key / 中文名 / 权重，1/3/5 细则见 `tools/lib/scoring.mjs` 的 `SCORING_RUBRIC`）：
@@ -163,7 +163,7 @@ flowchart TD
 | digital_tooling | 数字化与工具成熟度 | 5 |
 | hiring_process_quality | 招聘流程质量 | 3 |
 
-> 三列独立：CV Match（0-100）回答"履历与岗位多匹配"；Career Score（1-5）回答"岗位本身的职业价值"；Recommendation 是决策结论。**三列不可加权合成一个总分**，高分不推荐是合法状态（decision trace 是唯一解释依据）。
+> 三列独立：CV Match（0-100）回答"履历与岗位多匹配"；Career Score（0-100）回答"岗位本身的职业价值"；Recommendation 是决策结论。**三列不可加权合成一个总分**，高分不推荐是合法状态（decision trace 是唯一解释依据）。
 
 ### 硬红线机制（你定义，系统执行）
 
@@ -299,7 +299,7 @@ Claude：
 8. 写 report.md → reports/{NNN}-{slug}-{date}.md
 9. 生成 PDF（注入 JD 关键词到 cv-template.html → Playwright 渲染）
 10. 写 tracker TSV → 自动 merge 到 applications.md
-11. 显示 Career Score（1-5）+ CV Match（0-100）+ 推荐等级（五档）+ 谈判 anchor
+11. 显示 Career Score（0-100）+ CV Match（0-100）+ 推荐等级（五档）+ 谈判 anchor
 ```
 
 实际示例报告参考：[`reports/001-kuaishou-llm-fintech-2026-04-07.md`](reports/001-kuaishou-llm-fintech-2026-04-07.md)
