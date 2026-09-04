@@ -459,16 +459,20 @@ const SHELL_BASE = 'clamp(196px, 15vw, 250px) clamp(540px, 46vw, 650px) minmax(3
 test('P23 1280px 布局：三栏 base 栅格 + 推荐结果 5 格 + 核心进度结构锁定', () => {
   assert.equal(declAtWidth(CSS, '.shell', 'grid-template-columns', 1280), SHELL_BASE);
   assert.equal(declAtWidth(CSS, '.rec-grid', 'grid-template-columns', 1280), 'repeat(5, minmax(0, 1fr))');
-  // 核心进度：圆环/星形两段式 + 中间分隔（视觉验收锁定，零回归）
-  assert.equal(baseDecl(CSS, '.core-ring-row', 'grid-template-columns'), '1fr auto 1fr');
-  assert.ok(CSS.includes('.core-divider'));
-  assert.ok(CSS.includes('.star-disc'));
-  assert.ok(CSS.includes('.ring-stat'));
+  // 核心进度（Round 3）：KPI 指标卡布局 + 分类可点击交互样式；legacy ring/star 选择器保留占位
+  assert.equal(baseDecl(CSS, '.kpi-grid', 'grid-template-columns'), 'repeat(4, minmax(0, 1fr))');
+  assert.ok(CSS.includes('.kpi-card:hover'), 'KPI 卡 hover elevation');
+  assert.ok(CSS.includes('.rec-cell.is-clickable'), '推荐分类可点击交互样式');
+  assert.ok(CSS.includes('.star-disc'), 'legacy star 占位保留');
+  assert.ok(CSS.includes('.ring-track'), 'legacy ring 占位保留');
 });
 
-test('P24 1440px 布局：base 栅格 + 详情四卡一行 + 概览内容宽度上限', () => {
+test('P24 1440px 布局：base 栅格 + 详情结果概览模块 + 概览内容宽度上限', () => {
   assert.equal(declAtWidth(CSS, '.shell', 'grid-template-columns', 1440), SHELL_BASE);
-  assert.equal(baseDecl(CSS, '.d-verdict', 'grid-template-columns'), 'repeat(4, 1fr)');
+  // Round 3：详情顶部改为结果概览（推荐结论行 + 三条评分条），不再是四等分卡
+  assert.ok(CSS.includes('.sv-rec-row'), '推荐结论行样式');
+  assert.ok(CSS.includes('.score-bar'), '横向评分条样式');
+  assert.ok(CSS.includes('.v-card'), 'legacy v-card 占位保留');
   assert.equal(baseDecl(CSS, '.dash-view', 'max-width'), '1060px');
 });
 

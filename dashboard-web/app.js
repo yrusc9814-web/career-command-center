@@ -8,8 +8,8 @@
 
 import {
   displayDimensions, dimStatusZh, gapLevelZh, blockerHits, gapItemText,
-  traceLines, zhMetrics, reasonZh, verdictCards, recommendationCells, recClassOf, confClassOf,
-  rankJobs,
+  traceLines, zhMetrics, reasonZh, recommendationCells, recClassOf, confClassOf,
+  rankJobs, overviewKpis, easeOutCounter, formatCounterValue, scoreSummary,
 } from './lib/view-model.mjs';
 import { SECTION_EMPTY_TEXT, isAnalyzed } from './lib/analysis-contract.mjs';
 
@@ -210,7 +210,24 @@ function fillSelect(sel, values, label, fmt, valOf) {
 function updateFilterState(isList) {
   const n = isList ? filteredJobs().length : 0;
   const parts = [state.activeRun ? `仅搜索轮次 ${state.activeRun.replace('search-results-', '').replace('.json', '')}` : '全部轮次'];
+  // 3B：推荐分类点击进入的筛选 → 状态条明确显示条件 + 数量 + 一键清除
+  const recSel = $('#recFilter');
+  const recVal = recSel && recSel.value ? recSel.value : null;
+  if (recVal) parts.push(`推荐：${recVal}`);
   $('#filterState').textContent = `当前筛选：${parts.join(' · ')} · ${n} 个岗位`;
+  const el = $('#filterState');
+  let clearBtn = $('#clearRecFilterBtn');
+  if (recVal && !clearBtn) {
+    clearBtn = document.createElement('button');
+    clearBtn.id = 'clearRecFilterBtn';
+    clearBtn.className = 'btn ghost';
+    clearBtn.style.cssText = 'padding:2px 10px;font-size:12px;margin-left:8px';
+    clearBtn.textContent = '清除推荐筛选';
+    clearBtn.onclick = () => { $('#recFilter').value = ''; renderList(); updateFilterState(true); };
+    el.after(clearBtn);
+  } else if (!recVal && clearBtn) {
+    clearBtn.remove();
+  }
 }
 
 function renderRunBanner() {
@@ -221,17 +238,21 @@ function renderRunBanner() {
   $('#clearRunBtn').onclick = () => { state.activeRun = null; renderAll(); };
 }
 
-// ── 概览（核心进度 / 推荐结果 / 搜索摘要 / 本轮岗位排序） ──
+// ── 概览（KPI 指标卡 / 推荐结果 / 搜索摘要 / 本轮岗位排序） ──
 function renderDash() {
   const d = state.data;
   const s = d.stats;
   const cfg = d.search_config;
   const rec = s.by_recommendation;
-  // 五格顺序/文案固定，数值全部来自 Runtime 聚合（不硬编码计数）
+  // 五格顺序/文案固定，数值全部来自 Runtime 聚合（不硬编码计数）；3B：分类 = 可点击筛选入口
   const recCells = recommendationCells(rec).map(([label, n, cls]) =>
-    `<div class="rec-cell ${cls}"><div class="rc2-num">${n}</div><div class="rc2-label">${esc(label)}</div></div>`).join('');
+    `<button type="button" class="rec-cell ${cls} is-clickable" data-rec="${esc(label)}" title="筛选「${esc(label)}」分类岗位" aria-label="筛选查看 ${esc(label)} 的 ${n} 个岗位">
+      <span class="rc2-num">${n}</span><span class="rc2-label">${esc(label)}</span>
+    </button>`).join('');
   const recTotal = recommendationCells(rec).reduce((n, x) => n + x[1], 0);
-  const pct = (n) => s.total ? Math.round(n / s.total * 100) : 0;
+
+  // 3A：顶部 KPI 指标卡（数量 = 当前首页已有真实指标：已分析/想投/平均匹配度/平均综合评分）
+  const kpis = overviewKpis(s);
 
   // 展示排序（仅排序，不改数据）：Recommendation 优先 → Career Score 降序 → CV Match 降序；
   // 默认预览前 10 个（<=10 全显示，>10 只显示前 10），不新增任何更多入口或切换控件。
@@ -240,14 +261,17 @@ function renderDash() {
   $('#dashView').innerHTML = `
     <section class="dash-card">
       <div class="dash-h-row"><h3 class="dash-h">核心进度</h3><span class="fine">共 ${s.total} 个岗位</span></div>
-      <div class="core-ring-row">
-        ${ringStat(pct(s.analyzed), '已分析', `${s.analyzed} / ${s.total}`, 'ring-green')}
-        <div class="core-divider"></div>
-        ${starStat('想投', s.shortlisted)}
+      <div class="kpi-grid">
+        ${kpis.map(k => `
+          <div class="kpi-card ${k.cls}" data-kpi="${k.id}">
+            <div class="kpi-label">${esc(k.label)}</div>
+            <div class="kpi-num" data-target="${k.value == null ? '' : k.value}" data-decimals="${k.decimals ?? ''}">${k.value == null ? '—' : formatCounterValue(k.value)}</div>
+            <div class="kpi-sub">${esc(k.sub)}</div>
+          </div>`).join('')}
       </div>
     </section>
     <section class="dash-card">
-      <div class="dash-h-row"><h3 class="dash-h">推荐结果</h3><span class="fine">共 ${recTotal} 个岗位</span></div>
+      <div class="dash-h-row"><h3 class="dash-h">推荐结果</h3><span class="fine">共 ${recTotal} 个岗位 · 点击分类查看对应岗位</span></div>
       <div class="rec-grid">${recCells}</div>
     </section>
     <section class="dash-card">
@@ -261,8 +285,6 @@ function renderDash() {
           <div class="sg-row"><span class="k">投递跟踪</span><span>${d.tracker.rows} 行</span></div>
         </div>
         <div class="summary-group">
-          <div class="sg-row"><span class="k">平均简历匹配度</span><span>${s.avg_cv_match != null ? s.avg_cv_match + '%' : '暂无数据'}</span></div>
-          <div class="sg-row"><span class="k">平均综合评分</span><span>${s.avg_career_ops_score != null ? s.avg_career_ops_score + ' / 100' : '暂无数据'}</span></div>
           <div class="sg-row"><span class="k">薪资</span><span>${cfg.salary_min_k ?? '?'}K–${cfg.salary_max_k ?? '?'}K</span></div>
           <div class="sg-row"><span class="k">最后运行</span><span>${esc((d.last_run_at || '—').replace('T', ' ').slice(0, 16))}</span></div>
           <div class="sg-row"><span class="k">收件箱待处理</span><span>${d.inbox_pending} 个</span></div>
@@ -282,31 +304,67 @@ function renderDash() {
       api('/api/last-viewed', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ job_id: row.dataset.job }) }).catch(() => {});
     };
   });
+  // 3B：推荐分类 → 全部岗位 + canonical recommendation 筛选（复用现有 recFilter，零新数据源）
+  $$('.rec-cell.is-clickable', $('#dashView')).forEach(btn => {
+    btn.onclick = () => applyRecommendationFilter(btn.dataset.rec);
+  });
+  // 3A：数字 0 → 真实值（每次 Overview activation 重新播放；点击「概览」导航 = 重播）
+  animateOverviewKpis();
 }
-// 圆环指标（SVG donut）：环中央显示百分比，下方标签与数值，严格垂直中轴
-function ringStat(pct, label, valueText, cls) {
-  const R = 34, C = 2 * Math.PI * R;
-  const dash = (C * Math.min(pct, 100) / 100).toFixed(2);
-  return `<div class="ring-stat">
-    <svg class="ring ${cls}" width="84" height="84" viewBox="0 0 84 84" role="img" aria-label="${esc(label)} ${pct}%">
-      <circle class="ring-track" cx="42" cy="42" r="${R}"></circle>
-      <circle class="ring-fill" cx="42" cy="42" r="${R}" stroke-dasharray="${dash} ${C.toFixed(2)}" transform="rotate(-90 42 42)"></circle>
-      <text class="ring-num" x="42" y="42" text-anchor="middle" dominant-baseline="central">${pct}%</text>
-    </svg>
-    <div class="ring-label">${esc(label)}</div>
-    <div class="ring-value">${esc(valueText)}</div>
-  </div>`;
+
+// 3B：分类点击行为 = 设置现有推荐筛选 + 切换到全部岗位（不建第二套列表，不改排序）
+function applyRecommendationFilter(label) {
+  const value = label === '硬红线' ? '硬红线跳过' : label; // 展示别名 → canonical enum（scoring.mjs）
+  state.page = 'all';
+  renderAll();
+  const sel = $('#recFilter');
+  const has = [...sel.options].some(o => o.value === value);
+  sel.value = has ? value : '';
+  renderList();        // 以新筛选条件重渲染列表
+  updateFilterState(true);
+  const listTop = $('#jobList');
+  if (listTop) listTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-// 想投：暖黄圆形底 + 星形 icon（非百分比环），数值只显示数量
-function starStat(label, num) {
-  return `<div class="ring-stat">
-    <div class="star-disc" role="img" aria-label="${esc(label)} ${num}">
-      <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path class="star-path" d="M12 2.4l2.94 5.95 6.57.96-4.75 4.63 1.12 6.54L12 17.37l-5.88 3.11 1.12-6.54-4.75-4.63 6.57-.96z"/></svg>
-    </div>
-    <div class="ring-label">${esc(label)}</div>
-    <div class="ring-value">${esc(num)}</div>
-  </div>`;
+
+// 3A：概览 KPI 数字 0 → 真实值。rAF + ease-out；同一数字重播取消旧 frame；
+// prefers-reduced-motion: reduce → 直接显示最终值；最终值必须精确等于真实值。
+const kpiAnimations = new Map();
+function animateOverviewKpis() {
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const cards = $$('#dashView .kpi-card');
+  for (const card of cards) {
+    const numEl = $('.kpi-num', card);
+    if (!numEl) continue;
+    const raw = numEl.dataset.target;
+    if (raw === '') continue; // '—' 占位（指标缺位）：无动画
+    const target = Number(raw);
+    if (!Number.isFinite(target)) continue;
+    const decRaw = numEl.dataset.decimals;
+    const decimals = decRaw === '' ? null : Number(decRaw);
+    const fmt = (v) => {
+      const base = formatCounterValue(v);
+      // 小数指标（avg 类）：动画中固定 1 位小数步进，终值由 formatCounterValue 保证精确
+      return decimals == null && !Number.isInteger(target) ? (Number.isInteger(v) ? String(v) : (Math.round(v * 10) / 10).toFixed(1)) : base;
+    };
+    const run = kpiAnimations.get(numEl);
+    if (run) cancelAnimationFrame(run.frame); // 重入：取消旧动画帧，重新从 0 开始
+    if (reduce) { numEl.textContent = fmt(target); return; } // U4：减少动态效果 → 直达终值
+    const duration = 780; // ms（650–900 区间）
+    const startedAt = performance.now();
+    const frame = requestAnimationFrame(function step(now) {
+      const t = Math.min((now - startedAt) / duration, 1);
+      const v = easeOutCounter(0, target, t);
+      numEl.textContent = fmt(t >= 1 ? target : v); // 终帧强制真实值（无累计误差）
+      if (t < 1) {
+        kpiAnimations.set(numEl, { frame: requestAnimationFrame(step) });
+      } else {
+        kpiAnimations.delete(numEl);
+      }
+    });
+    kpiAnimations.set(numEl, { frame });
+  }
 }
+// Round 3 移除 ringStat/starStat：核心进度改为 KPI 指标卡（overviewKpis + 计数动画）。
 // 展示层文本映射（zhMetrics）在 ./lib/view-model.mjs：Runtime 文案中的旧品牌指标名 → 中文
 // 多条建议字符串 → 逐条列表（仅在存在 ①-⑳ 明确编号边界时拆分，保留原编号）
 function listify(text) {
@@ -504,7 +562,27 @@ function renderDetail(j) {
     </div>
 
     <div class="d-verdict">
-      ${verdictCards(a).map(c => `<div class="v-card"><div class="v-num ${esc(c.cls)}">${esc(c.num)}</div><div class="v-label">${esc(c.label)}</div></div>`).join('')}
+      ${(() => {
+        const sum = scoreSummary(a);
+        const recText = sum.recommendation || '—';
+        const bar = (b) => {
+          if (b.width == null) {
+            // 缺失/待确认：空 track（不伪造 0 分）
+            return `<div class="score-bar" role="meter" aria-label="${esc(b.label)}：待确认" aria-valuemin="0" aria-valuemax="100"><div class="score-bar-fill" style="width:0%"></div></div>`;
+          }
+          return `<div class="score-bar" role="meter" aria-label="${esc(b.label)}：${esc(b.text)}" aria-valuenow="${Math.round(b.score)}" aria-valuemin="0" aria-valuemax="100"><div class="score-bar-fill ${b.id}" style="width:${b.width}%"></div></div>`;
+        };
+        return `
+          <div class="sv-rec-row">
+            <span class="sv-rec-label">推荐结论</span>
+            <span class="rec-chip rec-${esc(recText)} sv-rec-value">${esc(recText)}</span>
+          </div>
+          ${sum.bars.map(b => `
+            <div class="sv-row">
+              <div class="sv-head"><span class="sv-label">${esc(b.label)}</span><span class="sv-value">${esc(b.text)}</span></div>
+              ${bar(b)}
+            </div>`).join('')}`;
+      })()}
     </div>
 
     <div class="d-actions">

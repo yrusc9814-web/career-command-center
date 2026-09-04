@@ -339,6 +339,76 @@ const confLevelSuffix = (c) =>
 const confCls = (c) =>
   (c && c.percent != null && Number.isFinite(Number(c.percent))) ? confClassOf(Number(c.percent)) : '';
 
+// ---------------------------------------------------------------------------
+// 7. Round 3 — 概览 KPI 卡 / 计数动画插值 / 详情结果概览评分条（纯展示 helper）
+// 数据全部来自已有 Runtime 聚合与 canonical analysis，不新增业务指标、不重算分数。
+// ---------------------------------------------------------------------------
+
+/** 计数动画插值（U2/U4 纯函数测试面）：ease-out cubic。
+ * @param {number} start 起始值（重播 = 0）
+ * @param {number} target 真实最终值（动画终点必须精确等于它）
+ * @param {number} t 进度 [0,1]
+ * @returns {number} 当前帧值；t>=1 恒等于 target（无累计误差） */
+export function easeOutCounter(start, target, t) {
+  const s = Number(start) || 0;
+  const e = Number(target);
+  if (!Number.isFinite(e)) return s;
+  const p = Math.min(Math.max(Number(t) || 0, 0), 1);
+  if (p >= 1) return e;
+  const k = 1 - Math.pow(1 - p, 3); // ease-out cubic
+  return s + (e - s) * k;
+}
+
+/** 数值格式化：整数不带小数点，小数保留原 precision（不强制整数化）。 */
+export function formatCounterValue(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return String(v);
+  return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
+}
+
+/**
+ * 概览 KPI 卡数据（卡片数量 = 当前首页已有真实指标数，不发明新指标）：
+ *   1 已分析（n / total，副行 100% 环比率）｜ 2 想投（shortlist 收藏数）
+ *   3 平均简历匹配度（avg_cv_match%）｜ 4 平均综合评分（avg_career_ops_score /100）
+ * all = stats.total（指标缺位时 count=null → 显示 '—'，动画跳过）。
+ */
+export function overviewKpis(stats = {}) {
+  const total = stats.total ?? 0;
+  const analyzed = stats.analyzed ?? 0;
+  const pctAnalyzed = total ? Math.round(analyzed / total * 100) : 0;
+  return [
+    { id: 'analyzed', label: '已分析', value: analyzed, sub: `${analyzed} / ${total} · ${pctAnalyzed}%`, decimals: 0, cls: 'kpi-green' },
+    { id: 'shortlisted', label: '想投', value: stats.shortlisted ?? 0, sub: '收藏（≠已投递）', decimals: 0, cls: 'kpi-amber' },
+    { id: 'avg_cv', label: '平均简历匹配度', value: stats.avg_cv_match ?? null, sub: '全部已分析岗位', decimals: null, cls: 'kpi-violet' },
+    { id: 'avg_career', label: '平均综合评分', value: stats.avg_career_ops_score ?? null, sub: 'true 0–100', decimals: null, cls: 'kpi-teal' },
+  ];
+}
+
+/**
+ * 详情页"结果概览"评分条（3C）：三条 0–100 横条 + 文字推荐结论。
+ * confidence 数据源 = 原四卡同源（score_confidence 优先，回退 cv_match_confidence，
+ * 两者都不缺才缺）——不换用另一个 confidence；缺失 → 待确认 + 空 track（不伪造 0 分）。
+ * 数值只用于展示宽度 clamp(score,0,100)，不参与任何业务计算。
+ */
+export function scoreSummary(a = {}) {
+  const num = (v) => (v != null && Number.isFinite(Number(v)) ? Number(v) : null);
+  const cv = num(a.cv_match_score);
+  const career = num(a.career_ops_score ?? a.career_score ?? a.score);
+  const conf = a.score_confidence || a.cv_match_confidence || null;
+  const confPct = conf ? num(conf.percent) : null;
+  const bar = (v) => (v == null ? null : Math.min(Math.max(v, 0), 100));
+  const fmt = (v) => (v == null ? null : (Number.isInteger(v) ? `${v} 分` : `${Math.round(v * 100) / 100} 分`));
+  return {
+    recommendation: a.recommendation || null,
+    recCls: recClassOf(a.recommendation),
+    bars: [
+      { id: 'cv', label: '简历匹配度', score: cv, width: bar(cv), text: fmt(cv) },
+      { id: 'career', label: '岗位综合评分', score: career, width: bar(career), text: fmt(career) },
+      { id: 'confidence', label: '评估可信度', score: confPct, width: bar(confPct), text: confPct == null ? '待确认' : fmt(confPct) },
+    ],
+  };
+}
+
 /**
  * 三层结果卡（详情页 d-verdict 的四张卡数据）：
  *   卡1 CV Match 0-100（%）｜卡2 Career Score 0-100（/100）｜卡3 Recommendation（Runtime 枚举）
