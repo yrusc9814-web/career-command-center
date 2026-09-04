@@ -132,12 +132,12 @@ test('P6 CV Match 以 0-100 展示（%），null → 暂无数据语义（—）
   assert.equal(verdictCards({ cv_match_score: 200 })[0].num, '200%'); // 透传异常值供人工发现，不改写
 });
 
-test('P7 Career Score 以 1-5 展示（/5），null 不变 0', () => {
+test('P7 Career Score 以 0-100 展示（/100），null 不变 0（Round 1B true 0-100）', () => {
   const cards = verdictCards(FIXTURE_003.analysis);
-  assert.equal(cards[1].num, '3.8');
-  assert.equal(cards[1].label, '综合评分 / 5');
+  assert.equal(cards[1].num, '70');
+  assert.equal(cards[1].label, '综合评分 / 100');
   assert.equal(verdictCards({})[1].num, '—');
-  // 0 非契约值（Runtime 恒为 1-5 或 null）；若出现则原样透传供人工发现，不改写、不吞
+  // 0 非契约值（Runtime 恒为 [20,100] 或 null）；若出现则原样透传供人工发现，不改写、不吞
   assert.equal(verdictCards({ career_ops_score: 0 })[1].num, '0');
 });
 
@@ -154,11 +154,11 @@ test('P8 Recommendation 独立展示，前端不重推导（分数缺失也不�
   assert.equal(confClassOf(90), 'conf-hi');
 });
 
-test('P9 fixture-003：CV 84% + Career 3.8 + 不推荐 三者同时成立', () => {
+test('P9 fixture-003：CV 84% + Career 70 + 不推荐 三者同时成立', () => {
   const cards = verdictCards(FIXTURE_003.analysis);
   assert.deepEqual(
     cards.map(c => c.num),
-    ['84%', '3.8', '不推荐', '100%'],
+    ['84%', '70', '不推荐', '100%'],
   );
 });
 
@@ -241,11 +241,11 @@ test('P13 fixture-002：正确表达 sourcing 能力，硬缺口=目标品类（
   assert.deepEqual(gap, FIXTURE_002.analysis.hard_gaps);
 });
 
-test('P14 fixture-003 语义完整入数据层：84 + 3.8 + blocker + 不推荐', () => {
+test('P14 fixture-003 语义完整入数据层：84 + 70 + blocker + 不推荐', () => {
   const s = stateWith({ ...PHASE6_RUN, jobs: [FIXTURE_003] });
   const j = s.jobs[0];
   assert.equal(j.analysis.cv_match_score, 84);
-  assert.equal(j.analysis.career_ops_score, 3.8);
+  assert.equal(j.analysis.career_ops_score, 70);
   assert.equal(j.analysis.recommendation, '不推荐');
   assert.ok(j.analysis.blockers.location_blocker);
   assert.match(j.analysis.recommendation_reason, /地点约束冲突/);
@@ -371,8 +371,8 @@ test('P21 aggregator 透传 Runtime 新字段，不吞关键字段', () => {
   assert.equal(s.jobs.length, 3);
   const a2 = s.jobs.find(j => j.job_id === 'fixture-002').analysis;
   assert.deepEqual(a2.cv_match_confidence, FIXTURE_002.analysis.cv_match_confidence);
-  assert.equal(a2.career_score, 2.8);
-  assert.equal(a2.career_ops_score, 2.8);
+  assert.equal(a2.career_score, 45);
+  assert.equal(a2.career_ops_score, 45);
   assert.deepEqual(a2.score_confidence, FIXTURE_002.analysis.score_confidence);
   assert.equal(a2.recommendation, '不推荐');
   assert.deepEqual(a2.decision_trace, FIXTURE_002.analysis.decision_trace);
@@ -512,10 +512,11 @@ test('P27 真实旧格式形态锁定：四值照常展示 + 新字段缺失→�
   assert.deepEqual(a.score_confidence, { percent: 95.7, level: '高' });
   assert.deepEqual(verdictCards(a).map(c => c.num), ['72%', '2.58', '不推荐', '95.7%']);
   // 第四卡 label 保持基线形态"可信度 · 高"（.v-label nowrap+ellipsis，长 label 三档宽度会截断）
+  // Round 1：卡2 label 统一 /100（legacy 数值 2.58 原样透传，量纲标注随契约更新）
   assert.deepEqual(verdictCards(a).map(c => c.label),
-    ['简历匹配度', '综合评分 / 5', '推荐结论', '可信度 · 高']);
-  // 零截断锁定：四卡 label 长度不超过基线最长卡（"综合评分 / 5" = 8 字符）
-  for (const c of verdictCards(a)) assert.ok(c.label.length <= 8, `v-card label 过长会截断：${c.label}`);
+    ['简历匹配度', '综合评分 / 100', '推荐结论', '可信度 · 高']);
+  // 零截断锁定：四卡 label 长度不超过基线最长卡（"综合评分 / 100" = 10 字符）
+  for (const c of verdictCards(a)) assert.ok(c.label.length <= 10, `v-card label 过长会截断：${c.label}`);
   // "Career Score 层语义"由评分明细汇总行的长 label 承载（app.js），四值卡内不重复
   assert.equal(readWeb('app.js').split('评分可信度（Career Score）').length - 1, 1);
   // Phase 4+ 新字段缺失：aggregator 透传 null，不崩、不伪造、不补算
@@ -563,7 +564,7 @@ test('P29 平均值只对有效数值岗位求平均：缺失不当作 0 分，�
     ],
   });
   assert.equal(s.stats.avg_cv_match, 58);          // (58)/1，不是 (58+0)/2=29
-  assert.equal(s.stats.avg_career_ops_score, 2.2); // 2.24 经既有 1 位小数展示舍入（非缺失当 0 的 (2.24+0)/2=1.1）
+  assert.equal(s.stats.avg_career_ops_score, 31); // 31 经既有 1 位小数展示舍入（非缺失当 0 的 (31+0)/2=15.5）
   // 全部无效 → null（概览"当前搜索摘要"显示暂无数据，不显示 0%/0.0）
   const s2 = stateWith({ ...PHASE6_RUN, jobs: [{ ...FIXTURE_002, job_id: 'fixture-avg-3', analysis: {} }] });
   assert.equal(s2.stats.avg_cv_match, null);
@@ -576,26 +577,32 @@ test('P29 平均值只对有效数值岗位求平均：缺失不当作 0 分，�
 // ---------------------------------------------------------------------------
 
 test('P31 reasonZh 推荐原因去内部术语：调试括号段移除 + 措辞统一 + BLOCKER key 守卫，001/003 逐字不变', () => {
-  // 规则 1+2：002 原文（rescored 数据）→ 调试括号段整体移除 + 引擎措辞与 BLOCKER_ZH 对齐
-  const raw002 = '硬性资格不满足（eligibility=ineligible，job-side blocker）（Career Ops Score 2.8/5）';
+  // 规则 1+2：002 原文（rescored 数据，0-100 制）→ 调试括号段整体移除 + 引擎措辞与 BLOCKER_ZH 对齐
+  const raw002 = '硬性资格不满足（eligibility=ineligible，job-side blocker）（Career Score 45/100）';
   const out002 = reasonZh(raw002);
   assert.ok(!out002.includes('eligibility=ineligible'));
   assert.ok(!out002.includes('job-side blocker'));
-  assert.equal(out002, '不满足岗位硬性要求（综合评分 2.8/5）');
+  assert.equal(out002, '不满足岗位硬性要求（综合评分 45/100）');
   // candidate-side blocker 括号段同样整体移除，且不吞相邻正常括号（评分括号保留）
-  const candSide = reasonZh('不满足岗位硬性要求（candidate-side blocker）（Career Ops Score 2.8/5）');
+  const candSide = reasonZh('不满足岗位硬性要求（candidate-side blocker）（Career Score 45/100）');
   assert.ok(!candSide.includes('candidate-side blocker'));
-  assert.equal(candSide, '不满足岗位硬性要求（综合评分 2.8/5）');
+  assert.equal(candSide, '不满足岗位硬性要求（综合评分 45/100）');
   // 规则 3：BLOCKER_ZH 英文 key → 对应中文（复用现有映射，P10b 映射继续成立）
   assert.equal(BLOCKER_ZH.eligibility_ineligible, '不满足岗位硬性要求');
   const guarded = reasonZh('同时命中 salary_floor_breach、work_schedule_blocker');
   assert.ok(!guarded.includes('salary_floor_breach') && !guarded.includes('work_schedule_blocker'));
   assert.ok(guarded.includes(BLOCKER_ZH.salary_floor_breach) && guarded.includes(BLOCKER_ZH.work_schedule_blocker));
-  // 规则 4：001/003 原文无英文 key、无调试括号段 → 除 zhMetrics 外逐字不变
-  assert.equal(reasonZh('职级严重倒退（Career Ops Score 2.24/5）'), '职级严重倒退（综合评分 2.24/5）');
+  // 规则 4：001/003 原文无英文 key、无调试括号段 → 除 zhMetrics 外逐字不变（0-100 量纲）
+  assert.equal(reasonZh('职级严重倒退（Career Score 31/100）'), '职级严重倒退（综合评分 31/100）');
   assert.equal(
-    reasonZh('现任雇主/关联主体岗位，不构成外部跳槽机会（Career Ops Score 3.8/5）'),
-    '现任雇主/关联主体岗位，不构成外部跳槽机会（综合评分 3.8/5）',
+    reasonZh('现任雇主/关联主体岗位，不构成外部跳槽机会（Career Score 70/100）'),
+    '现任雇主/关联主体岗位，不构成外部跳槽机会（综合评分 70/100）',
+  );
+  // legacy 兼容（仅历史数据可达；Round 1 后运行时不再产生旧 1-5 制文本）：
+  // 旧格式引擎措辞仍被同一 formatter 正确转译，不因量纲迁移而破坏
+  assert.equal(
+    reasonZh('职级严重倒退（Career Ops Score 2.24/5）'),
+    '职级严重倒退（综合评分 2.24/5）',
   );
   // 002 品类缺口语义不受影响：gaps/主要短板走 gapItemText 渲染路径，不经 reasonZh；
   // 缺口文本（含品类资源字样）原样保留，经 reasonZh 也逐字不变（P13 联动）
@@ -603,14 +610,138 @@ test('P31 reasonZh 推荐原因去内部术语：调试括号段移除 + 措辞�
   assert.match(hardGap, /生鲜/);
   assert.match(hardGap, /供应商资源/);
   assert.equal(reasonZh(hardGap), hardGap);
-  // rescored 数据三层结果不变（展示层零重算、零改写）：不推荐 + CV 48 + Career 2.8
+  // rescored 数据三层结果不变（展示层零重算、零改写）：不推荐 + CV 48 + Career 45（true 0-100）
   const a2 = FIXTURE_002.analysis;
   assert.equal(a2.recommendation, '不推荐');
   assert.equal(a2.cv_match_score, 48);
-  assert.equal(a2.career_ops_score, 2.8);
+  assert.equal(a2.career_ops_score, 45);
   // 接线锁定：app.js 两处 recommendation_reason 展示点（列表行 + 详情 reason-box）均用 reasonZh
   const app = readWeb('app.js');
   assert.equal(app.split('reasonZh(a.recommendation_reason)').length - 1, 2);
+});
+
+// ---------------------------------------------------------------------------
+// P31b. 决策矩阵 / 资格缺口封顶 用户可见化（回归：引擎工程措辞不得再 raw 漏给用户）
+// 覆盖 computeRecommendation（tools/lib/scoring.mjs）Step 3-5 的真实输出形态，
+// 与真实搜索批次里出现的完整 reason 文本；负面断言锁定内部术语永不出现。
+// ---------------------------------------------------------------------------
+
+const INTERNAL_LEAK_RE = new RegExp(
+  'eligibility=|eligible_with_gaps|career ≥|career >=|career <|career_score ≥|career_score <|cv ≥|cv >=|cv <|decision_trace|' +
+  '降一档|封顶|决策矩阵|HARD_GAP|hard_gaps|job-side blocker|candidate-side blocker|' +
+  'Career Ops|Career Score|CV Match|score_breakdown|career_ops_score|cv_match_score',
+);
+
+// 任务书要求的固定负面断言清单（engine 术语逐项不得出现在用户可见文本）
+const NEGATIVE_TOKENS = [
+  'eligibility=',
+  'eligible_with_gaps',
+  'career >=',
+  'career ≥',
+  'cv >=',
+  'cv ≥',
+  'decision_trace',
+  '封顶',
+  '降一档',
+];
+
+test('P31b reasonZh 决策矩阵/缺口封顶用户化：矩阵句、Step4/5 子句折叠为中文，内部术语零残留', () => {
+  const cases = [
+    // ── 新引擎 0-100 制句法（Round 1 起 computeRecommendation 实际产出，主契约）──
+    // 任务书样例的 0-100 等价形态：完整组合文本
+    '决策矩阵：Career Score 79/100（career_score ≥75）× CV Match 100/100（cv ≥80）→ 强烈推荐；eligibility=eligible_with_gaps：强烈推荐 降一档并封顶"推荐" → 推荐',
+    // 单句：决策矩阵各档位（0-100 档位标识）
+    '决策矩阵：Career Score 49/100（career_score 25-49）× CV Match 100/100（cv ≥80）→ 一般',
+    '决策矩阵：Career Score 56/100（career_score 50-74）× CV Match 100/100（cv ≥80）→ 推荐',
+    '决策矩阵：Career Score 76.5/100（career_score ≥75）× CV Match 66/100（cv 60-79）→ 推荐（挑战岗）',
+    '决策矩阵：Career Score 56.8/100（career_score 50-74）× CV Match 17/100（cv <40）→ 不推荐',
+    // Step 4：降一档并封顶（eligible_with_gaps）
+    '决策矩阵：Career Score 56.6/100（career_score 50-74）× CV Match 70/100（cv 60-79）→ 推荐；eligibility=eligible_with_gaps：推荐 降一档并封顶"推荐" → 一般',
+    // Step 5：career < 60 且带资格缺口
+    '决策矩阵：Career Score 49.6/100（career_score 25-49）× CV Match 73/100（cv 60-79）→ 一般；存在资格缺口（eligible_with_gaps）且 Career Score 49.6/100 < 50 → 不推荐',
+    // ── 旧 1-5 制句法（legacy 兼容：Round 1 前历史数据可达）──
+    '决策矩阵：Career Ops Score 4.16/5（career ≥4.0）× CV Match 100/100（cv ≥80）→ 强烈推荐；eligibility=eligible_with_gaps：强烈推荐 降一档并封顶"推荐" → 推荐',
+    '决策矩阵：Career Ops Score 2.95/5（career 2.0-2.9）× CV Match 100/100（cv ≥80）→ 一般',
+    '决策矩阵：Career Ops Score 3.23/5（career 3.0-3.9）× CV Match 70/100（cv 60-79）→ 推荐；eligibility=eligible_with_gaps：推荐 降一档并封顶"推荐" → 一般',
+    '决策矩阵：Career Ops Score 2.98/5（career 2.0-2.9）× CV Match 73/100（cv 60-79）→ 一般；存在资格缺口（eligible_with_gaps）且 Career Ops Score 2.98/5 < 3.0 → 不推荐',
+  ];
+  for (const raw of cases) {
+    const out = reasonZh(raw);
+    // 用户可见：语义句必须在（岗位质量/履历匹配度 → 推荐结论）
+    assert.ok(out.includes('综合判断'), `缺失综合判断语义：${raw} → ${out}`);
+    // 负面：内部术语零残留
+    for (const tok of NEGATIVE_TOKENS) {
+      assert.ok(!out.includes(tok), `仍泄露内部术语「${tok}」：${raw} → ${out}`);
+    }
+    assert.ok(!INTERNAL_LEAK_RE.test(out), `仍泄露引擎术语：${raw} → ${out}`);
+  }
+  // 组合句的最终推荐结论句必须保留"下调为「…」"的最终结论
+  const combo = reasonZh(cases[0]);
+  assert.ok(combo.includes('强烈推荐') && combo.includes('下调为「推荐」'), `组合句未保留矩阵结论+下调结论：${combo}`);
+});
+
+test('P31c reasonZh 逐条负面断言：决策矩阵/资格 enum/阈值词逐项不得出现', () => {
+  const raw = '决策矩阵：Career Ops Score 4.16/5（career ≥4.0）× CV Match 100/100（cv ≥80）→ 强烈推荐；eligibility=eligible_with_gaps：强烈推荐 降一档并封顶"推荐" → 推荐';
+  const out = reasonZh(raw);
+  assert.ok(!out.includes('决策矩阵'), '决策矩阵仍出现');
+  assert.ok(!out.includes('强烈推荐 降一档') && !out.includes('降一档'), '降一档仍出现');
+  for (const tok of ['eligibility=', 'eligible_with_gaps', 'career ≥', 'career >=', 'cv ≥', 'cv >=', 'decision_trace', '封顶']) {
+    assert.ok(!out.includes(tok), `内部术语「${tok}」仍泄露`);
+  }
+});
+
+test('P31d reasonZh 不泄露档位阈值/资格 enum（防未来新句法 raw fallback）：任意含内部 token 的输入都不带出', () => {
+  // 无论矩阵句是否命中整体模板，残余的档位区间/资格状态都必须被兜底守卫转译
+  // （含引擎真实可能出现的整句变体；裸 token 片段的语义转译以可读中文为准）
+  const leftovers = [
+    '决策矩阵：Career Ops Score 3.4/5（career ≥4.0）× CV Match 90/100（cv ≥80）→ 推荐',
+    'career ≥4.0',
+    'career_score ≥75',
+    'career_score 50-74',
+    'career 3.0-3.9',
+    'cv ≥80',
+    'cv 60-79',
+    'cv <40',
+    'eligibility=eligible_with_gaps',
+    '（eligibility=ineligible，job-side blocker）',
+    '硬性资格不满足（eligibility=ineligible，job-side blocker）（Career Ops Score 2.8/5）',
+    'eligibility=eligible_with_gaps：推荐 降一档并封顶"推荐" → 一般',
+    '存在 HARD_GAP：封顶"推荐"（强烈推荐 → 推荐）',
+    '存在资格缺口（eligible_with_gaps）且 Career Ops Score 2.98/5 < 3.0 → 不推荐',
+    'decision_trace=eligible_with_gaps',
+  ];
+  for (const raw of leftovers) {
+    const out = reasonZh(raw);
+    for (const tok of ['eligibility=', 'eligible_with_gaps', 'career ≥', 'career >=', 'career <', 'cv ≥', 'cv >=', 'cv <', 'decision_trace', 'HARD_GAP', 'job-side blocker', 'candidate-side blocker', 'Career Ops', 'Career Score', 'CV Match', '降一档', '封顶', '决策矩阵']) {
+      assert.ok(!out.includes(tok), `兜底仍泄露「${tok}」：${raw} → ${out}`);
+    }
+    assert.ok(!INTERNAL_LEAK_RE.test(out), `兜底仍泄露引擎术语：${raw} → ${out}`);
+  }
+  // 兜底映射是可读中文（不得被删除为空/只留标点）
+  const safe = reasonZh('career ≥4.0');
+  assert.ok(safe.includes('岗位价值非常高'), `career ≥4.0 兜底缺失：${safe}`);
+  const safe1b = reasonZh('career_score ≥75');
+  assert.ok(safe1b.includes('岗位价值非常高'), `career_score ≥75 兜底缺失：${safe1b}`);
+  const safe2 = reasonZh('cv 60-79');
+  assert.ok(safe2.includes('履历匹配度较高'), `cv 60-79 兜底缺失：${safe2}`);
+  const safe3 = reasonZh('eligibility=eligible_with_gaps');
+  assert.ok(safe3.includes('存在部分需要确认或补足的条件'), `eligible_with_gaps 兜底缺失：${safe3}`);
+  const safe4 = reasonZh('存在资格缺口（eligible_with_gaps）且 Career Ops Score 2.98/5 < 3.0 → 不推荐');
+  const safe5 = reasonZh('存在资格缺口（eligible_with_gaps）且 Career Score 49.6/100 < 50 → 不推荐');
+  assert.ok(safe5.includes('存在部分需要确认或补足的条件') && safe5.includes('不推荐'), `Step5 新制句兜底缺失：${safe5}`);
+  assert.ok(safe4.includes('存在部分需要确认或补足的条件') && safe4.includes('不推荐'), `Step5 句兜底缺失：${safe4}`);
+});
+
+test('P31e reasonZh 非引擎文本逐字透传（不吞内容、不重写用户可见句子）', () => {
+  // 非引擎人工/叙述文案（无内部术语）→ 除既有 zhMetrics 品牌词外逐字不变
+  const narrative = '薪资完全在区间内+海沧区精确命中+岗位名精确匹配；⚠️但 JD 自述工作制为大小周（8:30-12:00 / 14:00-18:00）';
+  assert.equal(reasonZh(narrative), narrative);
+  // 引擎/规则子句照常转译；普通缺口句（gapItemText 路径，不经 reasonZh）不受影响
+  const hardGap = FIXTURE_002.analysis.hard_gaps.map(gapItemText).join('；');
+  assert.equal(reasonZh(hardGap), hardGap);
+  // 空 / null / 纯占位
+  assert.equal(reasonZh(null), '');
+  assert.equal(reasonZh(''), '');
 });
 
 // ---------------------------------------------------------------------------

@@ -202,7 +202,24 @@ cv.md 配好之后一律走 6a 的引擎链路。只做基于客观事实的评�
 
 ## Step 7 — 生成汇总与导出
 
-1. 把最终 results 数组写入 `data/search-results-{YYYYMMDD-HHmm}.json`（Step 0 定义的那份）
+1. 正式落盘必须走唯一持久化 Gate，禁止直接手写 JSON 文件。把采集与评估结果组装成
+   **finalize 指令文件**（provider/engine 强制分离——这是信任边界的载体，不能把 engine 字段
+   混进 provider）：
+   ```json
+   { "defaults": { …引擎公共输出… },
+     "jobs": [ { "job": { …per_job 采集字段，不含 analysis… },
+                 "provider": { …模型 narrative（strengths/gaps/soft_gaps/cv_advice/interview_focus）… },
+                 "engine": { …该岗确定性引擎输出（覆盖 defaults 同名 key）… } } ] }
+   ```
+   然后执行（browser-search 唯一正式 persistence entry）：
+   ```bash
+   node tools/finalize-analysis.mjs --in <指令文件> --out data/search-results-{YYYYMMDD-HHmm}.json
+   ```
+   - Gate 会 normalize provider、剥离 provider 自带的越权引擎字段（engine > model）、
+     校验量纲/枚举/decision_trace，写 `analysis_gate` 元数据并打印 Batch Summary
+     （Total / Schema PASS / Repaired / Rich / Partial / Sparse / Rejected / 三类 Drift）；
+   - Schema PASS != total 时拒绝写盘（退出码 1）——此时不要绕过，修复被拒岗位后重跑；
+   - summary 终值要在向用户汇报 Step 8 时一并给出。
 2. 运行：
 ```bash
 npm run search:report -- data/search-results-{YYYYMMDD-HHmm}.json
@@ -254,10 +271,24 @@ per_job（analysis 段字段名是 Excel/MD 生成的契约，脚本 tools/gener
     "strengths": [], "gaps": [],
     "recommendation": "强烈推荐 | 推荐 | 一般 | 不推荐 | 硬红线跳过",
     "recommendation_reason": "",
-    "cv_advice": "", "interview_focus": ""
+    "strengths": [], "gaps": [], "soft_gaps": [], "hard_gaps": [],
+    "cv_advice": "", "interview_focus": "",
+    "decision_trace": []
   }
 }
 ```
+
+**分析输出稳定性合同（Round 2）**：以上 8 个用户板块字段（recommendation_reason / strengths /
+gaps / soft_gaps / cv_advice / interview_focus / decision_trace / score_breakdown）对每个已分析岗位
+**必须全部存在**——无证据时用诚实空值（`[]` / `''`），禁止省略 key、禁止编造内容凑结构、
+禁止同义字段名（advantages/weaknesses/resume_advice 等，一律用 canonical 名）。
+**落盘必须经 `node tools/finalize-analysis.mjs`（Round 2B 唯一 Persistence Gate；runtime 会
+normalize + validate + 拒绝越权引擎字段，而不是"收到什么存什么"）**；事后审计可用
+`node tools/backfill-analysis-contract.mjs --dry-run` 只读复检。
+数值分（cv_match_score / career_ops_score / score_scale_version: 2）只能来自引擎，模型不自评；
+PERSISTENCE GATE CONTRACT 全文见 `modes/_shared.md`。
+唯一合同实现 = `dashboard-web/lib/analysis-contract.mjs`（ANALYSIS_OUTPUT STABILITY CONTRACT，
+全文见 `modes/_shared.md`）。
 
 skipped_rule 的岗位 analysis.recommendation = "硬红线跳过" 仅当红/deal_breaker 命中；
 普通规则不符用「不推荐」+ skip_reason（如 "区域不符：目标区以外"）。

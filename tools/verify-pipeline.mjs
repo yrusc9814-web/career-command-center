@@ -6,7 +6,8 @@
  * 1. All statuses are canonical (per states.yml)
  * 2. No duplicate company+role entries
  * 3. All report links point to existing files
- * 4. Scores match format X.XX/5 or N/A or DUP
+ * 4. Scores match format XX.X/100 (0-100 制，Round 1 迁移后 canonical) or N/A or DUP
+ *    （legacy X.XX/5 仍可读，但新写入必须为 /100）
  * 5. All rows have proper pipe-delimited format
  * 6. No pending TSVs in tracker-additions/ (only in merged/ or archived/)
  * 7. states.yml canonical IDs for cross-system consistency
@@ -157,12 +158,12 @@ for (const e of entries) {
 }
 if (brokenReports === 0) ok('All report links valid');
 
-// --- Check 4: Score format ---
+// --- Check 4: Score format（Round 1 起 canonical = 0-100 制 `XX.X/100`；legacy `X.XX/5` 仍可读） ---
 let badScores = 0;
 for (const e of entries) {
   const s = e.score.replace(/\*\*/g, '').trim();
-  if (!/^\d+\.?\d*\/5$/.test(s) && s !== 'N/A' && s !== 'DUP') {
-    error(`#${e.num}: Invalid score format: "${e.score}"`);
+  if (!/^\d+\.?\d*\/100$/.test(s) && s !== 'N/A' && s !== 'DUP') {
+    error(`#${e.num}: Invalid score format: "${e.score}" (expected XX.X/100, N/A or DUP)`);
     badScores++;
   }
 }
@@ -201,6 +202,44 @@ for (const e of entries) {
   }
 }
 if (boldScores === 0) ok('No bold in scores');
+
+// --- Check 8: Canonical analysis gate（Round 2B PERSISTENCE GATE CONTRACT）---
+// 兜底防绕过：任何正式 analysis 落盘路径（无论是否经过 finalize CLI）产出的
+// data/search-results-*.json，其全部已分析岗位必须通过 assertCanonicalAnalysis
+// （validate complete + schema v2 + analysis_gate 封印）。绕过 Gate 的 raw 写入在这里暴露。
+const DATA_DIR = join(CAREER_OPS, 'data');
+let gateAnalyzed = 0;
+let gateErrors = 0;
+try {
+  const { assertCanonicalAnalysis, isAnalyzed } = await import('../dashboard-web/lib/analysis-contract.mjs');
+  const resultsFiles = readdirSync(DATA_DIR).filter(f => /^search-results-.*\.json$/.test(f)).sort();
+  for (const f of resultsFiles) {
+    let run;
+    try { run = JSON.parse(readFileSync(join(DATA_DIR, f), 'utf8')); } catch (e) {
+      error(`${f}: 无法解析 run 文件（${e.message.slice(0, 80)}）`);
+      gateErrors++;
+      continue;
+    }
+    for (const job of run.jobs || []) {
+      const a = job?.analysis;
+      if (!a || !isAnalyzed(a)) continue;
+      gateAnalyzed++;
+      const chk = assertCanonicalAnalysis(a);
+      if (!chk.ok) {
+        error(`${f} ${job.job_id || '(no job_id)'}: canonical analysis gate 未通过 — ${chk.errors.join('; ')}`);
+        gateErrors++;
+      }
+    }
+  }
+  if (gateErrors === 0) {
+    ok(gateAnalyzed > 0
+      ? `All ${gateAnalyzed} analyzed jobs pass canonical analysis gate`
+      : 'No analyzed jobs found (analysis gate check vacuous)');
+  }
+} catch (e) {
+  error(`Analysis gate check failed to run: ${e.message}`);
+  gateErrors++;
+}
 
 // --- Summary ---
 console.log('\n' + '='.repeat(50));

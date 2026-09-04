@@ -117,12 +117,79 @@
    - HARD_GAP 必须诚实写明"简历包装不能解决"（例：无目标品类供应商资源）。
    - **禁止默认建议**：补 GitHub / 开源项目 / 系统设计经验 / 技术栈 / side project。
 3. **Recommendation 恒五档来自引擎**：`强烈推荐 / 推荐 / 一般 / 不推荐 / 硬红线跳过`，由 `tools/lib/scoring.mjs` `computeRecommendation` 决策链 + `trace[]`（decision trace）产出，LLM 只解释（例："岗位匹配与价值不错，但现任雇主冲突，最终不推荐"），**禁止改写档位**（如把"不推荐"改成"建议投递"）。
-4. **高分不推荐是合法状态**：cv_match_score 84 + Career Score 3.8 + 不推荐 = 合法（手动 blocker / 资格缺口 / 缺口封顶都会压过分数）。**禁止看到高分自动翻案；decision trace 是唯一解释依据。**
+4. **高分不推荐是合法状态**：cv_match_score 84 + Career Score 71 + 不推荐 = 合法（手动 blocker / 资格缺口 / 缺口封顶都会压过分数）。**禁止看到高分自动翻案；decision trace 是唯一解释依据。**
 5. **"有能力但缺资源"守卫（002 类案例）**：capability matched + 品类 hard gap 必须表述为"具有供应商开发能力，但缺目标品类供应商资源"，**禁止写成"缺乏采购 / sourcing 能力"**。
 6. **UNKNOWN 文案守卫**：UNKNOWN 只写"当前信息不足 / JD 未披露 / 需面试确认"，**禁止写成"不具备 / 没有 / 较差"**（例：招聘流程 unknown 不得写"招聘流程较差"）。
 7. **无可靠数据一律 unknown**：薪资 / 公司规模 / 市场排名 / 成立时间 / 品牌地位 — 查不到可靠数据就写 unknown，**禁止 LLM 自补事实**。
 
-**评分细则权威**：Career Score 十维（权重合计 100）的 1/3/5 定义、证据来源与 unknown 规则的唯一 SoT = `tools/lib/scoring.mjs` 的 `SCORING_RUBRIC`。prompt 层只列 key + 中文名 + 权重 + 指向（见 `modes/offer.md`），不复制细则全文。
+**评分细则权威**：Career Score 十维（权重合计 100）的 0/50/100 定义、证据来源与 unknown 规则的唯一 SoT = `tools/lib/scoring.mjs` 的 `SCORING_RUBRIC`。prompt 层只列 key + 中文名 + 权重 + 指向（见 `modes/offer.md`），不复制细则全文。
+
+---
+
+
+## ANALYSIS OUTPUT STABILITY CONTRACT（分析输出稳定性合同，Round 2 起冻结）
+
+模型/供应商**无权定义输出 schema**。每一个正式入库岗位必须服从同一份分析输出合同
+（唯一运行时实现 = `dashboard-web/lib/analysis-contract.mjs`，`ANALYSIS_SCHEMA_VERSION = 2`）。
+
+- 换模型 / 换供应商 / 换执行代理，以下内容**不得改变**：
+  必需 section 集合、字段名、字段类型、分数量纲（true 0-100，`score_scale_version: 2`）、
+  recommendation 五档枚举、eligibility 四态枚举。
+- 模型输出一律视为 **untrusted structured input**：必须经 normalize（别名归一 + 类型归一）
+  与 validate（`tools/backfill-analysis-contract.mjs` / 后续入库门禁）后才可持久化。
+- 必需 section（canonical 字段名，与 Dashboard 详情板块一一对应）：
+  `recommendation_reason`(string) / `strengths`(array) / `gaps`(array) / `soft_gaps`(array) /
+  `cv_advice`(string) / `interview_focus`(string) / `decision_trace`(array) / `score_breakdown`(object)。
+- **结构不能缺，内容可以诚实为空**：无证据的 section 用 canonical 空值
+  （数组 = `[]`，自由文本 = `''`），禁止 key 消失，禁止编造内容凑结构。
+- 同义字段禁止并存：`advantages/key_strengths→strengths`、`weaknesses→gaps`、
+  `resume_advice/resume_suggestions→cv_advice`、`interview_suggestions→interview_focus`、
+  `fixable_gaps→soft_gaps`；持久化只留 canonical 字段。
+- 数值分只能来自确定性引擎；模型自评分字段一律忽略，不得覆盖
+  `cv_match_score` / `career_ops_score` / `recommendation` / `eligibility_status`。
+
+### PERSISTENCE GATE CONTRACT（Round 2B 起冻结）
+
+No formal analysis may be persisted before passing the canonical analysis persistence gate.
+
+Provider/model output is untrusted input.
+
+Provider output may contribute narrative fields only.
+
+Deterministic engine fields always override provider-supplied values.
+
+All persistence paths must use the same normalize → validate → repair → validate → persist flow.
+
+Direct persistence of raw provider output is prohibited.
+
+Schema completeness and content richness are separate concepts.
+
+Changing model/provider must not change persisted schema.
+
+落地（唯一实现，禁止第二套）：
+- 唯一 Gate = `dashboard-web/lib/analysis-contract.mjs` 的
+  `finalizeAnalysisForPersistence()`（normalize → 剥离 provider 引擎字段 → merge engine →
+  repair → validate → metadata → final validate）；
+- 唯一正式 writer = `tools/lib/analysis-persistence.mjs` `writeRunFile()` +
+  `tools/finalize-analysis.mjs` CLI：写盘前逐岗位 `assertCanonicalAnalysis()`
+  （未过 Gate 的 raw analysis 一律拒绝），并输出 §10 Batch Summary；
+- run 文件落盘后由 `npm run verify` Check 8 兜底全量校验——任何绕过 Gate 的写入都会
+  在 verify 暴露为 error；
+- `analysis_gate.schema_status`（complete/invalid）只管结构契约；
+  `analysis_gate.content_status`（rich/partial/sparse）由系统确定性计算
+  （`computeContentStatus()`，6 个 narrative 信号位：rich≥5 / partial 3–4 / sparse≤2），
+  模型无权自报丰富度。
+
+## NUMERIC SCORE CONTRACT（数值量纲合同，Round 1 起冻结；模型/供应商变更不得改写）
+
+- CV Match：0-100（`cv_match_score`，整数或一位小数）
+- Career Score：0-100（`career_ops_score`；维度分同为 0-100，合法区间 [0,100]，真 0 起评）
+- Confidence（可信度）：对外统一 0-100（`score_confidence.percent` / `cv_match_confidence.percent`）
+- Recommendation：文字五档（强烈推荐/推荐/一般/不推荐/硬红线跳过），**永不**写成数字或百分比
+- Eligibility：文字状态（eligible/eligible_with_gaps/ineligible/unknown），**永不**写成数字
+- **禁止**以 1-5 制输出 Career Score；**禁止**生成 `x/5`、`career >= 3.5` 这类旧制表达
+- 正式数值分只能由运行时引擎（`tools/lib/scoring.mjs` / `cv-match.mjs`）产出；LLM/模型只解释，不自评、不自算
+- 旧 1-5 制历史数据必须经 `tools/migrate-score-scale.mjs` 迁移（(x−1)×25 仿射等价，score_scale_version: 2），运行时禁止任何数值域猜测量纲
 
 ---
 

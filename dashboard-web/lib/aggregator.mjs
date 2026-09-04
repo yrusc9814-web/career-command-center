@@ -270,6 +270,8 @@ export function buildState(p) {
           rule_score: a.rule_score ?? null,
           score_confidence: a.score_confidence || null,   // Career Score 层可信度（不与 CV Match 可信度混算）
           score_breakdown: a.score_breakdown || null,
+          score_scale: a.score_scale ?? null,             // Round 1B 量纲标记透传（'0-100'）
+          score_scale_version: a.score_scale_version ?? null, // 量纲版本透传（=2，API 层可验证）
           dimensions: a.dimensions || null,               // Runtime 新格式维度数据（若有）
           recommendation: a.recommendation || null,        // Runtime 最终推荐，前端禁止重推导
           recommendation_reason: a.recommendation_reason || null,
@@ -286,6 +288,9 @@ export function buildState(p) {
           cv_advice: a.cv_advice || null,
           interview_focus: a.interview_focus || null,
           hard_redline: a.hard_redline || false,
+          analysis_schema_version: a.analysis_schema_version ?? null,      // Round 2 合同版本透传
+          analysis_completeness: a.analysis_completeness || null,          // 完整性元数据透传
+          analysis_gate: a.analysis_gate || null,          // Round 2B gate 元数据透传（schema_status / content_status；本轮仅 API 层，无 UI）
         },
         status: trackerRow?.status ? trackerRow.status : null,
         status_zh: trackerRow?.status ? (STATE_ZH[trackerRow.status] || trackerRow.status) : null,
@@ -405,7 +410,7 @@ export function makeStatusHandler({ dataDir, additionsDir, mergeCommand }) {
       role: job.title,
       job_id: job.job_id,
       status,
-      score: job.analysis?.career_ops_score ? `${job.analysis.career_ops_score}/5` : '-/5',
+      score: job.analysis?.career_ops_score ? `${job.analysis.career_ops_score}/100` : '-/100',
       pdf: '❌',
       report: '-',
       notes: 'via dashboard status change',

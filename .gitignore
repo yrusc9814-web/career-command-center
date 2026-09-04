@@ -8,6 +8,7 @@ data/pipeline.md
 data/scan-history.tsv
 data/browser-search-history.json
 data/search-results-*.json
+data/browser-search-*-breakpoint.json
 reports/*.md
 !reports/.gitkeep
 outreach/*.md

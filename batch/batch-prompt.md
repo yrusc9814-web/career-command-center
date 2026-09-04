@@ -63,7 +63,7 @@
 
 **输出守卫（Prompt 服从引擎）：** ① cv_match_score（0-100）/ coverage / recommendation 全部来自运行时引擎（`tools/lib/cv-match.mjs` / `tools/lib/scoring.mjs`），LLM 只解释不重算，禁止自报"匹配度 85%"式数字；② Gap 按四级+类型标注；③ Recommendation 恒五档来自引擎 + `trace[]`，LLM 只解释（如"岗位匹配与价值不错，但现任雇主冲突，最终不推荐"），禁止改写档位；④ **高分不推荐是合法状态**，decision trace 是唯一解释依据，禁止看到高分自动翻案；⑤ capability matched + 品类 hard gap 必须表述为"具有供应商开发能力，但缺目标品类供应商资源"，禁止写成"缺乏采购 / sourcing 能力"。
 
-**全局 Score 表**：Career Score 十维加权总分（`compensation` 薪酬竞争力 20 / `workload_workstyle` 工作制与强度 15 / `role_seniority` 职级质量与职责范围 13 / `career_growth` 成长空间 10 / `category_domain_value` 品类与行业价值 10 / `procurement_ownership` 采购自主权 9 / `company_stability` 公司与业务稳定性 7 / `location_fit` 地点与通勤 8 / `digital_tooling` 数字化与工具成熟度 5 / `hiring_process_quality` 招聘流程质量 3）— 维度细则唯一权威 = `tools/lib/scoring.mjs` 的 `SCORING_RUBRIC`（1/3/5 定义不复制进 prompt）。**cv_match_score（0-100）由 CV Match 层产出（`tools/lib/cv-match.mjs`），不参与 Career Score 加权**；JD 未写证据的维度 score=null 不入分母，营销叙事不作证据。
+**全局 Score 表**：Career Score 十维加权总分（`compensation` 薪酬竞争力 20 / `workload_workstyle` 工作制与强度 15 / `role_seniority` 职级质量与职责范围 13 / `career_growth` 成长空间 10 / `category_domain_value` 品类与行业价值 10 / `procurement_ownership` 采购自主权 9 / `company_stability` 公司与业务稳定性 7 / `location_fit` 地点与通勤 8 / `digital_tooling` 数字化与工具成熟度 5 / `hiring_process_quality` 招聘流程质量 3）— 维度细则唯一权威 = `tools/lib/scoring.mjs` 的 `SCORING_RUBRIC`（0/50/100 定义不复制进 prompt；维度分真 0-100 制，锚点 = 旧 1/3/5 的 (x−1)×25）。**cv_match_score（0-100）由 CV Match 层产出（`tools/lib/cv-match.mjs`），不参与 Career Score 加权**；JD 未写证据的维度 score=null 不入分母，营销叙事不作证据。
 
 ### Step 3 — 写 report .md
 
@@ -75,7 +75,7 @@
 
 **日期：** {{DATE}}
 **Archetype：** {检测到的}
-**Score：** {X.X/5}
+**Score：** {XX.X/100}
 **推荐等级：** {五档枚举，由 `tools/lib/scoring.mjs` `computeRecommendation` 决策链产出}；**Eligibility / Blocker：** `eligibility_status`（eligible/eligible_with_gaps/ineligible/unknown）+ 命中 blocker + `trace[]` 摘要（`tools/lib/eligibility.mjs` 组装）
 **URL：** {岗位 URL}
 **PDF：** career-ops/output/cv-candidate-{slug}-{{DATE}}.pdf
@@ -109,9 +109,23 @@ Body 是完整 A-F + 末尾 15-20 个 JD 关键词（供 ATS）。
 
 写一行 TSV 到 `batch/tracker-additions/{{ID}}.tsv`。**列顺序、canonical 状态、合并规则**见 `CLAUDE.md` 的 "TSV Format for Tracker Additions" 段。
 
-简记：9 列 tab 分隔，顺序 `num date company role status score/5 pdf_emoji [num](reports/...) notes`。status 取值必须是 canonical（`Evaluated` / `Applied` / `Responded` / `Interview` / `Offer` / `Rejected` / `Discarded` / `SKIP`）。
+简记：9 列 tab 分隔，顺序 `num date company role status score/100 pdf_emoji [num](reports/...) notes`。status 取值必须是 canonical（`Evaluated` / `Applied` / `Responded` / `Interview` / `Offer` / `Rejected` / `Discarded` / `SKIP`）。
 
 `{next_num}` 通过读 `data/applications.md` 最后一行计算。
+
+### Step 5b — 正式 analysis 持久化（Round 2B Persistence Gate，必须）
+
+若本 worker 产出结构化 analysis（进入 `data/search-results-*.json` 的正式记录），**禁止直接手写
+run 文件**——把该岗位的 `{ "job": {...采集字段...}, "provider": {...模型 narrative...},
+"engine": {...运行时引擎输出...} }` 写入 `/tmp/batch-{{ID}}-analysis.json`（jobs 数组），然后执行：
+
+```bash
+node tools/finalize-analysis.mjs --in /tmp/batch-{{ID}}-analysis.json --out data/search-results-batch-{{DATE}}.json
+```
+
+Gate 会对每个岗位做 normalize → 剥离越权引擎字段 → merge engine → validate；Schema PASS != total
+时拒绝写盘（退出码 1），此时修复被拒岗位后重跑，不要绕过。合同全文见 `modes/_shared.md`
+PERSISTENCE GATE CONTRACT。
 
 ### Step 6 — 最终输出
 
