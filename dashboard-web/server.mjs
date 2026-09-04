@@ -118,7 +118,7 @@ const server = http.createServer((req, res) => {
   const p = u.pathname;
 
   try {
-    if (req.method === 'GET' && (p === '/' || p === '/index.html' || p === '/styles.css' || p === '/app.js' || p === '/lib/view-model.mjs')) {
+    if (req.method === 'GET' && (p === '/' || p === '/index.html' || p === '/styles.css' || p === '/app.js' || p === '/lib/view-model.mjs' || p === '/lib/analysis-contract.mjs')) {
       return serveStatic(res, p);
     }
 

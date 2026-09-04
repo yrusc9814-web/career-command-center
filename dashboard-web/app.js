@@ -11,6 +11,7 @@ import {
   traceLines, zhMetrics, reasonZh, verdictCards, recommendationCells, recClassOf, confClassOf,
   rankJobs,
 } from './lib/view-model.mjs';
+import { SECTION_EMPTY_TEXT, isAnalyzed } from './lib/analysis-contract.mjs';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
@@ -261,7 +262,7 @@ function renderDash() {
         </div>
         <div class="summary-group">
           <div class="sg-row"><span class="k">平均简历匹配度</span><span>${s.avg_cv_match != null ? s.avg_cv_match + '%' : '暂无数据'}</span></div>
-          <div class="sg-row"><span class="k">平均综合评分</span><span>${s.avg_career_ops_score != null ? s.avg_career_ops_score + ' / 5' : '暂无数据'}</span></div>
+          <div class="sg-row"><span class="k">平均综合评分</span><span>${s.avg_career_ops_score != null ? s.avg_career_ops_score + ' / 100' : '暂无数据'}</span></div>
           <div class="sg-row"><span class="k">薪资</span><span>${cfg.salary_min_k ?? '?'}K–${cfg.salary_max_k ?? '?'}K</span></div>
           <div class="sg-row"><span class="k">最后运行</span><span>${esc((d.last_run_at || '—').replace('T', ' ').slice(0, 16))}</span></div>
           <div class="sg-row"><span class="k">收件箱待处理</span><span>${d.inbox_pending} 个</span></div>
@@ -343,7 +344,7 @@ function topJobRow(j) {
     </div>
     <span class="tj-chips">
       <span class="score-chip cv">匹配 <b>${a.cv_match_score != null ? a.cv_match_score + '%' : '—'}</b></span>
-      <span class="score-chip ops">综合 <b>${a.career_ops_score ?? '—'}</b>/5</span>
+      <span class="score-chip ops">综合 <b>${a.career_ops_score ?? '—'}</b>/100</span>
       ${hasConf(conf) ? `<span class="score-chip ${confClass(conf.percent)}">评分可信度 <b>${conf.percent}%</b>${conf.level != null ? ' · ' + esc(conf.level) : ''}</span>` : ''}
       ${a.recommendation ? `<span class="rec-chip rec-${esc(a.recommendation)}">${esc(a.recommendation)}</span>` : ''}
     </span>
@@ -433,7 +434,7 @@ function renderList() {
       </div>
       <div class="job-score-row">
         <span class="score-chip cv">匹配 <b>${a.cv_match_score != null ? a.cv_match_score + '%' : '—'}</b></span>
-        <span class="score-chip ops">综合 <b>${a.career_ops_score ?? '—'}</b>/5</span>
+        <span class="score-chip ops">综合 <b>${a.career_ops_score ?? '—'}</b>/100</span>
         ${hasConf(conf) ? `<span class="score-chip ${confClass(conf.percent)}">评分可信度 <b>${conf.percent}%</b>${conf.level != null ? ' · ' + esc(conf.level) : ''}</span>` : ''}
         ${a.recommendation ? `<span class="rec-chip rec-${esc(a.recommendation)}">${esc(a.recommendation)}</span>` : ''}
         ${j.status ? `<span class="status-chip">${esc(j.status_zh || j.status)}</span>` : ''}
@@ -530,15 +531,15 @@ function renderDetail(j) {
       </div>
     </div>
 
-    ${a.strengths?.length ? `<div class="d-section"><h3>✅ 主要优势</h3><ul>${a.strengths.map(s => `<li class="strength-li">${esc(s)}</li>`).join('')}</ul></div>` : ''}
-    ${a.gaps?.length ? `<div class="d-section"><h3>⚠️ 主要短板</h3><ul>${a.gaps.map(g => `<li class="gap-li">${esc(g)}</li>`).join('')}</ul></div>` : ''}
+    ${a.strengths?.length ? `<div class="d-section"><h3>✅ 主要优势</h3><ul>${a.strengths.map(s => `<li class="strength-li">${esc(s)}</li>`).join('')}</ul></div>` : (isAnalyzed(a) ? `<div class="d-section"><h3>✅ 主要优势</h3><p class="fine">${esc(SECTION_EMPTY_TEXT.strengths)}</p></div>` : '')}
+    ${a.gaps?.length ? `<div class="d-section"><h3>⚠️ 主要短板</h3><ul>${a.gaps.map(g => `<li class="gap-li">${esc(g)}</li>`).join('')}</ul></div>` : (isAnalyzed(a) ? `<div class="d-section"><h3>⚠️ 主要短板</h3><p class="fine">${esc(SECTION_EMPTY_TEXT.gaps)}</p></div>` : '')}
     ${blockerList.length ? `<div class="d-section"><h3>⛔ 硬性阻断（硬红线）</h3><ul>${blockerList.map(b => `<li class="gap-li">${esc(gapLevelZh('BLOCKER'))}：${esc(b.zh)}</li>`).join('')}</ul><div class="fine" style="margin-top:6px">阻断只覆盖最终推荐结论（不推荐），不修改简历匹配度与综合评分。</div></div>` : ''}
     ${hardGaps.length ? `<div class="d-section"><h3>⛔ 硬性缺口</h3><ul>${hardGaps.map(g => `<li class="gap-li">${esc(gapItemText(g) || '信息不足（待确认）')}</li>`).join('')}</ul></div>` : ''}
-    ${softGaps.length ? `<div class="d-section"><h3>🩹 可弥补缺口</h3><ul>${softGaps.map(g => `<li class="gap-li">${esc(gapItemText(g) || '信息不足（待确认）')}</li>`).join('')}</ul></div>` : ''}
-    ${a.cv_advice ? `<details class="d-section d-fold"><summary>📝 简历修改建议</summary><div class="fold-body">${listify(a.cv_advice)}</div></details>` : ''}
-    ${a.interview_focus ? `<details class="d-section d-fold"><summary>🎤 面试建议</summary><div class="fold-body">${listify(a.interview_focus)}</div></details>` : ''}
+    ${softGaps.length ? `<div class="d-section"><h3>🩹 可弥补缺口</h3><ul>${softGaps.map(g => `<li class="gap-li">${esc(gapItemText(g) || '信息不足（待确认）')}</li>`).join('')}</ul></div>` : (isAnalyzed(a) ? `<div class="d-section"><h3>🩹 可弥补缺口</h3><p class="fine">${esc(SECTION_EMPTY_TEXT.soft_gaps)}</p></div>` : '')}
+    ${a.cv_advice ? `<details class="d-section d-fold"><summary>📝 简历修改建议</summary><div class="fold-body">${listify(a.cv_advice)}</div></details>` : (isAnalyzed(a) ? `<details class="d-section d-fold"><summary>📝 简历修改建议</summary><div class="fold-body"><p class="fine">${esc(SECTION_EMPTY_TEXT.cv_advice)}</p></div></details>` : '')}
+    ${a.interview_focus ? `<details class="d-section d-fold"><summary>🎤 面试建议</summary><div class="fold-body">${listify(a.interview_focus)}</div></details>` : (isAnalyzed(a) ? `<details class="d-section d-fold"><summary>🎤 面试建议</summary><div class="fold-body"><p class="fine">${esc(SECTION_EMPTY_TEXT.interview_focus)}</p></div></details>` : '')}
     ${a.hard_redline ? `<div class="d-section"><h3>🚨 硬红线</h3><p>命中 deal_breaker / 红线条件</p></div>` : ''}
-    ${trace.length ? `<details class="d-section d-fold"><summary>🧭 推荐决策链（Runtime 透传）</summary><div class="fold-body"><ul class="plain-steps">${trace.map(l => `<li>${esc(l)}</li>`).join('')}</ul><div class="fine" style="margin-top:6px">最终推荐结论 = Runtime 决策链输出；高简历匹配 + 较高综合评分仍可能因硬性阻断而不推荐。</div></div></details>` : ''}
+    ${trace.length ? `<details class="d-section d-fold"><summary>🧭 推荐决策链（Runtime 透传）</summary><div class="fold-body"><ul class="plain-steps">${trace.map(l => `<li>${esc(l)}</li>`).join('')}</ul><div class="fine" style="margin-top:6px">最终推荐结论 = Runtime 决策链输出；高简历匹配 + 较高综合评分仍可能因硬性阻断而不推荐。</div></div></details>` : (isAnalyzed(a) ? `<details class="d-section d-fold"><summary>🧭 推荐决策链（Runtime 透传）</summary><div class="fold-body"><p class="fine">${esc(SECTION_EMPTY_TEXT.decision_trace)}</p></div></details>` : '')}
 
     ${a.score_breakdown ? `<details class="d-section d-fold"><summary>🧮 评分明细</summary><div class="fold-body">
       ${dims.length ? `
@@ -560,7 +561,7 @@ function renderDetail(j) {
         有效权重 ${a.score_breakdown.effective_weight} / ${a.score_breakdown.total_weight} · 评分可信度（Career Score）${hasConf(conf) ? conf.percent + '% · ' + conf.level : '暂无数据'}<br>
         综合评分<br>
         = Σ(加权值) ÷ 有效权重<br>
-        = <b>${a.career_ops_score ?? '—'}</b> / 5
+        = <b>${a.career_ops_score ?? '—'}</b> / 100
         ${a.rule_score != null ? `<br><span class="fine">旧初筛分 ${a.rule_score}（仅供参考，不作为最终评分）</span>` : ''}
       </div>
     </div></details>` : ''}
