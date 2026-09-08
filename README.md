@@ -1,16 +1,27 @@
-# career-ops-china
+# Career Command Center
 
-> **🇨🇳 中国大陆深度定制版（采购方向）**
+> **Agent-neutral 中国大陆求职指挥中心**
+
+**Product name:** Career Command Center · **Skill / command namespace:** `career-ops`
+
+Career Command Center 是一套 **Agent-neutral** 的中国大陆求职工作流。它不绑定 Claude、Codex、Kimi 或某一个具体 Agent：
+
+- **Agent 是运行宿主** — 负责理解你的指令、读取项目文件、调用本地工具
+- **模型负责理解和执行** — 各宿主接入的模型按各自的数据处理方式工作
+- **本地工具负责确定性处理** — 评分、匹配、持久化、报告都由 `tools/lib/` 运行时引擎产出
+- **浏览器控制是可选 capability** — 有就用 browser-search 自动采集，没有就走截图 / bookmarklet
+
+核心能力：JD 采集 → CV Match（0-100）→ Career Score（0-100）→ Eligibility → Recommendation（五档 + decision trace）→ 评估报告 → Dashboard → 申请 tracker → 定制 CV PDF → 薪酬调研 → 面试题库 / Story Bank → 触达消息草稿。
+
+> **起源说明（历史 / 致谢）：** 本仓库是 [`santifer/career-ops`](https://github.com/santifer/career-ops) 的中国大陆求职市场深度定制 fork（开发历史上曾用名 career-ops-china），预置方向为中国大陆采购从业者（执行采购 / 寻源与供应商开发 / 战略与品类采购）。核心改动包括：
 >
-> 这是 [`santifer/career-ops`](https://github.com/santifer/career-ops) 的中国大陆求职市场深度定制 fork。**所有功能、archetype、数据源、模板都已为国内采购从业者（执行采购 / 寻源与供应商开发 / 战略与品类采购）重新设计**，核心改动包括：
->
-> - **16 个 mode 文件** 全部翻译为中文，按国内招聘流程重写（含新增 `inbox` mode）
+> - **17 个 mode 文件** 全部翻译为中文，按国内招聘流程重写（含新增 `inbox` / `browser-search` mode）
 > - **3 个采购 archetype**（执行采购 / 寻源与供应商开发 / 战略与品类采购）+ 采购六档职级序列（助理 / 专员 / 高级专员 / 主管 / 经理 / 总监·负责人）
 > - **四层决策架构**：Eligibility / Blocker → CV Match（0-100）→ Career Score（0-100，十维 × 权重 100）→ Recommendation（五档 + decision trace），全部由运行时引擎（`tools/lib/`）产出
 > - **薪酬调研源** 从 Glassdoor / Levels.fyi / Blind 切换到 **看准网 / 脉脉 / OfferShow / 知乎 / 职友集 / 猎聘**
 > - **公司调研源** 改用 脉脉职言区 / 天眼查 / 企查查 / 招投标公告 / 行业媒体 / 小红书
-> - **🔑 Bookmarklet + Local Inbox 工作流**（新）：一键绕过 Boss 直聘 / 猎聘 / Mokahr / 企业 SPA 的反爬 + 反复制 + 登录墙 — 浏览器点按钮 → 本地服务器接收 JSON → Claude 批量评估。**国内 JD 取数的正确范式**
-> - **门户处理范式** 放弃对国内反爬平台的自动化爬取，改为 **截图 / bookmarklet** 人机协作（Playwright / WebFetch 只用于企业自有静态招聘页 + V2EX + GitHub）
+> - **🔑 Bookmarklet + Local Inbox 工作流**：在浏览器里点一次书签，把你已经打开的 JD 页面结构化捕获到本地 inbox，供你的 AI Agent 后续批量分析。这是国内登录墙平台 JD 取数的**默认推荐路径**（最低自动化依赖）
+> - **门户处理范式**：默认走 **截图 / bookmarklet** 人机协作；自动化爬取仅作为**可选**的 browser-search 路线（Playwright / WebFetch 只用于企业自有静态招聘页 + V2EX + GitHub）
 > - **企业池模板**：按目标品类自填（制造 / 贸易品牌 / 零售消费 / 供应链服务 / 外企在华），预置匿名占位与使用指引
 > - **触达模式** 从 LinkedIn 改为 脉脉 + 微信 双轨
 > - **CV 模板** 加入中文字体回退（PingFang SC / Microsoft YaHei / Noto Sans SC）
@@ -21,30 +32,65 @@
 
 ---
 
-## ⚠️ 通用性说明 — 不只是给采购求职者
+## Agent / Host Compatibility（不绑定单一 Agent）
 
-虽然这个 fork 的**预置**配置（archetype、portals 词表与公司池模板、薪酬调研词条、deal_breakers 模板）是围绕**采购序列（执行采购 / 寻源与供应商开发 / 战略与品类采购）**做的，但**整个系统的工作流是通用的**：A-F 评估、CV 匹配、薪酬调研、tracker 入库、PDF 生成、bookmarklet inbox 都和你的目标岗位无关。
+**Career Command Center 不绑定单一模型或 Agent Host。** 它的核心由 Markdown workflow、deterministic local runtime、local configuration、local tools 和 Dashboard 组成；任何能满足下面能力要求的 Agent 都可以作为宿主运行这套工作流。
 
-**换方向只需告诉 Claude 改几个文件**（不要手动改，让 Claude 改最快）：
+### 基础能力要求（必需）
 
-| 你想做什么方向 | 让 Claude 改 |
+一个宿主只要能：
+
+1. 读取项目文件
+2. 理解 Markdown / project instructions（读 `AGENTS.md` 入口）
+3. 修改允许修改的本地文件
+4. 执行 Node.js / npm 命令（需要工具功能时）
+
+就可以运行核心工作流（评估、评分、报告、tracker、PDF）。
+
+### 可选能力
+
+5. 浏览器控制 — 有则可用 `browser-search` 自动采集；没有就走截图 / 粘贴 / bookmarklet
+6. Web 搜索 — 薪酬调研与线索发现用
+7. 文件上传 / 截图读取 — 截图 JD 评估用
+
+不同宿主提供的能力组合不同：没有 browser capability 仍可截图 / 粘贴 JD / 用 bookmarklet；没有 Agent Skill 机制的宿主可以直接读 `AGENTS.md` 和 `modes/*.md`；有 browser control 的宿主才建议选择 `browser-search`。
+
+### 宿主示例
+
+| 类别 | 宿主 | 说明 |
+|------|------|------|
+| **已实际验证（verified）** | **ZCode** | 当前项目持续真实开发与使用的环境 |
+| **兼容入口（compatibility entry）** | **Claude Code** | 仓库保留 `.claude/skills/career-ops/SKILL.md` 与 `CLAUDE.md` 作为 Claude Code 兼容入口；提供入口 ≠ 全部能力已在该宿主完成 E2E 验证 |
+| **兼容宿主示例（compatible examples）** | OpenAI Codex、Cursor、WorkBuddy、千问办公、DIM、Qoder | 以及其他能够读取项目文件 / 项目级规则 / 调用本地命令的 Agent |
+
+> **Compatibility disclaimer：** 上表是兼容宿主示例，不代表每个功能都已在每个宿主上完成完整 E2E 验证。兼容性取决于各宿主实际提供的文件、终端、浏览器和工具能力。除非显式标注 verified，列入列表不等于官方完整支持。
+>
+> These are compatibility examples, not a claim that every feature has been fully E2E-tested on every host. Compatibility depends on each host's available file, terminal, browser, and tool capabilities. Unless explicitly marked as verified, inclusion in this list does not mean every feature has completed full E2E validation on that host.
+
+## Career Domain Customization（求职方向可定制）
+
+注意区分两件不同的事：**Agent 宿主是通用的**（见上节），**职业方向预置是可定制但非开箱通用的**。
+
+当前默认 preset（taxonomy、archetype、评分维度、portals 词表）**明显偏中国大陆采购 / 供应链方向**：A-F 评估、CV 匹配、薪酬调研、tracker 入库、PDF 生成、bookmarklet inbox 这些流程本身与具体岗位无关，但预置词表、职级序列与评分维度都是采购视角。其他职业方向需要调整 archetype / taxonomy / scoring configuration 或 runtime rules — 本轮预置不做这些调整，仅如实说明。
+
+| 你想做什么方向 | 让你的 Agent 改 |
 |----------------|--------------|
 | 销售 / 市场 / 客户成功 | `modes/_profile.md` 的 archetype 表 + `portals.yml` 的 title_filter + tracked_companies |
 | 供应链计划 / 物流 / 仓储 | 同上 + 调整排除词（把"计划员/物流"从 negative 移到 positive） |
 | 质量 / SQE / 生产管理 | archetype 替换 + 评估维度权重调整（采购自主权 → 质量体系） |
 | 财务 / HR / 法务 | 重写 archetype + 评估维度从"品类与行业价值"换成对应职能价值 |
 | 海外岗（任何方向）| 改用上游 [`santifer/career-ops`](https://github.com/santifer/career-ops)（薪酬源用 Glassdoor/Levels.fyi 而非看准网） |
-| 其他冷门方向（医疗 / 教育 / 制造业其他序列）| 直接和 Claude 描述你的方向，它会重写 archetypes + 数据源 + framing |
+| 其他冷门方向（医疗 / 教育 / 制造业其他序列）| 直接向你的 Agent 描述方向，让它重写 archetypes + 数据源 + framing |
 
-**操作只需一句话**：跟 Claude 说"我是 [方向] 的，请把整个系统调整到这个方向"，它会改 `_profile.md`（archetype + 叙事）/ `profile.yml` / `portals.yml` / `cv-template.html` 等所有相关文件。
+**操作只需一句话**：告诉你的 Agent"我是 [方向] 的，请把整个系统调整到这个方向"，它会改 `_profile.md`（archetype + 叙事）/ `profile.yml` / `portals.yml` / `cv-template.html` 等所有相关文件。
 
-> 设计哲学：**文件即配置，Claude 即编辑器**。系统不是给"采购求职者"专用的 — 是给"任何想用 AI 助手做精准求职的人"用的。预置只是起点，不是边界。
+> 设计哲学：**文件即配置，Agent 即编辑器**。预置只是起点，不是边界 — 但其他方向的适配程度取决于你调整的深度，不是开箱即用。
 
 ---
 
 ## 这个项目是什么
 
-**career-ops-china 把 Claude Code 变成一个中国大陆求职指挥中心**：贴一个岗位 JD 进来，AI 会自动跑完整 6 块评估（A-F），生成针对该岗位的 ATS 优化简历 PDF，把申请入库追踪。再加上薪资调研、面试题库与故事库、谈判话术、批量扫描、申请表助手、脉脉/微信 触达消息生成等十几个独立 mode。
+**Career Command Center 把你的 AI Agent（无论哪种宿主）变成一个中国大陆求职指挥中心**：贴一个岗位 JD 进来，AI 会自动跑完整 6 块评估（A-F），生成针对该岗位的 ATS 优化简历 PDF，把申请入库追踪。再加上薪资调研、面试题库与故事库、谈判话术、批量扫描、申请表助手、脉脉/微信 触达消息生成等十几个独立 mode。
 
 > ⚠️ **这不是海投工具，是过滤器**。系统对 < 75/100 分的岗位会强烈不建议申请。所有动作的最后一步永远是用户决定是否提交。
 
@@ -93,7 +139,7 @@ flowchart TD
     URLInbox --> AutoPipe
 
     BatchMode["⚡ batch 模式"] --> Workers
-    Workers["N × claude -p workers<br/>(并行子进程)"]
+    Workers["N × headless agent workers<br/>(并行子进程；batch-runner 当前实现用 claude -p)"]
     Workers --> AutoPipe
 
     AutoPipe{{"🎯 auto-pipeline<br/>━━━━━━━━━━━━━━━<br/>A · 角色摘要<br/>B · CV 匹配<br/>C · 级别策略<br/>D · 薪酬调研（看准/脉脉）<br/>E · 个性化方案<br/>F · 面试 STAR+R 故事"}}
@@ -178,21 +224,29 @@ deal_breakers:
 
 每次 scan / 评估都会先检查红线，命中直接跳过不浪费精力。
 
-### 国内招聘门户的处理
+### JD 采集的三条路线（JD Acquisition Paths）
 
-国内门户和西方差异巨大，系统针对每种情况有不同策略：
+国内门户和西方差异巨大（强反爬 + 登录墙 + SPA + 滑块），系统针对不同情况提供三条路线。**三条路线是并列关系，不是互斥关系**：
 
-| 平台 | 问题 | 系统处理（2026-04 后） |
-|------|------|---------------------|
-| **V2EX 招聘 / GitHub README / 企业自有静态招聘页** | 公开无限制 | ✅ WebFetch 直接取 |
-| **企业自有招聘 SPA**（制造 / 贸易 / 零售集团 careers） | JD 详情页 SPA 空壳 | ⚡ **浏览器 bookmarklet 主路径**（`tools/bookmarklets/dachang-spa.js`），或用户截图 |
-| **电商 / 新消费 / 供应链服务企业招聘**（多走 Mokahr / 飞书表单） | Mokahr iframe / 飞书表单 | ⚡ **bookmarklet**（`mokahr.js`）或截图 |
-| **Boss 直聘 / 拉勾 / 猎聘** | 强反爬 + 滑块 + 登录墙 + 反复制 | ⚡ **bookmarklet 专用版本**（`boss-zhipin.js` / `liepin.js` / `lagou.js`），绕过反复制，结构化抽取 |
-| **脉脉招聘 / LinkedIn / 微信公众号** | 必须登录 / DOM 加密 | 📸 用户截图拖给 Claude |
+| 路线 | 适用场景 | 依赖 |
+|------|---------|------|
+| **A. Manual Capture（手动捕获，默认、最通用）** | 截图 JD / 粘贴 JD 文本 / 用户提供公开 URL | 最低自动化依赖；登录态复杂平台（Boss / 脉脉）最稳妥 |
+| **B. Local Bookmarklet（本地书签捕获）** | 用户在浏览器打开 JD → 点 bookmarklet → `localhost:8787` → inbox | 只需本地服务器；用户主动触发 |
+| **C. Optional Browser Automation（可选浏览器自动化 = `browser-search` mode）** | 宿主具备真实浏览器控制能力时，只读搜索 / 采集 | 非默认路径；可能触发平台风控，遇验证立即 STOP |
 
-> **设计范式（2026-04 重写）：** 系统**放弃**对国内反爬平台的自动化爬取。用户在浏览器里已经看到的 JD，用 **1 次 bookmarklet 点击**（5 秒）即可结构化捕获到本地 inbox。这是中国市场唯一稳定可靠的取数方式 — Playwright / WebFetch 在 Boss / Mokahr / 飞书上的结构性失败率 > 90%。
+各平台的典型表现：
+
+| 平台 | 问题 | 推荐路线 |
+|------|------|---------|
+| **V2EX 招聘 / GitHub README / 企业自有静态招聘页** | 公开无限制 | A（直接提供 URL）或 C |
+| **企业自有招聘 SPA**（制造 / 贸易 / 零售集团 careers） | JD 详情页 SPA 空壳 | ⚡ **B bookmarklet 主路径**（`tools/bookmarklets/dachang-spa.js`），或 A 截图 |
+| **电商 / 新消费 / 供应链服务企业招聘**（多走 Mokahr / 飞书表单） | Mokahr iframe / 飞书表单 | ⚡ **B bookmarklet**（`mokahr.js`）或 A 截图 |
+| **Boss 直聘 / 拉勾 / 猎聘** | 强反爬 + 滑块 + 登录墙 + 反复制 | ⚡ **B bookmarklet 专用版本**（`boss-zhipin.js` / `liepin.js` / `lagou.js`，解除当前页面反复制样式后结构化抽取），或 A 截图 |
+| **脉脉招聘 / LinkedIn / 微信公众号** | 必须登录 / DOM 加密 | 📸 A 用户截图给 Agent |
+
+> **设计范式：** 对国内强反爬平台，**默认推荐 A / B 两条人机协作路线** — 自动化爬取在这类平台上通常不稳定（受登录墙、SPA、验证码、平台策略影响）。`scan` mode 只做线索发现（URL + 标题）；`browser-search` 是独立、可选、用户显式调用的浏览器自动化路线，需要宿主具备 browser-control capability 且带风控熔断。**`scan` 不等于 `browser-search`。**
 >
-> 详见 [`tools/README.md`](tools/README.md)。
+> 详见 [`tools/README.md`](tools/README.md) 与 [`modes/browser-search.md`](modes/browser-search.md)。
 
 ---
 
@@ -228,14 +282,14 @@ deal_breakers:
 ### 1. 第一次安装（5 步）
 
 ```bash
-# 1) clone fork repo（或上游再 set remote）
-git clone https://github.com/shuheng-mo/career-ops-china.git
-cd career-ops-china
+# 1) clone 当前仓库
+git clone https://github.com/yrusc9814-web/career-command-center.git
+cd career-command-center
 
-# 2) 装 npm 依赖（只有 playwright 一个）
+# 2) 装 npm 依赖
 npm install
 
-# 3) 装 Playwright Chromium（用于 PDF 生成 + 企业 SPA 招聘页抓取）
+# 3) 装 Playwright Chromium（Optional — PDF 生成与需要 Chromium 的浏览器工具用，非所有功能必须）
 npx playwright install chromium
 
 # 4) 复制 example 配置 + 创建你的 cv.md
@@ -243,24 +297,25 @@ cp config/profile.example.yml config/profile.yml
 cp templates/portals-china.example.yml portals.yml
 # 创建 cv.md（在项目根目录），格式见下面的 cv.md 章节
 
-# 5) 在项目目录里启动 Claude Code
-claude
+# 5) 用你的 Agent 打开项目（见下方 Step 4）
 ```
 
-### 2. 让 Claude 帮你 onboarding
+### 2. 让你的 Agent 帮你 onboarding
 
-在 Claude Code 里直接说一句话：
+用你选择的 Agent（见 [Agent / Host Compatibility](#agent--host-compatibility不绑定单一-agent)）打开项目后，直接说一句话：
 
-> 「我是新用户，帮我配置 career-ops-china」
+> 「我是新用户，帮我配置 Career Command Center」
 
-Claude 会按 `CLAUDE.md` 里的 onboarding 流程引导你：
+让 Agent 首先读取 `AGENTS.md`（通用 Agent 项目说明入口）。Agent 会按 onboarding 流程引导你：
 
 - 索取你的简历（贴文本 / LinkedIn URL / 自述都行）
 - 询问 base 城市、目标岗位、期望薪资、deal-breakers
 - 把信息写入 `cv.md` 和 `config/profile.yml`
 - 提醒你 onboarding 完成，可以开始用
 
-### 3. 用 16 个命令模式
+> Claude Code 用户可以直接 `claude` 启动并使用 `/career-ops` skill；其他宿主按各自方式打开项目并让 Agent 读取 `AGENTS.md` 即可。仓库不为未验证的宿主编造启动命令。
+
+### 3. 用 17 个 mode（16 个命令 + 1 个面试题库）
 
 | 模式 | 触发方式 | 做什么 |
 |------|---------|--------|
@@ -270,6 +325,7 @@ Claude 会按 `CLAUDE.md` 里的 onboarding 流程引导你：
 | `offers` | `/career-ops offers` | 多个 offer 加权对比 + 排名 |
 | `pdf` | `/career-ops pdf` | 单独生成 ATS 优化的定制 CV PDF |
 | `scan` | `/career-ops scan` | **线索发现**（仅 URL + 标题，不取 JD） — 取 JD 用 bookmarklet / 截图 |
+| `browser-search` | `/career-ops browser-search` | **可选浏览器自动化**：宿主具备 browser-control capability 时，真实浏览器只读搜索 / 采集岗位（详见 `modes/browser-search.md`） |
 | `pipeline` | `/career-ops pipeline` | 批处理 data/pipeline.md 里的待办 URL |
 | `batch` | `/career-ops batch` | 用 N 个 worker 并行评估多个 JD |
 | `tracker` | `/career-ops tracker` | 查看申请状态汇总 |
@@ -288,7 +344,7 @@ Claude 会按 `CLAUDE.md` 里的 onboarding 流程引导你：
 用户：
 [贴一段采购 JD 文本，比如："某品类采购主管，岗位描述如下..."]
 
-Claude：
+Agent（你的 AI Agent，下同）：
 1. 检测 archetype：如 寻源与供应商开发（primary）
 2. Block A：角色摘要表（公司、职级档位、base、TL;DR）
 3. Block B：JD 每条要求 → cv.md 对应行；Gap 四级标注 + Capability Coverage 表（cv_match_score 0-100 由引擎产出）
@@ -309,7 +365,7 @@ Claude：
 ```
 用户：/career-ops scan
 
-Claude（2026-04 重定位后）：
+Agent（2026-04 重定位后）：
 1. 启动 subagent（避免污染主上下文）
 2. 跑 portals.yml 里 enabled 的 search_queries 发现 URL（不尝试取 JD 内容）
 3. Playwright 抓 tracked_companies 的 careers 列表页（仅标题 + URL）
@@ -319,8 +375,8 @@ Claude（2026-04 重定位后）：
 7. 写新发现的岗位到 data/pipeline.md（带优先级 P1/P2/P3 + [!] 标记取 JD 方式）
 8. 显示汇总 + 明确提示"下一步请用 bookmarklet 或截图取每个 JD"
 
-⚠️ scan 不再承诺取到 JD — 国内反爬平台（Boss/Mokahr/飞书）99% 失败。
-   scan 仅发现"有哪些岗位在招"，JD 内容由用户用 bookmarklet 点击捕获。
+⚠️ scan 不承诺取到 JD — 国内强风控平台（Boss/Mokahr/飞书）的 JD 详情通常被登录墙 / SPA / 验证码挡住，自动化提取通常不稳定。
+   scan 仅发现"有哪些岗位在招"，JD 内容由用户用 bookmarklet 点击捕获（或截图）。若宿主具备 browser-control capability 且用户显式要求，可另行使用 `browser-search` mode（独立可选路线，非 scan 的一部分）。
 ```
 
 #### 例 E：Bookmarklet + Inbox（国内主路径，推荐）
@@ -335,19 +391,19 @@ Claude（2026-04 重定位后）：
 1. 浏览器打开任意 JD 页（Boss / 猎聘 / 企业自有招聘页 / Mokahr 都行）
 2. 点对应 bookmarklet（通用 / Boss / 猎聘 / 拉勾 / Mokahr / 企业 SPA）
 3. 看到 "✓ JD captured" = 本地 inbox/*.json 已就位
-4. 攒几个后回 Claude：/career-ops inbox
-   → Claude 批量评估（每个出 report + PDF + tracker TSV）
+4. 攒几个后回到你的 Agent：/career-ops inbox
+   → Agent 批量评估（每个出 report + PDF + tracker TSV）
 5. 最后跑 npm run merge（node tools/merge-tracker.mjs）合并 TSV 到 applications.md
 ```
 
-全端到端绕过反爬 + 反复制，详见 [`tools/README.md`](tools/README.md)。
+在浏览器里点一次书签即可把你已打开的 JD 页结构化捕获到本地 inbox（解除当前页面的反复制样式后读取 DOM），详见 [`tools/README.md`](tools/README.md)。
 
 #### 例 C：批量评估 pipeline
 
 ```
 用户：/career-ops pipeline
 
-Claude：
+Agent：
 1. 读 data/pipeline.md 找所有 [ ] 待办 URL
 2. 对每条：提取 JD → 跑 auto-pipeline
 3. 移到 [x] 已处理段
@@ -360,7 +416,7 @@ Claude：
 用户：/career-ops apply
 （用户在 Chrome 里打开了某公司的申请表）
 
-Claude：
+Agent：
 1. 读屏幕（截图或 Playwright snapshot）
 2. 在 reports/ 找匹配的 report
 3. 加载 Section G（之前生成的 draft answers）
@@ -487,11 +543,11 @@ tracked_companies:
   # ... 按目标品类自填，模板附使用指引
 ```
 
-### 8. 让 Claude 帮你定制
+### 8. 让 Agent 帮你定制
 
-这个项目最大的亮点是 **Claude 自己就能改自己的所有文件**。日常使用中如果有什么不爽，直接告诉 Claude：
+这个项目最大的亮点是 **Agent 自己就能改系统自己的文件**。日常使用中如果有什么不爽，直接告诉你的 Agent：
 
-| 你说的话 | Claude 会改 |
+| 你说的话 | Agent 会改 |
 |---------|-----------|
 | "把 archetype 加一个间接采购方向" | `modes/_profile.md` |
 | "我现在不在意工时了，把权重调小" | `tools/lib/scoring.mjs`（`SCORING_RUBRIC`，改后跑测试） |
@@ -502,27 +558,20 @@ tracked_companies:
 | "我现在主攻品类采购" | `modes/_profile.md` |
 | "把 deal-breaker 的『大小周』移除" | `config/profile.yml` |
 
-每次评估完一个岗位，如果 Claude 评分和你的直觉差太多，告诉它："这个分太高/低了，因为 X"，它会更新你的 profile / 调整 framing，下次会更准。**系统是越用越聪明的**。
+每次评估完一个岗位，如果 Agent 评分和你的直觉差太多，告诉它："这个分太高/低了，因为 X"，它会更新你的 profile / 调整 framing，下次会更准。**系统是越用越聪明的**。
 
-### 9. Git 工作流（如果你像我一样把这个 fork 推到自己的 repo）
+### 9. Git 工作流
+
+当前正式仓库为 `yrusc9814-web/career-command-center`，日常开发在 `main` 分支：
 
 ```bash
-# 当前分支应该是 china-main
 git status
-
-# 改完之后正常提交
-git add modes/some-mode.md cv.md  # 注意 cv.md 不会真的被加（gitignored）
-git commit -m "feat: 调整 archetype 优先级"
-git push  # 自动推到你 fork 的 china-main
+git add modes/some-mode.md        # 注意：cv.md / profile.yml / data 等本地文件已 gitignored，不会被加
+git commit -m "docs: 调整 archetype 说明"
+git push                          # 推到 origin 的 main
 ```
 
-`main` 分支保持原版，`china-main` 分支演进定制。如果想从 santifer 上游同步改进：
-
-```bash
-git fetch origin            # origin = santifer/career-ops
-git checkout china-main
-git merge origin/main       # 会有冲突，需要逐个解决
-```
+上游 [`santifer/career-ops`](https://github.com/santifer/career-ops) 仅作为 fork 来源与致谢保留（本仓库 `upstream` remote）。如需参考上游改进，可 `git fetch upstream` 自行比对，当前不作为安装或同步目标。
 
 ### 10. Tracker 后端：applications.md vs 飞书 Bitable（⭐ 2026-04-20 新增）
 
@@ -562,7 +611,7 @@ npm run tracker:backfill
 | **Closed At** | datetime | 终止状态（Rejected/Discarded/SKIP/Offer）自动打时间戳 → 生命周期可视化 |
 | **Days Since Added** | formula: `0 + IF(ISBLANK([Date]), 0, INT(DATEDIF([Date], TODAY(), "D")))` | 每条记录躺了多少天 |
 | **Lifecycle Flag** | formula: IFS 5 分支 emoji 标签 | 🎯活跃 / ⏰该 follow-up / 🔥高优待投 / 🔒已结束 |
-| **Score Value** | formula: `ROUND(IFERROR(VALUE(LEFT([Score], 3)), 0), 1)` | 数值化 Score（"4.2/5" → 4.2）用于排序 |
+| **Score Value** | formula: `ROUND(IFERROR(VALUE(LEFT([Score], 3)), 0), 1)` | 数值化 Score 用于排序（公式为旧 1–5 分制时期设计，如 "4.2/5" → 4.2；当前 Career Score 为 0–100 制） |
 
 | 视图 | 类型 | 配置 |
 |------|------|------|
@@ -587,7 +636,7 @@ npm run tracker:backfill  # 从 reports/ 补 URL + 为历史终止记录补 Clos
 **切换回 md（数据不丢）：**
 profile.yml 改 `tracker.backend: md`。md 是 bitable 的最新快照，所有工具立刻恢复用 md。Bitable 本身不删，可随时再切回。
 
-**📕 飞书 Bitable 集成的踩坑经验**（已固化到 memory + `CLAUDE.md`，让 Claude 下次不重复踩）：
+**📕 飞书 Bitable 集成的踩坑经验**（已固化到 memory + `CLAUDE.md`，让 Agent 下次不重复踩）：
 
 | 坑 | 症状 | 规避 |
 |----|------|------|
@@ -625,11 +674,12 @@ profile.yml 改 `tracker.backend: md`。md 是 bitable 的最新快照，所有�
 ## 项目结构
 
 ```
-career-ops-china/
+career-command-center/          # 开发目录历史名为 career-ops-china
 ├── README.md                       # 你正在看的这个文件
-├── CLAUDE.md                       # Claude Code 的工作指令
-├── LICENSE                         # MIT，双版权（santifer + 你）
-├── package.json                    # 只依赖 playwright
+├── AGENTS.md                       # 通用 Agent 项目说明入口
+├── CLAUDE.md                       # Claude Code 兼容入口（agent-neutral 的 Claude 侧接入）
+├── LICENSE                         # MIT，双版权（santifer + 定制作者）
+├── package.json
 ├── package-lock.json
 │
 ├── cv.md                           # ⛔ gitignored — 你的简历
@@ -642,7 +692,7 @@ career-ops-china/
 │   └── profile.yml                 # ⛔ gitignored — 你的个人配置
 │   └── target_pool.md              # ⛔ gitignored — 你的 Tier 公司池
 │
-├── modes/                          # 16 个 mode 文件，全部中文
+├── modes/                          # 17 个 mode 文件，全部中文（16 个命令 + interview-questions 题库）
 │   ├── _shared.md                  # 系统规则、评分、薪酬源、职级对标
 │   ├── _profile.template.md        # ✅ 用户 archetype 模板
 │   ├── _profile.md                 # ⛔ gitignored — 你的 archetype、叙事、谈判
@@ -664,7 +714,7 @@ career-ops-china/
 │
 ├── templates/
 │   ├── cv-template.html            # ATS 优化的 CV HTML 模板（含中文字体回退）
-│   ├── portals-china.example.yml   # 50+ 中国公司预置
+│   ├── portals-china.example.yml   # 采购词表预置 + 匿名企业池占位（用户自填真实目标公司）
 │   ├── portals.example.yml         # 上游原版（保留）
 │   └── states.yml                  # 状态 canonical（英文）+ 中文别名
 │
@@ -724,21 +774,21 @@ career-ops-china/
 
 ---
 
-## 浏览器 Bookmarklet + 本地 Inbox（⭐ 2026-04 新增，国内主路径）
+## 浏览器 Bookmarklet + 本地 Inbox（⭐ 国内主路径，JD 采集路线 B）
 
-这是 fork 相对上游最大的范式改变 — **放弃对国内反爬平台的自动化爬取**，改成 **用户浏览器点按钮 → 本地服务器接收 → Claude 批量处理**。
+这是 fork 相对上游最大的范式改变 — 对国内强风控平台，**默认不再硬扛自动化爬取**，改成 **用户浏览器点按钮 → 本地服务器接收 → AI Agent 批量处理**。
 
 ### 为什么？
 
-国内招聘平台（Boss 直聘 / 拉勾 / 猎聘 / Mokahr / 飞书表单 / 脉脉 / 微信公众号）有严苛的反爬 + 反复制 + 登录墙 + SPA + 滑块验证。Playwright / WebFetch / WebSearch 在这些平台上的**结构性失败率 > 90%**，硬撑只会拖累 session。
+国内招聘平台（Boss 直聘 / 拉勾 / 猎聘 / Mokahr / 飞书表单 / 脉脉 / 微信公众号）有严苛的反爬 + 反复制 + 登录墙 + SPA + 滑块验证。Playwright / WebFetch / WebSearch 在这些平台上通常不稳定（受登录墙、SPA、验证码、平台策略影响），硬撑只会拖累 session。
 
-但**用户在浏览器里已经看到的 JD**，DOM 始终可读（反爬只拦复制，不拦 JS 读取）。一个 bookmarklet 就能：
+但**用户在浏览器里已经看到的 JD**，DOM 始终可读（反爬多数只拦复制，不拦 JS 读取）。一个 bookmarklet 就能：
 
-1. 剥离 anti-copy CSS + event handlers
+1. 剥离 anti-copy CSS + event handlers（解除当前页面的反复制样式）
 2. 按站点特化 selector 结构化抽取 (`job_title` / `company` / `salary` / `description`)
 3. POST 到 `localhost:8787` 本地服务器
 4. 服务器写入 `inbox/*.json`
-5. Claude 跑 `/career-ops inbox` 批量评估
+5. 你的 Agent 跑 `/career-ops inbox` 批量评估
 
 ### 6 个 bookmarklets 覆盖所有常见平台
 
@@ -772,11 +822,12 @@ open tools/install.html
 打开 JD 页 → 点 bookmarklet → ✓ 提示 → 攒几个 → /career-ops inbox
 ```
 
-### 安全
+### 安全与隐私（两阶段语义，务必分清）
 
 - 服务器只监听 `127.0.0.1`（localhost）
 - `inbox/*.json` 是本地 JD 数据，已 gitignored
-- bookmarklet 不发送任何数据到 Claude / Anthropic / 第三方，**只发本地**
+- **捕获阶段：** bookmarklet 只把当前页面的提取结果发送到用户本机 `localhost`，不经过任何第三方
+- **分析阶段：** 当用户随后主动要求所选 AI Agent 分析 inbox 内容时，相关内容会由对应 Agent / model provider 按其自身数据处理方式处理 — 不要理解为"整个工作流的数据永远不会进入任何模型服务"
 
 详细文档：[`tools/README.md`](tools/README.md)。
 
@@ -793,7 +844,7 @@ open tools/install.html
 node tools/scan-helper.mjs <URL> [--mode=jd|list] [--wait=5000]
 ```
 
-⚠️ **不要用 `--user-data-dir` 复用你的日常 Chrome profile** — bookmarklet 走 user-triggered 路径，不触发反爬策略，比 Playwright 更稳定。
+⚠️ **不要用 `--user-data-dir` 复用你的日常 Chrome profile** — bookmarklet 走用户主动触发路径，通常比 Playwright 自动化更不容易触发平台风控，但也不保证在任何平台都可用。
 
 ---
 

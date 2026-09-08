@@ -1,11 +1,51 @@
 # Architecture
 
+## Host-neutral Architecture
+
+Career Command Center is agent-neutral: the agent host is a runtime carrier, not the product itself.
+
+```
+User
+  ↓
+AI Agent Host   (ZCode / Claude Code / Codex / Cursor / WorkBuddy / 千问办公 / DIM / Qoder / …)
+  ↓
+Career Command Center workflow   (AGENTS.md / CLAUDE.md compatibility entries + modes/*.md)
+  ↓
+modes / deterministic runtime / local tools   (tools/lib/* engines, tools/*.mjs)
+  ↓
+LOCAL ONLY data   (cv.md, profile.yml, data/, reports/, inbox/, tracker)
+```
+
+Optional capability, attached to the side of the workflow:
+
+- **Browser capability** — if the host provides real browser control, the optional `browser-search` mode can run read-only collection. The currently verified browser transport is **Kimi WebBridge** controlling the user's real Chrome. Kimi WebBridge is a browser capability implementation, **not** a core dependency of Career Command Center.
+
+Key boundaries (what is *not* the business logic):
+
+- **Agent Host ≠ business logic** — hosts run the workflow; they do not define scoring or rules
+- **Model ≠ score engine** — all numeric scores come from `tools/lib/*`; the model only explains
+- **Browser Provider ≠ Career Command Center core** — WebBridge / Playwright are swappable transports
+- **Claude / ZCode / Codex / Cursor etc. are hosts** — none of them is the product definition
+
+Host capability matrix (agent-neutral ≠ identical capabilities — each host exposes a different set):
+
+| Capability | Required? |
+|---|---|
+| Read project files | core |
+| Read project instructions (AGENTS.md / modes) | core |
+| Terminal / Node commands | most workflows |
+| Vision (screenshot reading) | optional — without it, paste JD text |
+| Web search | optional |
+| Browser control | optional — without it, Manual Capture / Bookmarklet still work |
+| Subagent / task delegation | optional |
+
 ## System Overview
 
 ```
                     ┌─────────────────────────────────┐
-                    │         Claude Code Agent        │
-                    │   (reads CLAUDE.md + modes/*.md) │
+                    │          AI Agent Host           │
+                    │ (reads AGENTS.md / CLAUDE.md     │
+                    │  + modes/*.md)                   │
                     └──────────┬──────────────────────┘
                                │
             ┌──────────────────┼──────────────────────┐
@@ -24,7 +64,7 @@
      │                    Output Pipeline                      │
      │  ┌──────────┐  ┌────────────┐  ┌───────────────────┐  │
      │  │ Report.md│  │  PDF (HTML  │  │ Tracker TSV       │  │
-     │  │ (A-F eval)│  │  → Puppeteer)│  │ (merge-tracker)  │  │
+     │  │ (A-F eval)│  │  → Playwright)│  │ (merge-tracker)  │  │
      │  └──────────┘  └────────────┘  └───────────────────┘  │
      └────────────────────────────────────────────────────────┘
                                │
@@ -61,14 +101,14 @@
 The batch system processes multiple offers in parallel:
 
 ```
-batch-input.tsv    →  batch-runner.sh  →  N × claude -p workers
+batch-input.tsv    →  batch-runner.sh  →  N × headless workers
 (id, url, source)     (orchestrator)       (self-contained prompt)
                            │
                     batch-state.tsv
                     (tracks progress)
 ```
 
-Each worker is a headless Claude instance (`claude -p`) that receives the full `batch-prompt.md` as context. Workers produce:
+Each worker is a headless agent instance (the current `batch-runner.sh` implementation spawns `claude -p`) that receives the full `batch-prompt.md` as context. Workers produce:
 - Report .md
 - PDF
 - Tracker TSV line

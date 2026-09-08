@@ -1,4 +1,10 @@
-# Career-Ops -- AI Job Search Pipeline（中国大陆版）
+# Career Command Center — Claude Code Compatibility Entry（中国大陆版）
+
+> **This is the Claude Code compatibility entry for Career Command Center.**
+>
+> **Career Command Center itself is agent-neutral** — 它不绑定 Claude、Codex、Kimi 或某一个具体 Agent。本文件是 Claude Code 侧的接入说明；通用 Agent 项目级说明入口是 `AGENTS.md`。两者职责不完全相同（AGENTS.md = generic / agent-neutral project instructions，本文件 = Claude Code compatibility entry），但遵循同一套业务规则；通用规则与运行时 SoT 以 `modes/*`、`tools/lib/*` 及 deterministic contracts 为准。
+>
+> **业务规则的 Source of Truth 在：`modes/*.md`（各 mode 工作流）、`tools/lib/*`（确定性运行时引擎）、deterministic contracts（如 analysis contract / persistence gate）。** 本文件不定义系统规则，只做 Claude Code 语境下的承接。
 
 ## Origin
 
@@ -12,7 +18,7 @@ The portfolio that goes with the original system is also open source: [cv-santia
 
 ## What is career-ops
 
-AI-powered job search automation built on Claude Code: pipeline tracking, offer evaluation, CV generation, portal scanning, batch processing.
+AI-powered job search automation（Career Command Center，agent-neutral 中国大陆求职指挥中心；本文件为 Claude Code 兼容入口）: pipeline tracking, offer evaluation, CV generation, portal scanning, batch processing.
 
 ### Main Files
 
@@ -23,7 +29,7 @@ AI-powered job search automation built on Claude Code: pipeline tracking, offer 
 | `data/scan-history.tsv` | Scanner dedup history |
 | `portals.yml` | Query and company config |
 | `templates/cv-template.html` | HTML template for CVs |
-| `tools/generate-pdf.mjs` | Puppeteer: HTML to PDF |
+| `tools/generate-pdf.mjs` | Playwright: HTML to PDF |
 | `article-digest.md` | Compact proof points from portfolio (optional) |
 | `interview-prep/story-bank.md` | Accumulated STAR+R stories across evaluations |
 | `reports/` | Evaluation reports (format: `{###}-{company-slug}-{YYYY-MM-DD}.md`) |
@@ -36,7 +42,7 @@ AI-powered job search automation built on Claude Code: pipeline tracking, offer 
 2. `config/profile.yml` 是否存在（不只是 profile.example.yml）？
 3. `modes/_profile.md` 是否存在？如果 `modes/_profile.template.md` 存在而 `_profile.md` 不存在，复制 template → `_profile.md`
 4. `config/target_pool.md` 是否存在？如果 `config/target_pool.template.md` 存在而 `target_pool.md` 不存在，复制 template → `target_pool.md`
-5. `portals.yml` 是否存在？（中国大陆版默认已存在，不需要重新创建）
+5. `portals.yml` 是否存在？不存在 → 从 `templates/portals-china.example.yml` 复制初始化（example 含搜索结构 + 采购词表 + 匿名占位公司池，需用户自填真实目标公司）
 
 **如果 cv.md 或 profile.yml 缺失，进入 onboarding 模式。** 在基础文件齐全之前，**不要** 跑评估、扫描或任何其他 mode。一步步引导用户：
 
@@ -158,8 +164,11 @@ This system is designed to be customized by YOU (Claude). 用户让你改 archet
 | 问申请状态 | `tracker` |
 | 实时填申请表 | `apply` |
 | 主动搜新岗位 | `scan` |
+| 浏览器只读自动搜索采集岗位（可选；宿主需具备 browser-control capability） | `browser-search` |
+| 处理 bookmarklet 捕获的 JD（inbox/*.json） | `inbox` |
 | 处理 pipeline.md 里的待办 URL | `pipeline` |
 | 批量处理岗位 | `batch` |
+| 抽取 STAR 故事沉淀 | `story-sync` |
 
 ### CV Source of Truth
 
@@ -180,7 +189,7 @@ This system is designed to be customized by YOU (Claude). 用户让你改 archet
 
 ### 中国大陆特殊伦理提醒
 
-- **不要推荐爬虫式扫描 Boss/拉勾/猎聘**。这些平台的 ToS 通常禁止自动化。系统的 scan 模式默认走公司自有 careers 页 + 低频 WebSearch，不直接抓门户。
+- **不要对强风控门户做爬虫式硬扫**。Boss/拉勾/猎聘等平台的 ToS 通常禁止自动化。系统的 `scan` 模式默认走公司自有 careers 页 + 低频 WebSearch，不直接抓门户详情；对强风控平台的完整浏览器采集只通过独立可选的 `browser-search` 模式进行（用户显式调用、宿主具备 browser capability、带风控熔断）。**`scan` 不等于 `browser-search`。**
 - **不要替用户在脉脉/微信上主动加陌生人**。`contact` 模式只生成消息草稿，发不发由用户决定。
 - **不要伪造学历、年龄、工作经历**。如果用户的简历有"美化"成分，提醒一次：很多企业会做背调，被发现入职后会被解约。
 - **不要绕开公司的 HR 流程**。比如不要建议用户拿到 offer 后偷偷再去面竞品压价 — 圈子不大，人设很重要。
@@ -212,7 +221,7 @@ This system is designed to be customized by YOU (Claude). 用户让你改 archet
 - Batch in `batch/` (gitignored except scripts and prompt)
 - Report numbering: sequential 3-digit zero-padded, max existing + 1
 - **RULE: After each batch of evaluations, run `node tools/merge-tracker.mjs`** (or `npm run merge`) to merge tracker additions and avoid duplications.
-- **RULE: NEVER create new entries in applications.md if company+role already exists.** Update the existing entry.
+- **RULE: Before creating or updating tracker entries, apply the canonical Job Identity: (1) `job_id` exact match; (2) if no job_id, extract it from the URL; (3) only as fallback, normalized company + exact role equality. Fuzzy role/title matching must not be used for job identity. Same company with a different `job_id` is a different posting — never overwrite one posting because titles look similar. New rows always go through the TSV / backend writer; update an existing entry only when it is the same job identity.
 
 ### TSV Format for Tracker Additions
 

@@ -20,7 +20,7 @@
 | `modes/_shared.md` | 总是 | **framing 规则、中国大陆薪酬源、评分权重、职级对标表、Tier 检测流程** |
 | `CLAUDE.md` | 如遇 TSV / tracker 格式疑问 | TSV 9 列规范和 canonical 状态 |
 | `templates/cv-template.html` | 生成 PDF 时 | HTML 模板 |
-| `tools/generate-pdf.mjs` | 生成 PDF 时 | Puppeteer 脚本 |
+| `tools/generate-pdf.mjs` | 生成 PDF 时 | Playwright 脚本 |
 
 **核心规则：**
 - 永远不要写 cv.md

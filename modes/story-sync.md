@@ -11,7 +11,7 @@
 
 **为什么 mock-interviews 是关键二级源：**
 
-- 评估报告 Block F 是**冷生成**（Claude 根据 JD 预想面试要点）
+- 评估报告 Block F 是**冷生成**（评估阶段由 Agent 根据 JD 与 candidate evidence 生成）
 - mock-interview 笔记是**热迭代**（一面结束后复盘 + 二面冲刺准备），包含真实问题、踩过的坑、调整过的话术、现场追问过的数字
 - 若同一 story 在两处出现差异，**mock 版本更新 / 覆盖 report 版本**（因为是更接近真实面试的打磨版）
 
@@ -21,10 +21,10 @@
 
 ## 推荐执行方式
 
-作为 **subagent** 跑（避免主 session 读 13+ 份 report 炸 context）：
+如果宿主支持任务委派 / subagent 能力，作为 **subagent** 跑（避免主 session 读 13+ 份 report 炸 context）；不支持委派的宿主直接在主 session 分批读取 report 执行：
 
 ```
-Agent(
+Agent(                                    # pseudo-code：以宿主实际的委派 API 为准，仅当宿主支持 delegated agents 时可用
     subagent_type="general-purpose",
     prompt="[本文件内容 + 具体参数]",
     run_in_background=True

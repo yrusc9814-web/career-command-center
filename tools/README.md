@@ -1,6 +1,6 @@
-# career-ops 浏览器 bookmarklets
+# career-ops 浏览器 bookmarklets（JD 采集路线 B：Local Bookmarklet）
 
-绕过国内招聘平台的反爬 / 反复制 / 登录墙限制，让你 **一键** 把 JD 发给 Claude 评估。
+在你自己的浏览器里，把**你已经打开的 JD 页面**结构化捕获到本地 inbox（bookmarklet 会解除当前页面的反复制样式、读取 DOM 后抽取字段），供 Career Command Center / 你的 AI Agent 后续分析。它不负责、也不需要"绕过登录" — 你本来就在登录态下查看页面。
 
 ## 工作原理
 
@@ -17,7 +17,7 @@ inbox/jd-{时间戳}-{平台}-{标题}.json
     │
     │ 3. 你跑 /career-ops inbox
     ▼
-Claude 自动评估 → report + PDF + tracker
+AI Agent / Career Command Center 分析 → report + PDF + tracker
 ```
 
 ## 一次性安装（5 分钟）
@@ -54,7 +54,7 @@ nohup node tools/jd-inbox-server.mjs > logs/inbox-server.log 2>&1 &
 1. 浏览器打开任意 JD 页（Boss / 猎聘 / 拉勾 / 公司 careers / Mokahr）
 2. 点书签栏对应的 bookmarklet
 3. 看到 `✓ JD captured` 弹窗 → 收工
-4. 回到 Claude 跑 `/career-ops inbox` 自动评估全部待处理
+4. 回到你使用的 Agent 跑 `/career-ops inbox` 自动评估全部待处理
 
 ## 5 个 bookmarklets 怎么选
 
@@ -79,7 +79,7 @@ A: 确保你已经登录 Boss + 完整看到 JD（拉到底部）再点。Boss �
 A: Mokahr 多数嵌在公司主域名的 iframe 里，跨域 → 无法读取。**右键 iframe → 在新 tab 打开 iframe URL**，然后再点 Mokahr bookmarklet。
 
 **Q: 公众号文章 / 小红书笔记里的 JD 抓不到**
-A: 微信/小红书 ToC 端 DOM 经过加密 / 反爬，bookmarklet 不能搞。请用截图给 Claude。
+A: 微信/小红书 ToC 端 DOM 经过加密 / 反爬，bookmarklet 不能搞。请用截图给你的 Agent。
 
 **Q: 怎么知道服务器收到了？**
 A: 启动服务器的终端会实时打印每次收到的 payload（platform、URL、文本长度）。
@@ -90,11 +90,12 @@ A: `ls -lt inbox/*.json` 看时间倒序的待处理文件，或 `cat inbox/{文
 **Q: 想自己改某个 bookmarklet 的 selector？**
 A: 编辑 `tools/bookmarklets/{name}.js`，重跑 `npm run build-bookmarklets`，再次拖到书签栏（覆盖旧版）。
 
-## 安全 & 隐私
+## 安全 & 隐私（两阶段语义，务必分清）
 
 - 服务器只监听 `127.0.0.1`（localhost），外网访问不到
-- inbox/*.json 是你的本地 JD 数据，已 gitignore
-- bookmarklet 不会发送任何数据到 Claude / Anthropic / 第三方，**只发到你自己的 localhost**
+- `inbox/*.json` 是你的本地 JD 数据，已 gitignore
+- **捕获阶段（本页描述的 bookmarklet 流程）：** bookmarklet 本身只把当前页面的提取结果发送到用户本机 `localhost`，不经过任何第三方
+- **分析阶段（你后续主动发起）：** 当你随后要求所选 AI Agent 分析 inbox 内容时，相关内容会由对应 Agent / model provider 按其自身数据处理方式处理 — 不要理解为"整个工作流的数据永远不会进入任何模型服务"
 
 ## 文件清单
 

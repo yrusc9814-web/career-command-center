@@ -40,18 +40,18 @@
 ```
 
 **何时跑：**
-- 用户说「#XX 发了」/「投了」/「试一下同步」 → Claude 跑 `npm run sync-outreach`
+- 用户说「#XX 发了」/「投了」/「试一下同步」 → Agent 跑 `npm run sync-outreach`
 - 也可以用户自己手动跑
 
 **脚本规则（`tools/sync-outreach-status.mjs`）：**
 - 不降级（如果状态已是 Applied/Responded/Interview/Offer/Rejected/Discarded/SKIP，不动）
 - 幂等（重复跑不会重复改）
-- HR 回复列**不自动解析**（自然语言太脆弱）。脚本只检测 HR 回复列非空，提示用户「可能要手动升 Responded/Interview」，由 Claude 询问后改
+- HR 回复列**不自动解析**（自然语言太脆弱）。脚本只检测 HR 回复列非空，提示用户「可能要手动升 Responded/Interview」，由 Agent 询问后改
 
 **HR 回复升级（手动路径）：**
 - 用户在发送记录 HR 回复列填 "约一面"、"加微信了"、"拒了"
-- 用户告诉 Claude：「#XX HR 回了」/「#XX 进面试了」
-- Claude 根据 `templates/states.yml` aliases 直接 Edit applications.md
+- 用户告诉 Agent：「#XX HR 回了」/「#XX 进面试了」
+- Agent 按 `templates/states.yml` aliases 更新状态（遵循 tracker backend 规则：md 后端直接更新 `data/applications.md` 对应行；bitable 后端 Bitable 是唯一写源，去 Bitable 改，见 `modes/tracker.md`）
 
 ## Boss 直聘触达（国内求职主渠道）
 

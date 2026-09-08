@@ -1,7 +1,7 @@
 {
   "name": "career-ops",
   "version": "1.0.0",
-  "description": "AI-powered job search pipeline built on Claude Code",
+  "description": "Agent-neutral AI job search workflow and career command center for China mainland",
   "scripts": {
     "verify": "node tools/verify-pipeline.mjs",
     "normalize": "node tools/normalize-statuses.mjs",
@@ -22,16 +22,19 @@
   },
   "keywords": [
     "ai",
+    "ai-agent",
+    "agent-workflow",
     "job-search",
-    "claude-code",
     "career",
+    "career-ops",
+    "claude-code",
     "automation"
   ],
   "author": "Santiago Fernández de Valderrama <hi@santifer.io> (https://santifer.io)",
-  "homepage": "https://santifer.io",
+  "homepage": "https://github.com/yrusc9814-web/career-command-center",
   "repository": {
     "type": "git",
-    "url": "https://github.com/santifer/career-ops"
+    "url": "https://github.com/yrusc9814-web/career-command-center.git"
   },
   "license": "MIT",
   "dependencies": {

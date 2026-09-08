@@ -25,8 +25,8 @@ CV Match、Career Score、Recommendation 是**三层独立决策**（PROCUREMENT
 
 | Offer | CV Match（0-100，来自 `tools/lib/cv-match.mjs`） | Career Score（0-100，来自 `tools/lib/scoring.mjs`） | Recommendation（五档，来自 `computeRecommendation` 决策链 + `trace[]`） | 关键解释（LLM 只解释） |
 |-------|----------------------------------------------|----------------------------------------------|--------------------------------------------------------------|----------------------|
-| Offer A | X / 100 | X.X / 5 | 强烈推荐 / 推荐 / 一般 / 不推荐 / 硬红线跳过 | 决策依据（blocker / 缺口 / trace 摘要） |
-| Offer B | X / 100 | X.X / 5 | ... | ... |
+| Offer A | X / 100 | X.X / 100 | 强烈推荐 / 推荐 / 一般 / 不推荐 / 硬红线跳过 | 决策依据（blocker / 缺口 / trace 摘要） |
+| Offer B | X / 100 | X.X / 100 | ... | ... |
 
 规则：
 - **三列口径不同、不可互相换算**：CV Match 回答"履历与岗位多匹配"（0-100）；Career Score 回答"岗位本身对候选人的职业价值"（0-100）；Recommendation 是综合硬红线 / blocker / 资格 / 决策矩阵 / 缺口封顶后的五档结论。

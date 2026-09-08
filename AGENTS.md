@@ -1,11 +1,14 @@
-# AGENTS.md — Career-Ops China（ZCode 适配版）
+# AGENTS.md — Career Command Center Agent Instructions
 
-> 本文件由原 `CLAUDE.md` 迁移而来，供 ZCode 等兼容 AGENTS.md 规范的 agent 使用。
-> 原 `CLAUDE.md` 保留未删除，内容与本项目业务逻辑一致。若两者有出入，以 mode 文件（`modes/*.md`）为准。
+> 本文件是 **通用 Agent 项目级说明入口**（agent-neutral project instructions），不绑定某一个具体 Agent 宿主。
+>
+> 它可以被 ZCode、Codex、Cursor、Qoder、DIM 等支持读取 `AGENTS.md`（或等价 project instructions）的宿主加载使用；Claude Code 通过 `CLAUDE.md` 与 `.claude/skills/career-ops/SKILL.md` 作为兼容入口使用同一套规则。**注意：并非每个平台都会自动读取 AGENTS.md** — 如果你的宿主没有自动加载，请让它首先阅读本文件。
+>
+> 本文件由原 `CLAUDE.md` 演化而来。若本文件与 `CLAUDE.md` 有出入，以 mode 文件（`modes/*.md`）与 `tools/lib/` 运行时引擎为准。
 
 ## What is career-ops
 
-AI-powered job search automation（中国大陆求职指挥中心）: pipeline tracking, offer evaluation, CV generation, portal scanning, batch processing. In ZCode, it is invoked through the `career-ops` skill (`.zcode/skills/career-ops/SKILL.md`, 兼容导入自 `.claude/skills/career-ops/SKILL.md`)。
+AI-powered job search automation（Career Command Center：Agent-neutral 中国大陆求职指挥中心）: pipeline tracking, offer evaluation, CV generation, portal scanning, batch processing. 通过项目 skill / 命令命名空间 `career-ops` 调用（Claude Code 兼容入口见 `.claude/skills/career-ops/SKILL.md`；其他宿主直接读取本文件与 `modes/*.md` 即可路由）。
 
 ### Main Files
 
@@ -29,9 +32,7 @@ AI-powered job search automation（中国大陆求职指挥中心）: pipeline t
 2. `config/profile.yml` 是否存在（不只是 profile.example.yml）？
 3. `modes/_profile.md` 是否存在？如果 `modes/_profile.template.md` 存在而 `_profile.md` 不存在，复制 template → `_profile.md`
 4. `config/target_pool.md` 是否存在？如果 `config/target_pool.template.md` 存在而 `target_pool.md` 不存在，复制 template → `target_pool.md`
-5. `portals.yml` 是否存在？（中国大陆版默认已存在，不需要重新创建）
-
-> 注：本工作区已完成上述文件的初始化；但 `cv.md` 目前是空白模板、`config/profile.yml` 仍是 example 原文 — 用户首次使用时按下面 onboarding 流程引导填写。
+5. `portals.yml` 是否存在？不存在 → 从 `templates/portals-china.example.yml` 复制初始化（example 含搜索结构 + 采购词表 + 匿名占位公司池，需用户自填真实目标公司）
 
 **如果 cv.md 或 profile.yml 缺失/为空白模板，进入 onboarding 模式。** 在基础文件齐全之前，**不要** 跑评估、扫描或任何其他 mode。一步步引导用户：
 
@@ -59,9 +60,9 @@ AI-powered job search automation（中国大陆求职指挥中心）: pipeline t
 
 把答案写进 `config/profile.yml`。把目标岗位映射到最接近的 archetype（在 `modes/_profile.md` 中），如果不匹配就改 `_profile.md`。
 
-#### Step 3: Portals（可选 — 中国大陆版默认已配好）
-中国大陆版的 `portals.yml` 已经预配置好了 50+ 公司。问候选人：
-> "portals.yml 已经包含了主流公司。想加自己关注的公司吗？或者想去掉哪些不感兴趣的？"
+#### Step 3: Portals（可选 — 从 example 初始化后个性化）
+`portals.yml` 是 LOCAL 用户配置：不存在时从 `templates/portals-china.example.yml` 复制（example 提供搜索结构、采购词表与匿名占位公司池，不是真实公司清单）。问候选人：
+> "portals 的采购词表已配好。想加自己关注的公司进 tracked_companies 吗？或者去掉哪些不感兴趣的品类？"
 
 #### Step 4: Tracker
 如果 `data/applications.md` 不存在，创建：
@@ -128,13 +129,13 @@ This system is designed to be customized by the agent. 用户让你改 archetype
 | 问申请状态 | `tracker` |
 | 实时填申请表 | `apply` |
 | 主动搜新岗位 | `scan` |
-| 浏览器自动搜索采集岗位（Boss，Kimi WebBridge 控真实 Chrome） | `browser-search` |
+| 浏览器只读自动搜索采集岗位（独立可选 mode；宿主需具备 browser-control capability，当前已验证 transport：Kimi WebBridge 控真实 Chrome） | `browser-search` |
 | 处理 bookmarklet 捕获的 JD（inbox/*.json） | `inbox` |
 | 处理 pipeline.md 里的待办 URL | `pipeline` |
 | 批量处理岗位 | `batch` |
 | 抽取 STAR 故事沉淀 | `story-sync` |
 
-具体路由规则见 `.zcode/skills/career-ops/SKILL.md`（与 `.claude/skills/career-ops/SKILL.md` 保持同步）。
+具体路由规则见 `.claude/skills/career-ops/SKILL.md`（Claude Code 兼容入口；其他宿主以本文件的 Skill Modes 表 + `modes/*.md` 为准）。
 
 ### CV Source of Truth
 
@@ -155,7 +156,7 @@ This system is designed to be customized by the agent. 用户让你改 archetype
 
 ### 中国大陆特殊伦理提醒
 
-- **不要推荐爬虫式扫描 Boss/拉勾/猎聘**。这些平台的 ToS 通常禁止自动化。系统的 scan 模式默认走公司自有 careers 页 + 低频 WebSearch，不直接抓门户。
+- **不要对强风控门户做爬虫式硬扫**。Boss/拉勾/猎聘等平台的 ToS 通常禁止自动化。系统的 `scan` 模式默认走公司自有 careers 页 + 低频 WebSearch，不直接抓门户详情；对强风控平台的完整浏览器采集只通过独立可选的 `browser-search` 模式进行（用户显式调用、宿主具备 browser capability、带风控熔断）。**`scan` 不等于 `browser-search`。**
 - **不要替用户在脉脉/微信上主动加陌生人**。`contact` 模式只生成消息草稿，发不发由用户决定。
 - **不要伪造学历、年龄、工作经历**。如果用户的简历有"美化"成分，提醒一次：很多企业会做背调，被发现入职后会被解约。
 - **不要绕开公司的 HR 流程**。比如不要建议用户拿到 offer 后偷偷再去面竞品压价 — 圈子不大，人设很重要。
@@ -167,7 +168,7 @@ This system is designed to be customized by the agent. 用户让你改 archetype
 2. 读取页面内容
 3. 只有 footer/navbar 没有 JD = 已关闭。有标题 + 描述 + 投递按钮 = 在招。
 
-ZCode 环境：可用 Browser Use（webbridge）或 Playwright 完成上述验证。
+有浏览器控制能力的宿主：可用宿主提供的 browser-control（如 WebBridge / Playwright）完成上述验证。
 
 **国内特殊情况：**
 - **Boss直聘 / 拉勾 / 猎聘 / 脉脉招聘**：登录墙挡住 → 没法验证 → 让用户手动确认岗位是否还开
@@ -185,7 +186,7 @@ ZCode 环境：可用 Browser Use（webbridge）或 Playwright 完成上述验�
 - Batch in `batch/` (gitignored except scripts and prompt)
 - Report numbering: sequential 3-digit zero-padded, max existing + 1
 - **RULE: After each batch of evaluations, run `node tools/merge-tracker.mjs`** (or `npm run merge`) to merge tracker additions and avoid duplications.
-- **RULE: NEVER create new entries in applications.md if company+role already exists.** Update the existing entry.
+- **RULE: Before creating or updating tracker entries, apply the canonical Job Identity: (1) `job_id` exact match; (2) if no job_id, extract it from the URL; (3) only as fallback, normalized company + exact role equality. Fuzzy role/title matching must not be used for job identity. Same company with a different `job_id` is a different posting — never overwrite one posting because titles look similar. New rows always go through the TSV / backend writer; update an existing entry only when it is the same job identity.
 
 ### TSV Format for Tracker Additions
 

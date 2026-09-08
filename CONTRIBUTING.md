@@ -1,6 +1,6 @@
-# Contributing to Career-Ops
+# Contributing to Career Command Center
 
-Thanks for your interest in contributing! Career-Ops is built with Claude Code, and you can use it for development too.
+Thanks for your interest in contributing! Career Command Center is an agent-neutral project — you can develop it with whichever compatible AI agent host you prefer (the original upstream was built with Claude Code).
 
 ## Before Submitting a PR
 
@@ -31,17 +31,18 @@ PRs without a corresponding issue may be closed if they don't align with the pro
 - Translate modes to other languages
 - Improve documentation
 - Add example CVs for different roles (in `examples/`)
-- Report bugs via [Issues](https://github.com/santifer/career-ops/issues)
+- Report bugs via [Issues](https://github.com/yrusc9814-web/career-command-center/issues)
 
 **Bigger contributions:**
 - New evaluation dimensions or scoring logic
-- Dashboard TUI features (in `dashboard/`)
+- Web Dashboard features (in `dashboard-web/` — test with `npm test`, which covers the dashboard and analysis-contract suites)
+- Dashboard TUI features (in `dashboard/` — the legacy Go TUI implementation)
 - New skill modes (in `modes/`)
 - Script improvements (`.mjs` utilities)
 
 ## Guidelines
 
-- Keep modes language-agnostic when possible (Claude handles both EN and ES)
+- Keep modes language-agnostic when possible (the agent reads whichever language the mode uses)
 - Scripts should handle missing files gracefully (check `existsSync` before `readFileSync`)
 - Dashboard changes require `go build` — test with real data before submitting
 - Don't commit personal data (cv.md, profile.yml, applications.md, reports/)
@@ -49,17 +50,19 @@ PRs without a corresponding issue may be closed if they don't align with the pro
 ## Development
 
 ```bash
-# Scripts
-node tools/verify-pipeline.mjs     # Health check (or: npm run verify)
-node tools/cv-sync-check.mjs       # Config check  (or: npm run sync-check)
+# Scripts + full test suite (includes web dashboard / analysis contract tests)
+npm test
 
-# Dashboard
+# Pipeline health check
+node tools/verify-pipeline.mjs     # (or: npm run verify)
+
+# Legacy Go TUI dashboard
 cd dashboard && go build -o career-dashboard .
 ./career-dashboard --path .
 ```
 
 ## Need Help?
 
-- [Open an issue](https://github.com/santifer/career-ops/issues)
+- [Open an issue](https://github.com/yrusc9814-web/career-command-center/issues)
 - [Read the architecture docs](docs/ARCHITECTURE.md)
-- Built by [santifer](https://santifer.io)
+- Original upstream built by [santifer](https://santifer.io)

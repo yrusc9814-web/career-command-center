@@ -8,9 +8,9 @@
 
 ### ✅ 优先级 1：JD 截图（图片附件）— **国内主路径**
 
-如果用户拖了截图进来：**直接读图提取 JD**。Claude 多模态能力直接 OCR + 理解。
+如果用户拖了截图进来：**直接读图提取 JD**。如果当前 Agent Host 具备视觉输入能力，直接对截图做 OCR + 理解；不具备则请用户粘贴 JD 文本。
 
-无任何反爬风险，覆盖 Boss / Mokahr / 飞书 / 微信 / 脉脉 等所有"看得到但抓不到"的场景。
+截图路径不依赖自动页面抓取，通常是最稳定的人工获取方式，覆盖 Boss / Mokahr / 飞书 / 微信 / 脉脉 等"看得到但抓不到"的场景。
 
 ### ✅ 优先级 2：JD 文本（粘贴）
 
@@ -44,7 +44,7 @@ WebFetch 失败时一次性说清楚：
 ```
 这个 URL 抓不到（{原因：登录墙 / SPA 壳 / 反爬}）。
 请用以下任一方式给我 JD：
-1. 截图 JD 区域（Cmd+Shift+4）→ 拖到对话框
+1. 用系统截图工具截取 JD 区域（如 macOS Cmd+Shift+4 / Windows Win+Shift+S）→ 拖到对话框
 2. 复制 JD 全文 → 粘贴
 然后我自动跑完整 pipeline。
 ```
@@ -60,9 +60,11 @@ WebFetch 失败时一次性说清楚：
 ## Step 3 — 生成 PDF
 按 `modes/pdf.md` 跑完整 pipeline。
 
-## Step 4 — Draft Application Answers（仅当 score >= 4.5）
+## Step 4 — Draft Application Answers（按当前正式申请答案政策执行）
 
-如果最终 score >= 4.5，生成申请表答案的草稿：
+仅当最终评估结果达到当前正式 recommendation / application-answer 政策阈值时生成申请表答案草稿（当前等价阈值 87.5/100，SoT = `tools/lib/scoring.mjs`；旧 1–5 制的 4.5 已退出正式量纲）。
+
+如果达到该政策阈值，生成申请表答案的草稿：
 
 1. **提取表单问题**：用 Playwright 打开申请表 + snapshot。如果取不到，用通用问题。
 2. **生成回答**：按下面的 tone。
@@ -114,6 +116,6 @@ WebFetch 失败时一次性说清楚：
 **语言：** 默认中文。如果 JD 是英文（外企、海外远程），用英文。
 
 ## Step 5 — 更新 tracker
-写入 `data/applications.md`（通过 TSV，见 CLAUDE.md），所有列填齐，包括 Report 和 PDF（✅）。
+通过 TSV 写入 `batch/tracker-additions/`（canonical tracker 规则见 `modes/_shared.md` 与 `AGENTS.md`），所有列填齐，包括 Report 和 PDF（✅）。
 
 **如果某一步失败**，继续后面的步骤，把失败的步骤在 tracker 备注里标 pending。

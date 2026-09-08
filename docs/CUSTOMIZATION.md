@@ -51,7 +51,7 @@ The negotiation section provides frameworks for salary discussions. Replace the 
 
 ## Hooks (Optional)
 
-Career-ops can integrate with external systems via Claude Code hooks. Example hooks:
+Career-ops can integrate with external systems via agent-host hooks. Example hooks:
 
 ```json
 {
@@ -67,6 +67,8 @@ Career-ops can integrate with external systems via Claude Code hooks. Example ho
 ```
 
 Save hooks in `.claude/settings.json`.
+
+> Note: `.claude/settings.json` and the hook event names above are a **Claude Code-specific optional integration**, not a universal standard. Other agent hosts have their own (or no) hook mechanisms — check your host's documentation.
 
 ## States (templates/states.yml)
 

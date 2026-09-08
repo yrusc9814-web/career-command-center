@@ -1,11 +1,17 @@
-# Mode: browser-search — 真实浏览器自动搜索采集岗位（Kimi WebBridge 版）
+# Mode: browser-search — 真实浏览器只读岗位采集
 
-通过 **Kimi WebBridge** 控制用户**当前真实 Chrome**（复用已有登录态），在招聘平台（当前支持 Boss直聘）
+> **本 mode 需要宿主提供 browser-control capability。** 没有真实浏览器控制能力的宿主无法运行本 mode — 请改用 Manual Capture（截图 / 粘贴）或 Local Bookmarklet 路线。
+>
+> **Current verified browser transport：** 当前实现已验证过的浏览器传输路径是 **Kimi WebBridge** 控制用户当前真实 Chrome（复用已有登录态）。Kimi WebBridge 是当前的 browser transport / capability implementation，**不是 Career Command Center 的核心依赖** — 其他宿主若提供等价的浏览器控制能力，可按同一 workflow 接入。
+>
+> **Portability note：** 下方 Step 1–Step N 使用的是 `webbridge_*` tool contract。其他宿主即使具备 browser capability，也不能保证原样运行这些命令 — 业务 workflow 可复用，但需要提供等价的 browser adapter / tool mapping（本仓库当前不提供其他宿主的 adapter）。
+
+本 mode 通过宿主的浏览器控制能力（当前已验证 transport：**Kimi WebBridge**）控制用户**当前真实 Chrome**（复用已有登录态），在招聘平台（当前支持 Boss直聘）
 按 `config/profile.yml` 的 `job_search` 配置自动搜索、筛选、逐个打开岗位详情、结构化提取 JD，
 去重后写入 career-ops 现有 inbox，再走现有分析链路，最后生成 Markdown 汇总 + Excel 导出。
 
 **职责边界：**
-- Kimi WebBridge 只负责浏览器操作和页面信息获取
+- 浏览器能力层（当前为 Kimi WebBridge）只负责浏览器操作和页面信息获取
 - career-ops 继续负责岗位分析、CV 匹配、评分、报告和 tracker
 - 不重复实现已有能力；不走 Playwright / API / 抓包
 
@@ -38,7 +44,7 @@
 ### 节奏控制：
 
 - **串行** 处理岗位，concurrency 固定为 1，禁止并行标签页浏览
-- 每个详情页之间 `wait` 2-4 秒随机间隔，模拟正常人工浏览
+- 每个详情页之间 `wait` 2-4 秒随机间隔，用于控制访问频率（低频操作）
 - 单次运行岗位数 ≤ `job_search.max_jobs_per_run`（默认 30）
 
 ---
@@ -180,7 +186,7 @@ recruiter_name, recruiter_title, recruiter_active_status, job_url, published_at,
 禁止 LLM 自算百分比）。recommendation 恒为五档枚举，来自 `tools/lib/scoring.mjs`
 `computeRecommendation` 决策链 + `trace[]`，LLM 只解释不重算。
 
-### 6b. 未完成 onboarding（当前默认状态）
+### 6b. 未完成 onboarding
 
 诚实降级模式 —— **不允许编造 CV 信息**。这是 onboarding 完成前的临时路径（不接评分引擎）；
 cv.md 配好之后一律走 6a 的引擎链路。只做基于客观事实的评估：
@@ -268,12 +274,12 @@ per_job（analysis 段字段名是 Excel/MD 生成的契约，脚本 tools/gener
     "cv_match": "待填写cv.md 或 0-100 整数（= cv_match_score，由 tools/lib/cv-match.mjs 产出；禁止 x.x/5 或百分比自算）",
     "cv_match_score": null,
     "score": null,
-    "strengths": [], "gaps": [],
     "recommendation": "强烈推荐 | 推荐 | 一般 | 不推荐 | 硬红线跳过",
     "recommendation_reason": "",
     "strengths": [], "gaps": [], "soft_gaps": [], "hard_gaps": [],
     "cv_advice": "", "interview_focus": "",
-    "decision_trace": []
+    "decision_trace": [],
+    "score_breakdown": {}
   }
 }
 ```

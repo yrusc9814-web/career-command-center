@@ -1,5 +1,7 @@
 # Mode: batch — 批量处理岗位
 
+> **Current implementation status：** 当前 batch conductor / worker 实现（`claude --chrome` conductor + `claude -p` worker + `batch-runner.sh`）是 **Claude Code-specific compatibility path**，是当前唯一已实现的编排器。其他宿主可以复用本 mode 的批量业务流程思想（串行、断点、TSV 产出、tracker 合并），但需要自己的 worker / orchestration adapter — 不能直接执行 `claude -p`；没有对应 adapter 的宿主请使用 sequential pipeline 处理或宿主自身的批处理能力。本文件不虚构其他宿主的等价命令。
+
 两种用法：**conductor --chrome**（实时浏览门户）或 **standalone**（已收集好的 URL 列表）。
 
 ## 架构
@@ -79,7 +81,7 @@ batch/batch-runner.sh [OPTIONS]
 
 ```
 id	url	status	started_at	completed_at	report_num	score	error	retries
-1	https://...	completed	2026-...	2026-...	002	4.2	-	0
+1	https://...	completed	2026-...	2026-...	002	82.5	-	0
 2	https://...	failed	2026-...	2026-...	-	-	错误信息	1
 3	https://...	pending	-	-	-	-	-	0
 ```

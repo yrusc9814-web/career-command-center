@@ -4,8 +4,8 @@
 
 ## 前提
 
-- **最佳：Playwright 可见模式**：候选人能看到浏览器，Claude 能和页面互动
-- **次选：无 Playwright**：候选人分享截图或手动贴问题
+- **最佳：宿主具备浏览器能力（browser-capable host）**：候选人能看到浏览器，Agent 可以读取并辅助处理页面
+- **次选：无浏览器能力**：候选人分享截图或手动贴问题
 
 ## Workflow
 
@@ -39,11 +39,12 @@
 
 ## Step 3 — 检测岗位变化
 
-如果屏幕上的岗位和评估时不一样：
-- **提醒候选人**："岗位从 [X] 变成了 [Y]，要重新评估还是直接适配回答？"
-- **适配方案**：调整回答到新 title，不重新评估
-- **重新评估**：跑完整 A-F，更新 report，重生成 Section G
-- **更新 tracker**：在 applications.md 里改岗位 title
+如果屏幕上的岗位和评估时不一样，**先按 canonical Job Identity 判断**（job_id 精确匹配 → 无 job_id 从 URL 提取 → fallback company normalized + role 精确相等）：
+
+- **同一 job_id（仅展示文案变化）**：允许更新 tracker 中的 title / display metadata
+- **不同 job_id（不同岗位）**：视为不同岗位，**不得覆盖旧岗位的 posting**；提醒候选人，询问是新建 tracker 条目并重新评估，还是仅适配当前回答
+- **适配方案（同一岗位）**：调整回答到新 title 展示，不重新评估
+- **重新评估（新岗位）**：跑完整 A-F，写新 report，重生成 Section G
 
 ## Step 4 — 分析表单
 

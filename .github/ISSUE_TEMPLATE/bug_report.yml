@@ -30,4 +30,6 @@ body:
     attributes:
       value: |
         ---
-        Built by [santifer](https://santifer.io) — need direct help? [Open a discussion](https://github.com/santifer/career-ops/discussions) or reach out at [santifer.io](https://santifer.io).
+        Career Command Center is based on the original [career-ops](https://github.com/santifer/career-ops) project by [santifer](https://santifer.io) — upstream attribution is retained under the MIT License.
+
+        For bugs in this repository, use this issue tracker: [yrusc9814-web/career-command-center issues](https://github.com/yrusc9814-web/career-command-center/issues).

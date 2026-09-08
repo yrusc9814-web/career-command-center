@@ -230,6 +230,6 @@ Changing model/provider must not change persisted schema.
 | WebFetch | 静态页面 JD 提取 |
 | Playwright | 验证岗位是否还在招（browser_navigate + browser_snapshot），SPA 上提取 JD。**关键：不要并行启动 2 个以上带 Playwright 的 agent — 它们共享一个浏览器实例。** 中国大陆门户（Boss直聘/拉勾/猎聘/智联）多数需要登录，Playwright 默认会被挡 — 见 `modes/scan.md` 的处理方式 |
 | Read | cv.md, article-digest.md, _profile.md, target_pool.md, cv-template.html |
-| Write | 临时 HTML for PDF, applications.md, reports .md |
-| Edit | 更新 tracker |
+| Write | 临时 HTML for PDF, reports .md；applications.md 仅限 onboarding 首次创建与 md 后端下的 status/notes 更新 — **新增行必须走 TSV / backend writer（规则 9），不允许直接 Write 新增** |
+| Edit | 更新 tracker（仅限已有条目的 status/notes/PDF 列，md 后端；bitable 后端去 Bitable 改。新增行走 TSV） |
 | Bash | `node tools/generate-pdf.mjs`（或 `npm run pdf`） |

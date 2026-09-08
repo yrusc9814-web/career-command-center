@@ -113,13 +113,18 @@ inbox 处理 — {YYYY-MM-DD}
 1. 终端跑 `node tools/jd-inbox-server.mjs`（或 `npm run inbox-server`）
 2. 浏览器打开 `tools/install.html`，把按钮拖到书签栏
 3. 在 JD 页面点 bookmarklet → 看到 ✓ 提示
-4. 回 Claude 跑 `/career-ops inbox`
+4. 回到你正在使用的 Agent，运行 /career-ops inbox（宿主不支持 slash skill 时，直接让 Agent 按 `modes/inbox.md` 执行）
 
 ## 去重
 
-处理前先检查：
-- 同 URL 是否已在 `data/applications.md`（公司 + 岗位归一化）
-- 同 URL 是否已在 `inbox/processed/`
+**正式岗位 identity 使用 canonical Job Identity contract**（与 tracker / merge-tracker 一致）：
+1. `job_id` 精确匹配（Boss 等平台从 URL 或 DOM 提取）
+2. 无 job_id 时从 URL 提取 job_id
+3. 再无 ID 才 fallback：company normalized + role 精确相等（fuzzy title 匹配不用于岗位 identity）
+4. **同公司不同 job_id 是不同岗位**，不得因 title 相近覆盖另一个 posting
+
+处理前先检查（capture-level dedup，保留）：
+- 同 URL 是否已在 `data/applications.md` 或 `inbox/processed/`（按 canonical Job Identity 判断是否同一岗位）
 
 如重复 → 询问用户：覆盖评估 / 跳过 / 当作新岗位再评
 

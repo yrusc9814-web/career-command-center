@@ -20,7 +20,9 @@
 - `Discarded` — 候选人自己撤了或岗位关闭
 - `SKIP` — 不匹配，根本不投
 
-如果用户要更新状态，编辑对应行。
+如果用户要更新状态：
+- **md 后端（默认）**：直接更新 `data/applications.md` 对应行的 Status / Notes（仅已有条目；新增行必须走 TSV / backend writer）
+- **bitable 后端**：Bitable 是唯一写源，`applications.md` 是只读快照 — 去 Bitable 里改，不要直接编辑 md
 
 **展示统计：**
 - 总申请数

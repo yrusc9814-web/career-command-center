@@ -4,12 +4,14 @@
 >
 > **scan 是「线索发现」工具，不是「JD 提取」工具。**
 >
-> 国内主流平台（Boss直聘 / 拉勾 / 猎聘 / 脉脉 / Mokahr / 飞书表单）有**严苛的反爬 + 反复制 + 登录墙 + SPA**，自动化提取 JD 在 99% 场景下不可行，硬撑只会浪费时间。
+> 国内主流平台（Boss直聘 / 拉勾 / 猎聘 / 脉脉 / Mokahr / 飞书表单）有**严苛的反爬 + 反复制 + 登录墙 + SPA**，对这些平台的详情页做自动化提取通常不可行（受登录墙、SPA、验证码、平台策略影响），硬撑只会浪费时间。
 >
 > scan 的现实定位：
 > 1. ✅ 发现"哪些公司在招"、"岗位标题大致是什么"、"在哪个 URL"
 > 2. ❌ **不**承诺取到 JD 全文
-> 3. ✅ 把发现的 URL 列表交给用户，**用户用截图/手动复制方式把 JD 给 Claude**
+> 3. ✅ 把发现的 URL 列表交给用户，**用户用截图/手动复制方式把 JD 给 Agent**
+>
+> **`scan` 不等于 `browser-search`：** 对强风控门户的完整真实浏览器自动化只由独立可选的 `browser-search` mode 承担（用户显式调用、宿主必须具备 browser-control capability、带风控熔断）。scan 自身是线索发现模式，不承担这项工作。
 
 ---
 
@@ -20,14 +22,14 @@
 │ 用户日常发现岗位的 5 种方式（按推荐度排序）                 │
 ├──────────────────────────────────────────────────────────────┤
 │ 1. 截图 JD → 拖到对话框 → /career-ops auto-pipeline          │
-│    ✅ 覆盖率 100%（Boss/Mokahr/飞书/微信/脉脉 全适用）        │
-│    ✅ 5 秒/岗位，零反爬风险                                  │
+│    ✅ 适用面最广（Boss/Mokahr/飞书/微信/脉脉 全适用）          │
+│    ✅ 5 秒/岗位，最低自动化依赖（用户手动截图）              │
 │                                                              │
 │ 2. 复制 JD 全文 → 粘贴到对话框 → auto-pipeline                │
 │    ✅ 适用于允许复制的网站（liepin 部分页 / V2EX / 知乎）    │
 │                                                              │
 │ 3. 邮件订阅（Boss/拉勾/猎聘 关键词推送）→ 邮箱里能看到 JD     │
-│    → 用 lark-mail 或转发到 Claude                            │
+│    → 转发给你的 Agent                                        │
 │    ✅ 完全被动，每天自动流入                                 │
 │                                                              │
 │ 4. 内推贴 / 公众号 / V2EX → 完整 JD 公开                     │
@@ -39,7 +41,7 @@
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**给 Claude 的核心规则：**
+**给 Agent 的核心规则：**
 > 任何时候用户说「评估这个岗位」+ 给了 URL，**先尝试 WebFetch 一次**。如果失败（登录墙 / SPA / 反爬），**立即停止尝试自动化**，告诉用户：「这个 URL 抓不到 JD，请截图给我或复制 JD 文本」。**不要在国内门户上反复挣扎。**
 
 ---
@@ -67,9 +69,9 @@
 **可选字段（2026-04-20 新增，仅作 metadata 用于分组 / selector 提示）：**
 - `category: manufacturer | trader_brand | retail_consumer | supply_chain_service | mnc_china`
   - 制造企业 / 贸易与品牌商 / 零售与消费 / 供应链服务 / 外企在华采购办
-  - 用于将来 `scan --category=<name>` 子集过滤；目前 Claude 只用于输出摘要分组
+  - 用于将来 `scan --category=<name>` 子集过滤；目前 Agent 只用于输出摘要分组
 - `ats: workday | greenhouse | smartrecruiters | mokahr | feishu | custom`
-  - Mokahr / 飞书 通常需登录 → Claude 读到这两个值时应跳过 Playwright 改标 `[!]`
+  - Mokahr / 飞书 通常需登录 → Agent 读到这两个值时应跳过 Playwright 改标 `[!]`
   - Workday / Greenhouse / SmartRecruiters 是公开 ATS，Playwright 可直抓，selector 模式相对稳定
 
 **渠道扩容日志：** 新增渠道时先小样本抽样验证 URL 可用性再开 `enabled: true`；采购岗位集中在制造 / 贸易 / 零售企业的自有招聘页与 Boss / 猎聘，扩容优先这两类。
@@ -175,7 +177,7 @@ WebSearch query：
 7. **去重**（三重）：scan-history.tsv + applications.md + pipeline.md
 
 8. **写入 pipeline.md**（**注意：不带 JD，只带 URL + 标题 + 来源标签**）：
-   - 默认全部标 `[!]`（因为 99% 的 URL 取不到 JD）
+   - 默认全部标 `[!]`（因为多数国内门户 URL 取不到 JD）
    - 仅当来源是 V2EX / GitHub / 公司自有静态页 → 标 `[ ]`（可 WebFetch）
    - 标记格式：`- [!] {url} | {company} | {title} | {source} | 取 JD 方式：截图 / 复制`
 
@@ -212,10 +214,13 @@ title 过滤后：N
   ...
 
 ▼ 下一步（强烈推荐）：
-  对每个感兴趣的岗位：
-  1. 打开 URL → Cmd+Shift+4 截图 JD 区域
-  2. 拖到对话框 → /career-ops（auto-pipeline 自动跑）
-  
+  对每个感兴趣的岗位，三条取 JD 路径任选（默认推荐前两条）：
+  1. Manual Capture：打开 URL → 用系统截图工具截取 JD 区域
+     （macOS：Cmd+Shift+4 / Windows：Win+Shift+S）→ 拖到对话框
+  2. Local Bookmarklet：在 JD 页点书签一键捕获到本地 inbox（tools/README.md）
+  3. （可选，显式 opt-in）/career-ops browser-search：仅当宿主具备
+     browser-control capability 且用户明确要求时使用，scan 不会自动触发
+
   千万不要等 scan 给你 JD — 它给不了。
 ```
 
@@ -254,7 +259,7 @@ query_run	GitHub — 企业招聘页	2026-04-15T10:25	high	7
 
 每次实际调用 WebSearch 的 query 都写一行。scan 启动时回读，`dedup_window_days` 内已跑过的 query 从候选集剔除。
 
-`needs_manual` 表示已发现但需要用户手动取 JD（默认 99% 的国内门户结果都是这个状态）。
+`needs_manual` 表示已发现但需要用户手动取 JD（国内风控门户的扫描结果默认都是这个状态）。
 
 ---
 
@@ -282,16 +287,16 @@ query_run	GitHub — 企业招聘页	2026-04-15T10:25	high	7
 
 ## 为什么这么改（给后来者的设计说明）
 
-旧版 scan 试图做 **"发现 + 提取 JD + 去重 + 评估准备"** 一条龙。在国内市场上，"提取 JD" 这一步**结构性失败率 > 90%**：
+旧版 scan 试图做 **"发现 + 提取 JD + 去重 + 评估准备"** 一条龙。在国内市场上，"提取 JD" 这一步对强风控平台**通常结构性失败**（登录墙 / SPA / 验证码 / 平台策略，不保证可用性）：
 
 - Boss 直聘 / 拉勾 / 猎聘 详情页 = 登录墙
 - 电商 / 新消费 / 供应链服务企业 = Mokahr / 飞书表单
 - 制造 / 零售集团 careers 详情 = SPA 空壳
 - 脉脉 / 微信公众号 = 完全反爬
 
-继续在这条路上挣扎只会**累死 Claude，挫败用户**。新版的核心理念：
+继续在这条路上挣扎只会**累死 Agent，挫败用户**。新版的核心理念：
 
-1. **职责分离：** scan 只管"发现哪些采购岗位存在"。"取 JD"交给人（5 秒截图）+ Claude Vision（直接读图）。
+1. **职责分离：** scan 只管"发现哪些采购岗位存在"。"取 JD"交给人（5 秒截图）+ Agent 的读图能力（直接读图）。
 2. **诚实预期：** 输出摘要明确告诉用户哪些 URL 抓得到、哪些抓不到、对应取 JD 方式是什么。
 3. **零浪费：** 不在反爬战争里耗 Playwright/WebFetch。**抓不到立刻 yield 给用户。**
 4. **企业自有招聘页仍然有价值：** 制造 / 贸易 / 零售集团的自有招聘列表页能抓，至少能告诉用户「这家最近在招什么采购方向」。
