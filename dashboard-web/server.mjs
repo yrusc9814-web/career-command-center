@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // server.mjs — Career Ops Dashboard 本地展示层
 //
-//   npm run dashboard → http://127.0.0.1:8790
+//   npm run dashboard      → http://127.0.0.1:8790  （正式数据 data/ reports/ output/）
+//   npm run dashboard:demo → http://127.0.0.1:8790  （UI Preview Demo：data-demo/ reports-demo/ output-demo/）
+//   等价的开关写法：DASHBOARD_DEMO=1 node dashboard-web/server.mjs 或 node dashboard-web/server.mjs --demo
 //
 // 只读聚合 Career Ops 已有数据（results / history / inbox / reports / applications.md / profile.yml），
 // 可写状态仅 data/dashboard-state.json（shortlist / UI 偏好 / last_viewed）与 canonical 状态写回
@@ -20,20 +22,33 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WEB = path.dirname(fileURLToPath(import.meta.url));
-const DATA = path.join(ROOT, 'data');
-const REPORTS = path.join(ROOT, 'reports');
-const OUTPUT = path.join(ROOT, 'output');
+
+// ── UI Preview Demo 隔离开关 ────────────────────────────────────────────────
+// DASHBOARD_DEMO=1（或 argv 含 --demo，供 npm script 跨平台使用）→ 读写 *-demo 根目录；
+// 默认（npm run dashboard）→ 正式 data/ reports/ output/，且纵深防御跳过 ui-preview-demo 文件。
+const DEMO = /^(1|true|yes)$/i.test(process.env.DASHBOARD_DEMO || '')
+  || process.argv.slice(2).includes('--demo');
+const DEMO_MARK = 'ui-preview-demo';
+
+const DATA = path.join(ROOT, DEMO ? 'data-demo' : 'data');
+const REPORTS = path.join(ROOT, DEMO ? 'reports-demo' : 'reports');
+const OUTPUT = path.join(ROOT, DEMO ? 'output-demo' : 'output');
 const INBOX = path.join(ROOT, 'inbox');
-const ADDITIONS = path.join(ROOT, 'batch', 'tracker-additions');
 const STATE_FILE = path.join(DATA, 'dashboard-state.json');
 const PROFILE_FILE = path.join(ROOT, 'config', 'profile.yml');
 
-const PORT = 8790;
+// 默认端口 8790 不变；DASHBOARD_PORT 只用于测试在随机端口上拉起真实 server，
+// 避免与开发者已常驻的 8790 实例互相干扰（不改变任何路由行为）。
+const PORT = Number(process.env.DASHBOARD_PORT) || 8790;
 const HOST = '127.0.0.1';
 
 function loadProfile() {
-  const text = fs.readFileSync(PROFILE_FILE, 'utf8');
-  return loadYaml(text) || {};
+  try {
+    const text = fs.readFileSync(PROFILE_FILE, 'utf8');
+    return loadYaml(text) || {};
+  } catch {
+    return {};
+  }
 }
 
 function loadDashboardState() {
@@ -59,12 +74,22 @@ function readDashboardState() {
 function currentJobState(jobId) {
   const state = buildState({
     dataDir: DATA, outputDir: OUTPUT, reportsDir: REPORTS, inboxDir: INBOX,
-    profile: loadProfile(), dashboardState: readDashboardState(),
+    profile: loadProfile(), dashboardState: readDashboardState(), demoMode: DEMO,
   });
   return state.jobs.find(j => j.job_id === jobId) || null;
 }
 
+// Demo 模式：新增岗位首次写入走 TSV + merge-tracker，而 merge-tracker 的目标路径硬编码为
+// 正式 data/applications.md。为避免 Demo 体验写脏正式 tracker，Demo 下禁用 merge，
+// 且 additions 目录也落在 demo 根内（清理 data-demo/ 即可一并删除）。
+const ADDITIONS = DEMO
+  ? path.join(DATA, 'tracker-additions')
+  : path.join(ROOT, 'batch', 'tracker-additions');
+
 const mergeTracker = () => {
+  if (DEMO) {
+    return { ok: false, error: 'DEMO_MODE: merge-tracker 已禁用，避免写回正式 data/applications.md' };
+  }
   try {
     const out = execFileSync(process.execPath, [path.join(ROOT, 'tools', 'merge-tracker.mjs')], {
       cwd: ROOT, encoding: 'utf8', timeout: 30000,
@@ -94,8 +119,14 @@ function send(res, code, body, type = 'application/json; charset=utf-8') {
 
 function sendJson(res, code, obj) { send(res, code, JSON.stringify(obj)); }
 
+const STATIC_ALLOW = new Set([
+  'home.html', 'index.html', 'favicon.svg',
+  'lib/view-model.mjs', 'lib/analysis-contract.mjs',
+]);
+
 function serveStatic(res, urlPath) {
-  const rel = urlPath === '/' ? 'index.html' : urlPath.slice(1);
+  const rel = urlPath === '/' ? 'home.html' : urlPath.slice(1).replace(/\\/g, '/');
+  if (!STATIC_ALLOW.has(rel)) return send(res, 404, 'not found', 'text/plain; charset=utf-8');
   const file = path.normalize(path.join(WEB, rel));
   if (!file.startsWith(WEB)) return sendJson(res, 403, { error: 'forbidden' });
   if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
@@ -108,6 +139,8 @@ function newestFile(dir, prefix) {
   try {
     const files = fs.readdirSync(dir)
       .filter(f => f.startsWith(prefix))
+      // 纵深防御：官方模式下忽略 demo 产物，即使有人把 2099 文件放回正式目录也不会抢 latest。
+      .filter(f => DEMO || !f.includes(DEMO_MARK))
       .sort();
     return files.length ? path.join(dir, files[files.length - 1]) : null;
   } catch { return null; }
@@ -118,18 +151,26 @@ const server = http.createServer((req, res) => {
   const p = u.pathname;
 
   try {
-    if (req.method === 'GET' && (p === '/' || p === '/index.html' || p === '/styles.css' || p === '/app.js' || p === '/lib/view-model.mjs' || p === '/lib/analysis-contract.mjs')) {
-      return serveStatic(res, p);
+    // 品牌图标是 SVG（dashboard-web/favicon.svg，index.html 用 <link rel="icon"> 声明）。
+    // 部分浏览器/场景仍会无条件探测 /favicon.ico，而项目里没有也不需要 .ico 资产：
+    // 显式回 204（No Content），让这条路径成为「已知无资源」而不是控制台里的 404 噪声。
+    if (req.method === 'GET' && p === '/favicon.ico') {
+      res.writeHead(204, { 'Cache-Control': 'no-store' });
+      return res.end();
+    }
+
+    if (req.method === 'GET' && !p.startsWith('/api/')) {
+      return serveStatic(res, p === '/' ? '/home.html' : p);
     }
 
     if (req.method === 'GET' && p === '/api/health') {
-      return sendJson(res, 200, { ok: true, service: 'career-ops-dashboard', port: PORT, host: HOST });
+      return sendJson(res, 200, { ok: true, service: 'career-ops-dashboard', port: PORT, host: HOST, demo: DEMO });
     }
 
     if (req.method === 'GET' && p === '/api/state') {
       const state = buildState({
         dataDir: DATA, outputDir: OUTPUT, reportsDir: REPORTS, inboxDir: INBOX,
-        profile: loadProfile(), dashboardState: readDashboardState(),
+        profile: loadProfile(), dashboardState: readDashboardState(), demoMode: DEMO,
       });
       return sendJson(res, 200, state);
     }
@@ -137,7 +178,10 @@ const server = http.createServer((req, res) => {
     if (req.method === 'GET' && p === '/api/report') {
       const rel = u.searchParams.get('file') || '';
       const file = path.normalize(path.join(ROOT, rel));
-      if (!file.startsWith(REPORTS) || !file.endsWith('.md') || !fs.existsSync(file)) {
+      // 目录级包含判断（不能用裸 startsWith：ROOT/reports 会把 ROOT/reports-demo 也放过）
+      const insideReports = file === REPORTS || file.startsWith(REPORTS + path.sep);
+      const demoBlocked = !DEMO && path.basename(file).includes(DEMO_MARK);
+      if (!insideReports || !file.endsWith('.md') || demoBlocked || !fs.existsSync(file)) {
         return sendJson(res, 404, { error: 'report not found' });
       }
       return sendJson(res, 200, { file: rel, content: fs.readFileSync(file, 'utf8') });
@@ -156,7 +200,15 @@ const server = http.createServer((req, res) => {
     if (req.method === 'GET' && p === '/api/export/latest-md') {
       const file = newestFile(REPORTS, 'browser-search-');
       if (!file) return sendJson(res, 404, { error: 'no markdown yet' });
-      return sendJson(res, 200, { file: path.basename(file), content: fs.readFileSync(file, 'utf8') });
+      // 与 Excel 分支一致：以 attachment 直接回文件字节。
+      // 此前返回 JSON（sendJson 的 content-type 是 application/json），
+      // 前端 <a href> 点击 → 浏览器在当前标签内渲染 JSON → Dashboard 被替换。
+      res.writeHead(200, {
+        'Content-Type': 'text/markdown; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${path.basename(file)}"`,
+        'Cache-Control': 'no-store',
+      });
+      return res.end(fs.readFileSync(file));
     }
 
     if (req.method === 'POST' && (p === '/api/shortlist' || p === '/api/last-viewed')) {
@@ -191,7 +243,7 @@ const server = http.createServer((req, res) => {
         if (!result.ok) return sendJson(res, 400, result);
         const state = buildState({
           dataDir: DATA, outputDir: OUTPUT, reportsDir: REPORTS, inboxDir: INBOX,
-          profile: loadProfile(), dashboardState: readDashboardState(),
+          profile: loadProfile(), dashboardState: readDashboardState(), demoMode: DEMO,
         });
         return sendJson(res, 200, { ok: true, how: result.how, job: state.jobs.find(j => j.job_id === job_id) });
       });
@@ -205,6 +257,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`求职决策中枢 Dashboard → http://${HOST}:${PORT}`);
-  console.log('  数据源: data/search-results-*.json, inbox/, reports/, data/applications.md, config/profile.yml');
+  console.log(`  模式: ${DEMO ? 'UI Preview Demo（demo 根目录）' : '正式数据'}`);
+  console.log(`  数据源: ${path.relative(ROOT, DATA)}/search-results-*.json, inbox/, ${path.relative(ROOT, REPORTS)}/, ${path.relative(ROOT, DATA)}/applications.md, config/profile.yml`);
   console.log('  只读展示层；可写仅 dashboard-state.json 与 canonical 状态写回');
 });

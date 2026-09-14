@@ -1,111 +1,2463 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>求职决策中枢</title>
-<link rel="stylesheet" href="/styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>求职决策中枢 · 决策驾驶舱</title>
+  <!-- 资源接线：品牌图标沿用项目既有资产（server 白名单内的 /favicon.svg）；成品 UI 原本没有这一行 -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    :root {
+      /* Claude 暖陶纸本设计系统 */
+      --claude-bg: #FAF9F5;
+      --claude-surface: #FFFFFF;
+      --claude-cream: #F4F1EA;
+      --claude-cream-hover: #EAE5DC;
+      
+      --claude-terracotta: #D97757;
+      --claude-terracotta-hover: #C36243;
+      --claude-terracotta-soft: rgba(217, 119, 87, 0.12);
+      
+      --claude-olive: #466850;
+      --claude-olive-soft: rgba(70, 104, 80, 0.12);
+      --claude-amber: #B87B1D;
+      --claude-amber-soft: rgba(184, 123, 29, 0.12);
+      --claude-rust: #B84736;
+      --claude-rust-soft: rgba(184, 71, 54, 0.1);
+      
+      --border-line: #E8E3DA;
+      --border-subtle: #F0EDE6;
+      --border-highlight: rgba(217, 119, 87, 0.35);
+      
+      --text-ink: #2C2925;
+      --text-sub: #5E5A54;
+      --text-faint: #928D84;
+      
+      --font-serif: "Newsreader", Georgia, "Source Han Serif CN", "Songti SC", serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", sans-serif;
+      --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+      
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --radius-sm: 6px;
+      --radius-pill: 9999px;
+      
+      --shadow-claude: 0 1px 3px rgba(44, 41, 37, 0.05), 0 8px 24px rgba(44, 41, 37, 0.04);
+      --shadow-hover: 0 4px 14px rgba(44, 41, 37, 0.08);
+      --ease-claude: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--claude-bg);
+      color: var(--text-ink);
+      font-family: var(--font-sans);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 还原源码的 Shell 容器 */
+    .claude-shell {
+      width: 100%;
+      max-width: 1720px;
+      height: calc(100vh - 28px);
+      background: var(--claude-surface);
+      border: 1px solid var(--border-line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-claude);
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      overflow: hidden;
+      transition: grid-template-columns 0.28s var(--ease-claude);
+    }
+
+    /* 处于岗位列表 + 决策详情模式时的三栏结构 */
+    .claude-shell.mode-three-panel {
+      grid-template-columns: 240px clamp(460px, 38vw, 540px) minmax(420px, 1fr);
+    }
+
+    /* ═══ 1. 左栏 (Sidebar) ═══ */
+    .c-sidebar {
+      background: #FAF9F6;
+      border-right: 1px solid var(--border-line);
+      display: flex;
+      flex-direction: column;
+      padding: 16px 12px;
+      overflow-y: auto;
+    }
+
+    .identity {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 0 8px 16px 8px;
+      border-bottom: 1px solid var(--border-line);
+      margin-bottom: 14px;
+    }
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--claude-terracotta);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 2px 8px rgba(217, 119, 87, 0.25);
+      flex-shrink: 0;
+      padding: 6px;
+      box-sizing: border-box;
+    }
+    .avatar-radar-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .brand { font-family: var(--font-serif); font-weight: 700; font-size: 15px; color: var(--text-ink); }
+    .tagline { font-size: 11.5px; color: var(--claude-terracotta); font-weight: 500; }
+
+    .nav-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-faint);
+      padding: 10px 10px 4px 10px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-sub);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.18s;
+      width: 100%;
+      text-align: left;
+    }
+    .nav-btn:hover {
+      background: var(--claude-cream);
+      color: var(--text-ink);
+    }
+    .nav-btn.active {
+      background: #FFFFFF;
+      border-color: var(--border-line);
+      color: var(--claude-terracotta);
+      font-weight: 600;
+      box-shadow: 0 1px 4px rgba(44, 41, 37, 0.05);
+    }
+    .count-badge {
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: var(--claude-cream);
+      padding: 1px 7px;
+      border-radius: var(--radius-pill);
+      color: var(--text-sub);
+      transition: all 0.18s;
+    }
+    .nav-btn.active .count-badge {
+      background: var(--claude-terracotta-soft);
+      color: var(--claude-terracotta);
+      font-weight: 700;
+    }
+
+    .nav-collapsible {
+      margin-top: 12px;
+    }
+    .nav-collapsible-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      border-radius: var(--radius-sm);
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-collapsible-summary::-webkit-details-marker {
+      display: none;
+    }
+    .nav-collapsible-summary:hover {
+      color: var(--text-ink);
+      background: rgba(44, 41, 37, 0.04);
+    }
+    .nav-collapsible-summary .nav-collapse-icon {
+      transition: transform 0.2s ease;
+      color: var(--text-faint);
+      flex-shrink: 0;
+    }
+    .nav-collapsible:not([open]) .nav-collapse-icon {
+      transform: rotate(-90deg);
+    }
+    .nav-collapsible-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    /* ═══ 2. 中栏 (Mid Column) ═══ */
+    .c-mid-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #FFFFFF;
+      border-right: 1px solid var(--border-line);
+    }
+    .claude-shell:not(.mode-three-panel) .c-mid-panel {
+      border-right: none;
+    }
+
+    .mid-head {
+      height: 58px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border-line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--claude-bg);
+      flex-shrink: 0;
+    }
+    .mid-head-title {
+      font-family: var(--font-serif);
+      font-size: 18.5px;
+      font-weight: 600;
+      color: var(--text-ink);
+    }
+    .mid-filter-state {
+      font-size: 12px;
+      color: var(--text-faint);
+      margin-top: 2px;
+    }
+
+    /* 智能过滤舱 (Concierge Filter Deck) */
+    .filter-deck {
+      padding: 10px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: #FAF9F6;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .fd-primary-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .fd-search-wrap {
+      flex: 1 1 180px;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .fd-search-icon {
+      position: absolute;
+      left: 10px;
+      font-size: 13px;
+      color: var(--text-faint);
+      pointer-events: none;
+    }
+    .fd-search-input {
+      width: 100%;
+      background: #FFFFFF;
+      border: 1px solid var(--border-line);
+      border-radius: var(--radius-pill);
+      padding: 6px 12px 6px 30px;
+      font-size: 12.5px;
+      color: var(--text-ink);
+      outline: none;
+      transition: all 0.2s;
+    }
+    .fd-search-input:focus {
+      border-color: var(--claude-terracotta);
+      box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.12);
+    }
+    .fd-pills-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .pill-select {
+      appearance: none;
+      background: #FFFFFF;
+      border: 1px solid var(--border-line);
+      border-radius: var(--radius-pill);
+      padding: 4px 22px 4px 10px;
+      font-size: 11.5px;
+      color: var(--text-sub);
+      cursor: pointer;
+      outline: none;
+      transition: all 0.18s;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 20 20' fill='%23928D84' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 8l3 3 3-3' stroke='%23928D84' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 6px center;
+      background-size: 12px;
+    }
+    .pill-select:hover {
+      border-color: #CBD5E1;
+      color: var(--text-ink);
+    }
+    .pill-select.active {
+      background-color: var(--claude-terracotta-soft);
+      border-color: rgba(217, 119, 87, 0.4);
+      color: var(--claude-terracotta);
+      font-weight: 600;
+    }
+
+    .btn-toggle-star {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-line);
+      background: #FFFFFF;
+      color: var(--text-sub);
+      font-size: 11.5px;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .btn-toggle-star:hover {
+      background: var(--claude-cream);
+      color: var(--text-ink);
+    }
+    .btn-toggle-star.active {
+      background: rgba(184, 123, 29, 0.12);
+      border-color: rgba(184, 123, 29, 0.4);
+      color: var(--claude-amber);
+      font-weight: 600;
+    }
+
+    .btn-clear-filters {
+      font-size: 11.5px;
+      color: var(--claude-terracotta);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 2px 6px;
+      margin-left: auto;
+      display: none;
+    }
+    .btn-clear-filters.show { display: inline-block; }
+    .btn-clear-filters:hover { text-decoration: underline; }
+
+    /* 岗位列表容器 (三栏模式中栏) */
+    .job-list-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      background: #FAF9F6;
+    }
+
+    .job-card-c {
+      background: #FFFFFF;
+      border: 1px solid var(--border-line);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.2s var(--ease-claude);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+    }
+    .job-card-c:hover {
+      border-color: #D3CCC0;
+      box-shadow: var(--shadow-hover);
+      transform: translateY(-1px);
+    }
+    .job-card-c.active {
+      border-color: var(--claude-terracotta);
+      box-shadow: 0 0 0 1px var(--claude-terracotta), 0 4px 14px rgba(217, 119, 87, 0.12);
+      background: #FCFBF8;
+    }
+
+    .jc-line1 {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .jc-title {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-ink);
+      line-height: 1.35;
+      flex: 1;
+    }
+    .jc-salary {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--claude-terracotta);
+      white-space: nowrap;
+    }
+    .jc-company-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      color: var(--text-sub);
+    }
+    .jc-star-btn {
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      color: #C5C1B8;
+      transition: color 0.15s, transform 0.15s;
+    }
+    .jc-star-btn:hover { color: var(--claude-amber); transform: scale(1.15); }
+    .jc-star-btn.on { color: var(--claude-amber); }
+
+    .jc-meta-line {
+      font-size: 11.5px;
+      color: var(--text-faint);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    /* 5 颗标准化决策胶囊 (Decision Chips) */
+    .jc-chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 4px;
+      align-items: center;
+    }
+    .chip {
+      font-size: 10.5px;
+      font-weight: 500;
+      padding: 1.5px 6.5px;
+      border-radius: var(--radius-pill);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      line-height: 1.3;
+    }
+    .chip-cv {
+      background: rgba(70, 104, 80, 0.08);
+      color: var(--claude-olive);
+      font-family: var(--font-mono);
+    }
+    .chip-ops {
+      background: rgba(217, 119, 87, 0.09);
+      color: var(--claude-terracotta);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    .chip-conf {
+      background: rgba(184, 123, 29, 0.08);
+      color: var(--claude-amber);
+    }
+    .chip-rec {
+      font-weight: 600;
+    }
+    .chip-rec.rec-high { background: var(--claude-olive-soft); color: var(--claude-olive); }
+    .chip-rec.rec-mid { background: var(--claude-terracotta-soft); color: var(--claude-terracotta); }
+    .chip-rec.rec-low { background: var(--claude-rust-soft); color: var(--claude-rust); }
+    .chip-rec.rec-gray { background: var(--claude-cream); color: var(--text-sub); }
+
+    .chip-status {
+      background: #F2EFE9;
+      color: var(--text-sub);
+      font-size: 10px;
+    }
+
+    /* ═══ 3. 右栏 (Detail Panel) ═══ */
+    .c-detail-panel {
+      display: flex;
+      flex-direction: column;
+      background: #FFFFFF;
+      overflow-y: auto;
+      padding: 24px 28px 48px;
+      gap: 18px;
+    }
+    .c-detail-panel > * {
+      flex-shrink: 0;
+    }
+
+    .detail-head-wrap {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-line);
+    }
+    .detail-top-title {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text-ink);
+      line-height: 1.3;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .detail-top-meta {
+      font-size: 13px;
+      color: var(--text-sub);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    /* 象牙白决策裁决看板 (Verdict Hero Card) - 垂直排版 (完全对齐图 2) */
+    .verdict-hero-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border-line);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 1px 4px rgba(44, 41, 37, 0.03);
+    }
+    .vhc-top-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .vhc-top-label {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-ink);
+    }
+    .vhc-rec-tag {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 12px;
+      border-radius: var(--radius-pill);
+    }
+    .vhc-meters-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .micro-meter-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .mm-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 12.5px;
+      color: var(--text-sub);
+    }
+    .mm-val {
+      font-family: var(--font-mono);
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-ink);
+    }
+    .mm-track {
+      height: 6px;
+      background: #EAE6DF;
+      border-radius: 99px;
+      overflow: hidden;
+      position: relative;
+      width: 100%;
+    }
+    .mm-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.6s var(--ease-claude);
+    }
+    .mm-fill.fill-olive { background: var(--claude-olive); }
+    .mm-fill.fill-terracotta { background: var(--claude-terracotta); }
+    .mm-fill.fill-amber { background: var(--claude-amber); }
+
+    /* 动作操作条 (Action Deck - 紧凑胶囊对齐图 2) */
+    .action-deck {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-line);
+      background: #FFFFFF;
+      color: var(--text-ink);
+      font-size: 12.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .btn-status-pill:hover {
+      background: var(--claude-cream);
+      border-color: #CBD5E1;
+    }
+    .btn-boss-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-line);
+      background: #FFFFFF;
+      color: var(--text-ink);
+      font-size: 12.5px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s var(--ease-claude);
+    }
+    .btn-boss-link:hover {
+      background: var(--claude-cream);
+      border-color: var(--claude-terracotta);
+      color: var(--claude-terracotta);
+      transform: translateY(-1px);
+    }
+    .btn-boss-link span.arrow {
+      transition: transform 0.2s;
+    }
+    .btn-boss-link:hover span.arrow {
+      transform: translate(2px, -2px);
+    }
+
+    /* 核心分析结构卡片 (Structured Analysis Cards) */
+    .analysis-plate {
+      border: 1px solid var(--border-line);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .ap-title {
+      font-family: var(--font-serif);
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--text-ink);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ap-rationale {
+      background: #FAF8F4;
+      border-left: 3px solid var(--claude-terracotta);
+    }
+    .ap-rationale-text {
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text-ink);
+      font-style: normal;
+    }
+    .ap-meta-kv {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 12px;
+      color: var(--text-sub);
+      padding-top: 8px;
+      border-top: 1px dashed var(--border-subtle);
+    }
+
+    .ap-strengths {
+      background: rgba(70, 104, 80, 0.035);
+      border-color: rgba(70, 104, 80, 0.22);
+    }
+    .ap-gaps {
+      background: rgba(217, 119, 87, 0.035);
+      border-color: rgba(217, 119, 87, 0.22);
+    }
+    .ap-blocker {
+      background: rgba(184, 71, 54, 0.05);
+      border-color: rgba(184, 71, 54, 0.35);
+    }
+
+    .bullet-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .bullet-item {
+      display: flex;
+      gap: 8px;
+      align-items: baseline;
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: var(--text-ink);
+    }
+    .bullet-item .dot {
+      flex-shrink: 0;
+      font-size: 12px;
+    }
+
+    /* 高定折叠面板群 (Accordions - 完全对齐图 1 独立圆角卡片规范) */
+    .c-fold {
+      flex-shrink: 0;
+      border: 1px solid var(--border-line);
+      border-radius: var(--radius-md);
+      background: #FFFFFF;
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      box-shadow: 0 1px 3px rgba(44, 41, 37, 0.02);
+    }
+    .c-fold:hover {
+      border-color: #D3CCC0;
+      box-shadow: 0 2px 8px rgba(44, 41, 37, 0.04);
+    }
+    .c-fold summary {
+      padding: 12px 18px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-ink);
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      list-style: none;
+      background: #FFFFFF;
+      transition: background 0.18s;
+    }
+    .c-fold summary::-webkit-details-marker { display: none; }
+    .c-fold summary:hover { background: #FAF9F6; }
+    .c-fold[open] summary {
+      border-bottom: 1px solid var(--border-subtle);
+      background: #FAF9F6;
+    }
+    .c-fold summary .fold-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .c-fold summary .fold-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .c-fold summary .chevron {
+      font-size: 11px;
+      color: var(--text-faint);
+      transition: transform 0.22s var(--ease-claude);
+      display: inline-block;
+    }
+    .c-fold[open] summary .chevron {
+      transform: rotate(180deg);
+    }
+    .c-fold-body {
+      padding: 16px 20px;
+      background: #FFFFFF;
+      font-size: 12.5px;
+      line-height: 1.65;
+    }
+
+    /* 独立导出卡片 (完全对齐图 1) */
+    .c-export-card {
+      flex-shrink: 0;
+      background: #FFFFFF;
+      border: 1px solid var(--border-line);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 1px 3px rgba(44, 41, 37, 0.02);
+    }
+    .export-card-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-ink);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .export-card-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .c-btn-export {
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-line);
+      background: #FFFFFF;
+      color: var(--text-ink);
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .c-btn-export:hover {
+      background: var(--claude-cream);
+      border-color: #CBD5E1;
+      transform: translateY(-1px);
+    }
+
+    /* 十维图谱表格 */
+    .dims-scorecard-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .dims-scorecard-table th {
+      text-align: left;
+      padding: 6px 8px;
+      color: var(--text-faint);
+      border-bottom: 1px solid var(--border-line);
+      font-weight: 500;
+    }
+    .dim-row {
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .dim-row:hover {
+      background: #FAF8F4;
+    }
+    .dim-row td {
+      padding: 7px 8px;
+      border-bottom: 1px dashed var(--border-subtle);
+    }
+    .dim-drawer {
+      padding: 10px 14px;
+      background: #FAF8F4;
+      border-radius: var(--radius-sm);
+      margin: 6px 0;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text-sub);
+    }
+
+    /* 状态下拉菜单 */
+    .status-dropdown-wrap {
+      position: relative;
+      display: inline-block;
+    }
+    .status-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      width: 200px;
+      background: #FFFFFF;
+      border: 1px solid var(--border-line);
+      border-radius: var(--radius-md);
+      box-shadow: 0 10px 30px rgba(44, 41, 37, 0.12);
+      padding: 6px;
+      z-index: 100;
+      display: none;
+    }
+    .status-dropdown-menu.show { display: block; }
+    .status-dropdown-item {
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      color: var(--text-ink);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: background 0.15s;
+    }
+    .status-dropdown-item:hover { background: var(--claude-cream); }
+    .status-dropdown-item.active { font-weight: 700; color: var(--claude-terracotta); background: var(--claude-terracotta-soft); }
+
+    /* 全局组件 */
+    .c-btn {
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-line);
+      background: #FFFFFF;
+      color: var(--text-ink);
+      cursor: pointer;
+      transition: all 0.18s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .c-btn:hover { background: var(--claude-cream); }
+    .c-btn.primary {
+      background: var(--claude-terracotta);
+      border-color: var(--claude-terracotta);
+      color: #fff;
+      font-weight: 600;
+    }
+    .c-btn.primary:hover { background: var(--claude-terracotta-hover); }
+
+    /* 首页概览容器 (dashView) */
+    .dash-view-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      background: var(--claude-bg);
+    }
+    .kpi-row-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+    .kpi-card-c {
+      background: #FFFFFF;
+      border: 1px solid var(--border-line);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      box-shadow: 0 1px 4px rgba(44, 41, 37, 0.03);
+    }
+    .kpi-card-c .k-label { font-size: 12px; color: var(--text-faint); margin-bottom: 4px; }
+    .kpi-card-c .k-val {
+      font-family: var(--font-serif);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-ink);
+      display: inline-flex;
+      align-items: baseline;
+      gap: 3px;
+      line-height: 1.2;
+    }
+    .kpi-card-c .k-num {
+      display: inline-flex;
+      align-items: baseline;
+    }
+    .kpi-card-c .k-unit {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-faint);
+    }
+    .kpi-card-c .k-sub { font-size: 11.5px; color: var(--text-sub); margin-top: 4px; }
+
+    .rec-classifier-cells {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+    .rec-cell-btn {
+      background: #FFFFFF;
+      border: 1px solid var(--border-line);
+      border-radius: var(--radius-md);
+      padding: 14px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .rec-cell-btn:hover {
+      border-color: var(--claude-terracotta);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(217, 119, 87, 0.1);
+    }
+    .rc-num {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 2px;
+      display: inline-flex;
+      justify-content: center;
+      align-items: baseline;
+      line-height: 1.2;
+    }
+    .rc-label { font-size: 12px; font-weight: 500; color: var(--text-sub); }
+
+    /* ═══ 垂直物理滚轮 (Vertical Odometer / Ticker) ═══ */
+    .ticker-col {
+      display: inline-block;
+      height: 1.2em;
+      line-height: 1.2em;
+      overflow: hidden;
+      vertical-align: -0.14em;
+    }
+    .ticker-strip {
+      display: flex;
+      flex-direction: column;
+      transform: translateY(0);
+      will-change: transform;
+    }
+    .ticker-digit {
+      height: 1.2em;
+      line-height: 1.2em;
+      text-align: center;
+      display: block;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum";
+    }
+    .ticker-dot {
+      display: inline-block;
+      line-height: 1.2em;
+      margin: 0 1px;
+      font-family: var(--font-serif);
+      vertical-align: baseline;
+    }
+
+    .dash-top-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border-line);
+      border-radius: var(--radius-md);
+      padding: 20px 24px;
+      box-shadow: 0 1px 4px rgba(44, 41, 37, 0.03);
+    }
+    .dash-job-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.18s;
+      background: #FAF9F6;
+    }
+    .dash-job-row:hover {
+      background: #FFFFFF;
+      border-color: var(--claude-terracotta);
+      box-shadow: 0 2px 8px rgba(217, 119, 87, 0.08);
+      transform: translateX(2px);
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #DCD6CD; border-radius: 99px; }
+  </style>
 </head>
 <body>
-<main class="shell" id="shell">
+  <main class="claude-shell" id="claude-shell">
 
-  <!-- ═══ 左栏 ═══ -->
-  <aside class="panel sidebar" id="sidebar">
-    <div class="identity">
-      <div class="avatar" id="avatar">Z</div>
-      <div>
-        <div class="brand">Career-ops</div>
-        <div class="tagline" id="tagline">求职决策中枢</div>
+    <!-- ═══ 1. 左栏：身份与中枢导航 ═══ -->
+    <aside class="c-sidebar" id="sidebar">
+      <div class="identity">
+        <div class="avatar" title="CAREER-OPS 态势感知中枢">
+          <svg class="avatar-radar-svg" viewBox="0 0 200 200" fill="none" stroke="currentColor">
+            <line x1="100" y1="14" x2="100" y2="186" stroke-width="4"/>
+            <line x1="14" y1="100" x2="186" y2="100" stroke-width="4"/>
+            <circle cx="100" cy="100" r="66" stroke-width="4"/>
+            <circle cx="146.7" cy="53.3" r="6" fill="currentColor"/>
+            <circle cx="53.3" cy="53.3" r="6" fill="currentColor"/>
+            <circle cx="53.3" cy="146.7" r="6" fill="currentColor"/>
+            <circle cx="146.7" cy="146.7" r="6" fill="currentColor"/>
+            <path d="M 136 86 L 152 86 A 54 54 0 1 0 152 114 L 136 114 A 38 38 0 1 1 136 86 Z" stroke-width="5"/>
+            <circle cx="100" cy="100" r="13" stroke-width="4"/>
+            <circle cx="100" cy="100" r="6" fill="currentColor"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand">Career-ops</div>
+          <div class="tagline">求职决策中枢</div>
+        </div>
       </div>
-    </div>
 
-    <nav class="nav" aria-label="主导航">
-      <div class="nav-section">
-        <div class="nav-label">总览</div>
-        <button class="nav-btn active" data-page="dash"><span class="nav-icon">📊</span><span>概览</span></button>
+      <nav aria-label="主导航">
+        <a href="/home.html" class="nav-btn" style="text-decoration:none; margin-bottom:10px; border:1px dashed var(--border-line); background:#FFFFFF; color:var(--text-ink); font-weight:600;">
+          <span>◂</span><span>返回品牌首页 (Monolog)</span>
+        </a>
+
+        <div class="nav-section-title">总览</div>
+        <button class="nav-btn active" data-page="dash" id="nav-dash">
+          <span>📊</span><span>首页概览</span>
+        </button>
+
+        <div class="nav-section-title" style="margin-top:14px;">岗位决策</div>
+        <button class="nav-btn" data-page="all" id="nav-all">
+          <span>🗂️</span><span>全部岗位</span><span class="count-badge" id="cnt-all">—</span>
+        </button>
+        <button class="nav-btn" data-page="pending" id="nav-pending">
+          <span>📥</span><span>待处理</span><span class="count-badge" id="cnt-pending">0</span>
+        </button>
+        <button class="nav-btn" data-page="shortlist" id="nav-shortlist">
+          <span>⭐</span><span>想投精选</span><span class="count-badge" id="cnt-shortlist">—</span>
+        </button>
+        <button class="nav-btn" data-page="Evaluated" id="nav-evaluated">
+          <span>🟡</span><span>已分析待决策</span><span class="count-badge" id="cnt-evaluated">—</span>
+        </button>
+        <button class="nav-btn" data-page="Applied" id="nav-applied">
+          <span>📤</span><span>已投递</span><span class="count-badge" id="cnt-applied">—</span>
+        </button>
+        <button class="nav-btn" data-page="Responded" id="nav-responded">
+          <span>💬</span><span>招聘方回应</span><span class="count-badge" id="cnt-responded">—</span>
+        </button>
+        <button class="nav-btn" data-page="Interview" id="nav-interview">
+          <span>🎤</span><span>面试</span><span class="count-badge" id="cnt-interview">—</span>
+        </button>
+        <button class="nav-btn" data-page="Offer" id="nav-offer">
+          <span>🎉</span><span>Offer（录用）</span><span class="count-badge" id="cnt-offer">—</span>
+        </button>
+        <button class="nav-btn" data-page="closed" id="nav-closed">
+          <span>🗄️</span><span>已放弃 / 淘汰</span><span class="count-badge" id="cnt-closed">—</span>
+        </button>
+
+        <details class="nav-collapsible" open>
+          <summary class="nav-section-title nav-collapsible-summary">
+            <span>记录</span>
+            <svg class="nav-collapse-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </summary>
+          <div class="nav-collapsible-content">
+            <button class="nav-btn" data-page="runs" id="nav-runs">
+              <span>🔍</span><span>搜索记录</span><span class="count-badge" id="cnt-runs">—</span>
+            </button>
+            <button class="nav-btn" data-page="settings" id="nav-settings">
+              <span>⚙️</span><span>数据与设置</span>
+            </button>
+          </div>
+        </details>
+      </nav>
+    </aside>
+
+    <!-- ═══ 2. 中栏：工具栏与岗位工作台 ═══ -->
+    <section class="c-mid-panel" id="mid-panel">
+      <header class="mid-head">
+        <div>
+          <h1 class="mid-head-title" id="page-title">首页概览</h1>
+          <div class="mid-filter-state" id="filter-state">当前筛选：—</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="c-btn" id="btn-refresh" title="重新计算与刷新">↺ 刷新</button>
+          <button class="c-btn" id="btn-switch-view">切换至全部岗位列表 ↗</button>
+        </div>
+      </header>
+
+      <!-- 智能过滤舱 (Concierge Filter Deck) -->
+      <div class="filter-deck" id="mid-toolbar" style="display:none">
+        <!-- 主检索行 -->
+        <div class="fd-primary-row">
+          <div class="fd-search-wrap">
+            <span class="fd-search-icon">🔍</span>
+            <input class="fd-search-input" id="search-input" type="search" placeholder="搜索公司、岗位或技能关键词...">
+          </div>
+          <select class="pill-select" id="rec-filter" title="推荐级别筛选">
+            <option value="">全部推荐</option>
+            <option value="强烈推荐">强烈推荐</option>
+            <option value="推荐">推荐</option>
+            <option value="一般">一般 / 需调研</option>
+            <option value="不推荐">不推荐</option>
+            <option value="硬红线跳过">硬红线跳过</option>
+          </select>
+          <select class="pill-select" id="sort-by" title="列表排序方式">
+            <option value="rec">排序：推荐优先</option>
+            <option value="score">排序：综合评分</option>
+            <option value="cv">排序：简历匹配度</option>
+            <option value="salary">排序：薪资最高</option>
+            <option value="time">排序：采集时间</option>
+          </select>
+        </div>
+
+        <!-- 副行胶囊筛选器 -->
+        <div class="fd-pills-row">
+          <select class="pill-select" id="district-filter" title="区域筛选">
+            <option value="">全部区域</option>
+          </select>
+          <select class="pill-select" id="salary-filter" title="薪资区间筛选">
+            <option value="">全部薪资</option>
+            <option value="0-10">10K 以下</option>
+            <option value="10-15">10-15K</option>
+            <option value="15-25">15-25K</option>
+            <option value="25-99">25K 以上</option>
+          </select>
+          <select class="pill-select" id="status-filter" title="推进状态筛选">
+            <option value="">全部状态</option>
+          </select>
+          <button type="button" class="btn-toggle-star" id="btn-shortlist-toggle">
+            <span>⭐</span><span>只看想投</span>
+          </button>
+          <button type="button" class="btn-clear-filters" id="btn-clear-filters">重置筛选</button>
+        </div>
       </div>
-      <div class="nav-section">
-        <div class="nav-label">岗位决策</div>
-        <button class="nav-btn" data-page="all"><span class="nav-icon">🗂️</span><span>全部岗位</span><span class="count" id="cnt-all">0</span></button>
-        <button class="nav-btn" data-page="pending"><span class="nav-icon">📥</span><span>待处理</span><span class="count" id="cnt-pending">0</span></button>
-        <button class="nav-btn" data-page="shortlist"><span class="nav-icon">⭐</span><span>想投</span><span class="count" id="cnt-short">0</span></button>
-        <button class="nav-btn" data-page="Evaluated"><span class="nav-icon">🟡</span><span>已分析（待决策）</span><span class="count" id="cnt-Evaluated">0</span></button>
-        <button class="nav-btn" data-page="Applied"><span class="nav-icon">📤</span><span>已投递</span><span class="count" id="cnt-Applied">0</span></button>
-        <button class="nav-btn" data-page="Responded"><span class="nav-icon">💬</span><span>招聘方回应</span><span class="count" id="cnt-Responded">0</span></button>
-        <button class="nav-btn" data-page="Interview"><span class="nav-icon">🎤</span><span>面试</span><span class="count" id="cnt-Interview">0</span></button>
-        <button class="nav-btn" data-page="Offer"><span class="nav-icon">🎉</span><span>Offer（录用）</span><span class="count" id="cnt-Offer">0</span></button>
-        <button class="nav-btn" data-page="closed"><span class="nav-icon">🗄️</span><span>已放弃 / 淘汰</span><span class="count" id="cnt-closed">0</span></button>
+
+      <!-- 视图 A: 首页概览 (dashView) -->
+      <div class="dash-view-scroll" id="dash-view">
+        <div class="kpi-row-grid">
+          <div class="kpi-card-c">
+            <div class="k-label">已分析岗位</div>
+            <div class="k-val" id="dash-kpi-analyzed"><span class="k-num" id="k-num-analyzed">0</span><span class="k-unit">个</span></div>
+            <div class="k-sub">覆盖精密机械及新能源供应链</div>
+          </div>
+          <div class="kpi-card-c">
+            <div class="k-label">想投重点精选</div>
+            <div class="k-val" id="dash-kpi-shortlist" style="color:var(--claude-terracotta)"><span class="k-num" id="k-num-shortlist">0</span><span class="k-unit">家</span></div>
+            <div class="k-sub">具备极高突破价值的标杆平台</div>
+          </div>
+          <div class="kpi-card-c">
+            <div class="k-label">平均简历契合度</div>
+            <div class="k-val" id="dash-kpi-cv" style="color:var(--claude-olive)"><span class="k-num" id="k-num-cv">—</span><span class="k-unit">%</span></div>
+            <div class="k-sub">核心品类与寻源要素深度对齐</div>
+          </div>
+          <div class="kpi-card-c">
+            <div class="k-label">平均综合回报</div>
+            <div class="k-val" id="dash-kpi-ops"><span class="k-num" id="k-num-ops">—</span><span class="k-unit">分</span></div>
+            <div class="k-sub">10 维度成长空间与回报权衡</div>
+          </div>
+        </div>
+
+        <div class="rec-classifier-cells">
+          <div class="rec-cell-btn" data-rec="强烈推荐">
+            <div class="rc-num" id="rec-cnt-strong" style="color:var(--claude-olive)">0</div>
+            <div class="rc-label">强烈推荐</div>
+          </div>
+          <div class="rec-cell-btn" data-rec="推荐">
+            <div class="rc-num" id="rec-cnt-rec" style="color:var(--claude-terracotta)">0</div>
+            <div class="rc-label">推荐投递</div>
+          </div>
+          <div class="rec-cell-btn" data-rec="一般">
+            <div class="rc-num" id="rec-cnt-normal" style="color:var(--claude-amber)">0</div>
+            <div class="rc-label">一般 / 调研</div>
+          </div>
+          <div class="rec-cell-btn" data-rec="不推荐">
+            <div class="rc-num" id="rec-cnt-weak" style="color:var(--text-faint)">0</div>
+            <div class="rc-label">不推荐</div>
+          </div>
+          <div class="rec-cell-btn" data-rec="硬红线跳过">
+            <div class="rc-num" id="rec-cnt-redline" style="color:var(--claude-rust)">0</div>
+            <div class="rc-label">硬红线跳过</div>
+          </div>
+        </div>
+
+        <div class="dash-top-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border-subtle);">
+            <span style="font-family:var(--font-serif); font-size:16px; font-weight:600; color:var(--text-ink)">🎯 本轮优先推荐投递岗位 (Top Picks)</span>
+            <span style="font-size:12px; color:var(--text-faint)">点击任意一行，直接进入三栏深度决策</span>
+          </div>
+          <div id="dash-top-rows"></div>
+        </div>
       </div>
-      <div class="nav-section">
-        <div class="nav-label">记录</div>
-        <button class="nav-btn" data-page="runs"><span class="nav-icon">🔍</span><span>搜索记录</span><span class="count" id="cnt-runs">0</span></button>
-        <button class="nav-btn" data-page="settings"><span class="nav-icon">⚙️</span><span>数据与设置</span></button>
+
+      <!-- 视图 B: 岗位卡片列表 (三栏模式中栏) -->
+      <div class="job-list-scroll" id="job-list-scroll" style="display:none"></div>
+
+      <!-- 视图 C: 搜索记录 (runsView) -->
+      <div class="dash-view-scroll" id="runs-view" style="display:none"></div>
+
+      <!-- 视图 D: 数据与设置 (settingsView) -->
+      <div class="dash-view-scroll" id="settings-view" style="display:none"></div>
+    </section>
+
+    <!-- ═══ 3. 右栏：岗位深度决策详情 (Detail Panel) ═══ -->
+    <aside class="c-detail-panel" id="detail-panel" style="display:none">
+      
+      <!-- 头部：标题与基础元数据 -->
+      <div class="detail-head-wrap">
+        <div>
+          <h2 class="detail-top-title">
+            <span id="dt-title">—</span>
+            <span class="jc-star-btn" id="dt-star" title="标记为想投">☆</span>
+          </h2>
+          <div class="detail-top-meta">
+            <span id="dt-company" style="font-weight:600; color:var(--text-ink)">—</span>
+            <span>•</span>
+            <span id="dt-location">—</span>
+            <span>•</span>
+            <span id="dt-salary" style="font-family:var(--font-mono); font-weight:700; color:var(--claude-terracotta)">—</span>
+            <span>•</span>
+            <span id="dt-status-pill" class="chip chip-status">—</span>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="c-btn" id="btn-back-home">返回概览 ◂</button>
+        </div>
       </div>
-    </nav>
 
-    <div class="health" id="healthBar">
-      <span class="dot ok" id="healthDot"></span>
-      <span id="healthText">连接中…</span>
-    </div>
-  </aside>
-
-  <!-- ═══ 中栏 ═══ -->
-  <section class="panel mid" id="mid">
-    <header class="mid-head">
-      <div>
-        <h1 id="pageTitle">概览</h1>
-        <div class="fine" id="filterState">当前筛选：全部 · 0 个岗位</div>
+      <!-- 决策裁决看板 (Verdict Hero Card) - 垂直排版 (完全对齐图 2) -->
+      <div class="verdict-hero-card">
+        <div class="vhc-top-line">
+          <span class="vhc-top-label">推荐结论</span>
+          <span class="vhc-rec-tag chip-rec rec-high" id="dt-rec-badge">—</span>
+        </div>
+        <div class="vhc-meters-stack">
+          <!-- 简历匹配度 -->
+          <div class="micro-meter-row">
+            <div class="mm-label-row">
+              <span>简历匹配度</span>
+              <span class="mm-val" id="dt-cv-val">—</span>
+            </div>
+            <div class="mm-track"><div class="mm-fill fill-olive" id="dt-cv-bar" style="width:0%"></div></div>
+          </div>
+          <!-- 岗位综合评分 -->
+          <div class="micro-meter-row">
+            <div class="mm-label-row">
+              <span>岗位综合评分</span>
+              <span class="mm-val" id="dt-ops-val">—</span>
+            </div>
+            <div class="mm-track"><div class="mm-fill fill-terracotta" id="dt-ops-bar" style="width:0%"></div></div>
+          </div>
+          <!-- 评估可信度 -->
+          <div class="micro-meter-row">
+            <div class="mm-label-row">
+              <span>评估可信度</span>
+              <span class="mm-val" id="dt-conf-val">—</span>
+            </div>
+            <div class="mm-track"><div class="mm-fill fill-amber" id="dt-conf-bar" style="width:0%"></div></div>
+          </div>
+        </div>
       </div>
-      <button class="btn ghost" id="refreshBtn" type="button">刷新</button>
-    </header>
 
-    <div class="toolbar" id="toolbar">
-      <input class="input grow" id="searchInput" type="search" placeholder="搜索公司 / 岗位关键词">
-      <select class="input" id="districtFilter"><option value="">全部区域</option></select>
-      <select class="input" id="salaryFilter">
-        <option value="">全部薪资</option>
-        <option value="0-5">5K 以下</option>
-        <option value="5-10">5-10K</option>
-        <option value="10-15">10-15K</option>
-        <option value="15-99">15K 以上</option>
-      </select>
-      <select class="input" id="recFilter">
-        <option value="">全部推荐</option>
-        <option>强烈推荐</option><option>推荐</option><option>一般</option><option>不推荐</option><option>硬红线跳过</option>
-      </select>
-      <select class="input" id="statusFilter"><option value="">全部状态</option></select>
-      <label class="chk"><input type="checkbox" id="shortOnly"> 只看想投</label>
-      <select class="input" id="sortBy">
-        <option value="rec">排序：推荐优先</option>
-        <option value="score">排序：综合评分</option>
-        <option value="cv">排序：简历匹配度</option>
-        <option value="salary">排序：薪资</option>
-        <option value="time">排序：采集时间</option>
-      </select>
-    </div>
+      <!-- 动作操作条 (Action Deck - 紧跟裁决看板，对齐图 2) -->
+      <div class="action-deck">
+        <div class="status-dropdown-wrap">
+          <button class="btn-status-pill" id="btn-flow-status">
+            <span id="btn-flow-status-text">—</span>
+            <span style="font-size:10px; margin-left:2px;">▾</span>
+          </button>
+          <div class="status-dropdown-menu" id="status-dropdown-menu">
+            <div class="status-dropdown-item" data-status="Evaluated" data-zh="已分析（待决策）"><span>🟡 已分析待决策</span></div>
+            <div class="status-dropdown-item" data-status="Applied" data-zh="已投递"><span>📤 已投递</span></div>
+            <div class="status-dropdown-item" data-status="Responded" data-zh="招聘方回应"><span>💬 招聘方回应</span></div>
+            <div class="status-dropdown-item" data-status="Interview" data-zh="面试"><span>🎤 面试推进</span></div>
+            <div class="status-dropdown-item" data-status="Offer" data-zh="Offer（录用）"><span>🎉 Offer（录用）</span></div>
+            <div style="height:1px; background:var(--border-subtle); margin:4px 0;"></div>
+            <!-- 数据接线：canonical states 含 Rejected（未通过），菜单补齐该状态；
+                 沿用既有 .status-dropdown-item 结构与样式，不新增任何 CSS / 控件形态 -->
+            <div class="status-dropdown-item" data-status="Rejected" data-zh="未通过"><span>❌ 未通过</span></div>
+            <div class="status-dropdown-item" data-status="Discarded" data-zh="已放弃"><span>🗄️ 已放弃 / 淘汰</span></div>
+            <div class="status-dropdown-item" data-status="SKIP" data-zh="不投"><span>🚫 判定不投</span></div>
+          </div>
+        </div>
 
-    <div id="runBanner" class="run-banner hidden"></div>
-    <div class="content-area">
-      <div id="dashView" class="dash-view"></div>
-      <div id="runsView" class="runs-view hidden"></div>
-      <div id="settingsView" class="settings-view hidden"></div>
-      <div id="jobList" class="job-list hidden"></div>
-    </div>
-  </section>
-
-  <!-- ═══ 右栏 ═══ -->
-  <aside class="panel detail" id="detailPanel">
-    <div class="detail-inner" id="detailInner">
-      <div class="empty">
-        <div class="empty-icon">👈</div>
-        <div class="empty-title">选择一个岗位</div>
-        <div class="empty-sub">在中栏点击岗位卡片，这里会显示完整评估</div>
+        <a class="btn-boss-link" id="dt-boss-link" href="#" target="_blank" rel="noopener noreferrer">
+          <span>Boss 原链接</span>
+          <span class="arrow">↗</span>
+        </a>
       </div>
-    </div>
-  </aside>
 
-</main>
-<div class="toast hidden" id="toast"></div>
-<script type="module" src="/app.js"></script>
+      <!-- 核心业务分析卡片 (推荐原因与优劣势) -->
+      <div class="analysis-plate ap-rationale">
+        <div class="ap-title">📌 推荐原因</div>
+        <div class="ap-rationale-text" id="dt-rationale">正在解析推荐原因...</div>
+        <div class="ap-meta-kv">
+          <span>薪资匹配：<b id="dt-meta-salary" style="color:var(--text-ink)">—</b></span>
+          <span>地点匹配：<b id="dt-meta-location" style="color:var(--text-ink)">—</b></span>
+          <span>采集时间：<span id="dt-meta-time" style="color:var(--text-faint)">—</span></span>
+        </div>
+      </div>
+
+      <div class="analysis-plate ap-strengths" id="dt-strengths-card">
+        <div class="ap-title" style="color:var(--claude-olive)">✅ 主要优势</div>
+        <ul class="bullet-list" id="dt-strengths-list"></ul>
+      </div>
+
+      <div class="analysis-plate ap-gaps" id="dt-gaps-card">
+        <div class="ap-title" style="color:var(--claude-terracotta)">⚠️ 主要短板</div>
+        <ul class="bullet-list" id="dt-gaps-list"></ul>
+      </div>
+
+      <div class="analysis-plate ap-blocker" id="dt-blocker-card" style="display:none">
+        <div class="ap-title" style="color:var(--claude-rust)">⛔ 硬性阻断拦截</div>
+        <div id="dt-blocker-text" style="font-size:12.5px; line-height:1.6; color:var(--claude-rust)"></div>
+      </div>
+
+      <div class="analysis-plate" id="dt-softgaps-card" style="background:#FAF9F6; border-color:var(--border-line);">
+        <div class="ap-title">🩹 可弥补缺口</div>
+        <ul class="bullet-list" id="dt-softgaps-list"></ul>
+      </div>
+
+      <!-- ═══ 模块群（完全对齐图 1 结构、命名与独立卡片排版） ═══ -->
+
+      <!-- 模块 1: 📝 简历修改建议 -->
+      <details class="c-fold">
+        <summary>
+          <div class="fold-left">
+            <span>📝 简历修改建议</span>
+          </div>
+          <div class="fold-right">
+            <span class="chevron">▾</span>
+          </div>
+        </summary>
+        <div class="c-fold-body" id="dt-cv-advice-body"></div>
+      </details>
+
+      <!-- 模块 2: 🎤 面试建议 -->
+      <details class="c-fold">
+        <summary>
+          <div class="fold-left">
+            <span>🎤 面试建议</span>
+          </div>
+          <div class="fold-right">
+            <span class="chevron">▾</span>
+          </div>
+        </summary>
+        <div class="c-fold-body" id="dt-interview-body"></div>
+      </details>
+
+      <!-- 模块 3: 🧭 推荐决策链 (Runtime 透传) -->
+      <details class="c-fold">
+        <summary>
+          <div class="fold-left">
+            <span>🧭 推荐决策链 (Runtime 透传)</span>
+          </div>
+          <div class="fold-right">
+            <span class="chevron">▾</span>
+          </div>
+        </summary>
+        <div class="c-fold-body" id="dt-trace-body"></div>
+      </details>
+
+      <!-- 模块 4: 🧮 评分明细 -->
+      <details class="c-fold">
+        <summary>
+          <div class="fold-left">
+            <span>🧮 评分明细</span>
+          </div>
+          <div class="fold-right">
+            <span class="chevron">▾</span>
+          </div>
+        </summary>
+        <div class="c-fold-body">
+          <table class="dims-scorecard-table">
+            <thead>
+              <tr>
+                <th>评估维度</th>
+                <th>得分</th>
+                <th>权重</th>
+                <th>加权分</th>
+                <th>依据与证据</th>
+              </tr>
+            </thead>
+            <tbody id="dt-dims-tbody"></tbody>
+          </table>
+          <div id="dt-dim-evidence-box" class="dim-drawer" style="display:none"></div>
+        </div>
+      </details>
+
+      <!-- 模块 5: 📄 完整 JD (含 JD 完整度徽章) -->
+      <details class="c-fold">
+        <summary>
+          <div class="fold-left">
+            <span>📄 完整 JD</span>
+          </div>
+          <div class="fold-right">
+            <span id="dt-jd-comp" class="chip chip-status" style="font-size:11px; padding:2px 8px;">JD 完整度：—</span>
+            <span class="chevron">▾</span>
+          </div>
+        </summary>
+        <div class="c-fold-body" id="dt-jd-body" style="white-space:pre-wrap; line-height:1.75; font-family:var(--font-sans); color:var(--text-sub);"></div>
+      </details>
+
+      <!-- 模块 6: 📦 导出 (独立卡片，完全对齐图 1) -->
+      <div class="c-export-card">
+        <div class="export-card-title">📦 导出</div>
+        <div class="export-card-actions">
+          <button class="c-btn-export" id="btn-export-excel">最新 Excel</button>
+          <button class="c-btn-export" id="btn-export-md">最新 Markdown</button>
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <script type="module">
+    // ══════════════════════════════════════════════════════════════════════
+    // 数据边界（唯一被改写的部分；渲染逻辑与样式保持原成品 UI 不变）
+    // 原成品：import { MOCK_JOBS, MACRO_INTELLIGENCE, ROLE_PORTFOLIO } from '../shared/mock-data.js';
+    //   · MACRO_INTELLIGENCE 在成品 UI 中从未被引用（死导入），不再引入；
+    //   · mock 数据改为向本地 server 的 /api/state 取真实数据，
+    //     并在 adaptJob() 里把 API 的嵌套结构（job_id / analysis.*）摊平成 UI 一直在读的扁平字段。
+    //   · Runtime 文案 → 用户可见文案一律复用项目既有展示层纯函数 lib/view-model.mjs
+    //     （reasonZh / zhMetrics / traceLines / gapItemText / displayDimensions / blockerHits），
+    //     不在前端新写一套映射，也不重算任何评分或推荐结论。
+    //   · 三处内存写（shortlisted / status）改为写回 /api/shortlist 与 /api/status；
+    //     切换岗位详情时上报 /api/last-viewed。写回失败一律回滚，不在本地留下与后端不一致的状态。
+    //   · 所有进入 innerHTML 的真实数据统一走 esc()（JD 原文、简历建议、优势/短板、防雷真题等）。
+    // ══════════════════════════════════════════════════════════════════════
+    import {
+      reasonZh, zhMetrics, traceLines, gapItemText, displayDimensions, blockerHits, rankJobs,
+    } from './lib/view-model.mjs';
+
+    let MOCK_JOBS = [];
+    let ROLE_PORTFOLIO = { name: '', title: '' };
+    let DASH_STATE = null;        // /api/state 原始响应（stats / runs / last_viewed 等）
+    let DATA_ERROR = '';          // 取数失败原因（复用既有状态行文本位提示）
+    let lastViewedReported = null;
+
+    // 真实数据一律不可信：进 innerHTML 前转义（含属性上下文）
+    const ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    function esc(v) {
+      if (v === null || v === undefined) return '';
+      return String(v).replace(/[&<>"']/g, c => ESC_MAP[c]);
+    }
+    function safeUrl(u) {
+      const s = String(u || '').trim();
+      return /^https?:\/\//i.test(s) ? s : '#';
+    }
+    function meanOf(values) {
+      const nums = values.filter(v => typeof v === 'number' && Number.isFinite(v));
+      return nums.length ? (nums.reduce((s, x) => s + x, 0) / nums.length).toFixed(1) : '--';
+    }
+    // 数据接线：「已分析 / 已研判」语义 = Runtime stats.analyzed（有 Career Score 的岗位数），
+    // 不是全部岗位数 stats.total。口径与聚合层一致（career_ops_score != null）；
+    // 拿不到 /api/state 时按同一口径在前端兜底。
+    function analyzedCount() {
+      const n = DASH_STATE && DASH_STATE.stats && DASH_STATE.stats.analyzed;
+      return Number.isFinite(n) ? n : MOCK_JOBS.filter(j => j.career_ops_score != null).length;
+    }
+    // API job → 成品 UI 期望的扁平 job（只搬字段 + 复用展示层文案映射，不重算、不重推导 recommendation）
+    function adaptJob(j) {
+      const a = j.analysis || {};
+      const numOr = (v, fallback) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? fallback : Number(v));
+      const breakdown = a.score_breakdown || null;
+      return Object.assign({}, j, {
+        id: j.job_id,
+        company_short: j.company_short || '',
+        cv_match_score: numOr(a.cv_match_score, null),
+        career_ops_score: numOr(a.career_ops_score, null),
+        score_confidence: a.score_confidence || null,
+        // 十维明细：只保留冻结十维（displayDimensions 过滤退役维度并统一中文名），依据文案走 zhMetrics
+        score_breakdown: breakdown
+          ? Object.assign({}, breakdown, {
+            dimensions: displayDimensions(breakdown).map(d => Object.assign({}, d, {
+              reason: d.reason ? zhMetrics(d.reason) : d.reason,
+              evidence: d.evidence ? zhMetrics(d.evidence) : d.evidence,
+            })),
+          })
+          : null,
+        recommendation: a.recommendation || '',
+        // 推荐原因：引擎措辞/内部 token 由 reasonZh 转用户可见中文（不改变结论语义）
+        recommendation_reason: reasonZh(a.recommendation_reason || ''),
+        decision_trace: traceLines(a.decision_trace),
+        blockers: a.blockers || null,
+        hard_redline: !!a.hard_redline,
+        // 阻断原因文案：优先 Runtime 显式给出，否则用 blockerHits 的中文命中项（不新写映射表）
+        redline_reason: a.redline_reason || blockerHits(a.blockers).map(h => h.zh).join('；'),
+        strengths: (Array.isArray(a.strengths) ? a.strengths : []).map(gapItemText),
+        gaps: (Array.isArray(a.gaps) ? a.gaps : []).map(gapItemText),
+        soft_gaps: (Array.isArray(a.soft_gaps) ? a.soft_gaps : [])
+          .map(g => ({ text: gapItemText(g), fix: (g && typeof g === 'object' ? (g.fix || g.mitigation || '') : '') })),
+        cv_advice: a.cv_advice ? zhMetrics(a.cv_advice) : '',
+        interview_focus: a.interview_focus ? zhMetrics(a.interview_focus) : '',
+        interview_traps: Array.isArray(a.interview_traps) ? a.interview_traps : [],
+        status: j.status || 'pending',
+        status_zh: j.status_zh || '待处理',
+        jd_original: j.jd_original || j.description || '',
+        collected_at: fmtTime(j.collected_at),
+      });
+    }
+    function fmtTime(v) {
+      const s = String(v || '');
+      if (!s) return '';
+      const m = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+      return m ? `${m[1]} ${m[2]}` : s.slice(0, 16);
+    }
+    async function loadData() {
+      const res = await fetch('/api/state', { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error(`/api/state → HTTP ${res.status}`);
+      const state = await res.json();
+      DASH_STATE = state;
+      MOCK_JOBS = (state.jobs || []).map(adaptJob);
+      const c = state.candidate || {};
+      ROLE_PORTFOLIO = { name: c.full_name || '', title: c.current_title || '' };
+      // 深链：品牌首页的 Top Picks 指向 /#job=<job_id>，这里在数据边界把它还原成选中项
+      const hashMatch = /^#job=(.+)$/.exec(window.location.hash || '');
+      const hashJob = hashMatch ? decodeURIComponent(hashMatch[1]) : '';
+      // 首屏（或当前选中岗位已不在数据里）才决定选中项：深链 > 后端 last_viewed > 列表首个；
+      // 刷新时保持用户当前选中岗位不动。
+      if (hashJob && MOCK_JOBS.some(j => j.id === hashJob)) {
+        activeJobId = hashJob;
+      } else if (!activeJobId || !MOCK_JOBS.some(j => j.id === activeJobId)) {
+        const viewed = state.last_viewed && MOCK_JOBS.some(j => j.id === state.last_viewed) ? state.last_viewed : '';
+        activeJobId = viewed || (MOCK_JOBS.length ? MOCK_JOBS[0].id : null);
+      }
+      lastViewedReported = activeJobId;   // 首屏不重复上报同一个 last_viewed
+    }
+    // 写回失败 → 回滚本地状态，保证 UI 与后端一致
+    function postJson(url, payload) {
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(res => {
+        if (res.ok) return res.json().catch(() => ({}));
+        return res.json().catch(() => ({})).then(body => {
+          throw new Error((body && body.error) || `HTTP ${res.status}`);
+        });
+      });
+    }
+    function toggleShortlist(job) {
+      const next = !job.shortlisted;
+      const prev = job.shortlisted;
+      const repaint = () => {
+        renderJobList();
+        updateSidebarCounts();
+        if (activeJobId === job.id) renderDetail();
+      };
+      job.shortlisted = next;
+      repaint();
+      postJson('/api/shortlist', { job_id: job.id, shortlisted: next }).catch(err => {
+        console.error('想投状态保存失败：', err);
+        job.shortlisted = prev;
+        repaint();
+        alert(`想投状态未能保存（已回滚）：${err && err.message ? err.message : err}`);
+      });
+    }
+    // 数据接线（并发安全）：同一 job_id 的 /api/status 写回串行发出（per-job mutation queue），
+    // 并给每笔写回编号（request sequence）。规则：
+    //   · optimistic：点击立即反映用户最新意图（保持原交互与视觉不变）；
+    //   · 串行：上一笔未落定不发下一笔 → 服务端写入顺序 = 用户点击顺序，响应天然不乱序；
+    //   · 只有该岗位「最新一笔」的响应/失败才决定 UI 终态：
+    //       成功 → 用服务端权威回读覆盖并记为「已确认状态」；
+    //       失败 → 回滚到「已确认状态」并明确报错（旧一笔的失败不得把新意图拉回）；
+    //   · 过时请求（seq 已被更新意图取代）只推进队列，不回写 UI，保证 UI 最终与服务端一致、不状态回退。
+    const statusMutations = new Map();   // job_id -> { seq, chain, confirmed }
+    function changeStatus(job, status, statusZh) {
+      let ctl = statusMutations.get(job.id);
+      if (!ctl) {
+        ctl = {
+          seq: 0,
+          chain: Promise.resolve(),
+          confirmed: {
+            status: job.status,
+            status_zh: job.status_zh,
+            tracker_num: job.tracker_num,
+            report_file: job.report_file,
+          },
+        };
+        statusMutations.set(job.id, ctl);
+      }
+      const seq = ++ctl.seq;             // 本次意图编号；seq < ctl.seq 的响应即过时
+      const repaint = () => {
+        renderJobList();
+        renderDetail();
+        updateSidebarCounts();
+      };
+      job.status = status;
+      job.status_zh = statusZh;
+      repaint();
+      ctl.chain = ctl.chain.then(() => postJson('/api/status', { job_id: job.id, status }).then(data => {
+        // 该笔已落库：服务端回读该岗位在 tracker 里的权威状态，成为新的「已确认状态」
+        const fresh = data && data.job;
+        ctl.confirmed = {
+          status: (fresh && fresh.status) || status,
+          status_zh: (fresh && fresh.status_zh) || statusZh,
+          tracker_num: fresh && fresh.tracker_num != null ? fresh.tracker_num : ctl.confirmed.tracker_num,
+          report_file: fresh && fresh.report_file != null ? fresh.report_file : ctl.confirmed.report_file,
+        };
+        if (seq !== ctl.seq) return;     // 已有更新意图在途：UI 交给最新一笔收敛，这里不回写
+        Object.assign(job, ctl.confirmed);
+        repaint();
+      }).catch(err => {
+        console.error('推进状态写回失败：', err);
+        if (seq !== ctl.seq) return;     // 过时请求的失败不影响最新意图的乐观展示
+        Object.assign(job, ctl.confirmed);   // 回滚到服务端已确认状态，保证 UI 与后端一致
+        repaint();
+        alert(`推进状态未能写回 tracker（已回滚）：${err && err.message ? err.message : err}`);
+      }));
+    }
+    function reportLastViewed(jobId) {
+      if (!jobId || jobId === lastViewedReported) return;   // 同一岗位只在真正切换时上报一次
+      lastViewedReported = jobId;
+      postJson('/api/last-viewed', { job_id: jobId }).catch(err => console.warn('last-viewed 上报失败：', err));
+    }
+    // 导出：走 server 的 attachment 下载端点（先探测，无产物时只提示，绝不让当前页被 JSON 顶掉）
+    function downloadExport(url, label) {
+      fetch(url, { method: 'GET' }).then(res => {
+        if (!res.ok) return res.json().catch(() => ({})).then(b => { throw new Error((b && b.error) || `HTTP ${res.status}`); });
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }).catch(err => {
+        console.error('导出失败：', err);
+        alert(`${label} 导出失败：${err && err.message ? err.message : err}`);
+      });
+    }
+
+    let currentView = 'dash';
+    let activeJobId = null;
+    let selectedRec = '';
+    let selectedDistrict = '';
+    let selectedSalary = '';
+    let selectedStatus = '';
+    let isShortlistOnly = false;
+    let searchKeyword = '';
+    let sortBy = 'rec';
+
+    const shell = document.getElementById('claude-shell');
+    const dashView = document.getElementById('dash-view');
+    const jobListScroll = document.getElementById('job-list-scroll');
+    const runsView = document.getElementById('runs-view');
+    const settingsView = document.getElementById('settings-view');
+    const midToolbar = document.getElementById('mid-toolbar');
+    const detailPanel = document.getElementById('detail-panel');
+
+    // 辅助格式化函数
+    function listify(text) {
+      if (!text) return '<p style="color:var(--text-faint)">暂无数据</p>';
+      const s = esc(String(text).trim());
+      const parts = s.split(/(?=[①-⑳])/).map(x => x.trim()).filter(Boolean);
+      if (parts.length >= 2 && /^[①-⑳]/.test(parts[0])) {
+        return parts.map(p => `
+          <div style="display:flex; gap:8px; margin-bottom:8px; line-height:1.6;">
+            <span style="font-family:var(--font-mono); font-weight:700; color:var(--claude-terracotta)">${p.slice(0, 1)}</span>
+            <span>${p.slice(1).trim()}</span>
+          </div>
+        `).join('');
+      }
+      return `<p style="line-height:1.65">${s}</p>`;
+    }
+
+    function jdHtml(text) {
+      if (!text) return '暂无 JD 原文';
+      return esc(text)
+        .replace(/【(.*?)】/g, '<div style="font-weight:700; color:var(--text-ink); margin:14px 0 6px; font-size:13.5px">【$1】</div>');
+    }
+
+    function getRecClass(rec) {
+      if (['强烈推荐', 'APPLY_NOW'].includes(rec)) return { cls: 'rec-high', label: '强烈推荐' };
+      if (['推荐', '推荐投递', 'APPLY_ADAPTED'].includes(rec)) return { cls: 'rec-mid', label: '推荐投递' };
+      if (['不推荐', '硬红线跳过', 'DONT_APPLY'].includes(rec)) return { cls: 'rec-low', label: rec };
+      return { cls: 'rec-gray', label: rec || '待评估' };
+    }
+
+    // 初始化筛选下拉选项
+    function initFilterOptions() {
+      const districts = [...new Set(MOCK_JOBS.map(j => j.district).filter(Boolean))];
+      const distSelect = document.getElementById('district-filter');
+      distSelect.innerHTML = '<option value="">全部区域</option>' + districts.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+
+      const statuses = [
+        { id: 'Evaluated', zh: '已分析待决策' },
+        { id: 'Applied', zh: '已投递' },
+        { id: 'Responded', zh: '招聘方回应' },
+        { id: 'Interview', zh: '面试' },
+        { id: 'Offer', zh: 'Offer（录用）' },
+        // 数据接线：canonical states 含 Rejected（Demo Runtime 真实存在该状态岗位），
+        // 筛选必须能单独筛出它；文案沿用聚合层 STATE_ZH.Rejected = 未通过。
+        { id: 'Rejected', zh: '未通过' },
+        { id: 'Discarded', zh: '已放弃 / 淘汰' },
+        { id: 'SKIP', zh: '不投' }
+      ];
+      const statusSelect = document.getElementById('status-filter');
+      statusSelect.innerHTML = '<option value="">全部状态</option>' + statuses.map(s => `<option value="${s.id}">${s.zh}</option>`).join('');
+    }
+
+    // 更新侧边栏计数
+    function updateSidebarCounts() {
+      const stats = {
+        all: MOCK_JOBS.length,
+        pending: MOCK_JOBS.filter(j => j.status === 'pending').length,
+        shortlist: MOCK_JOBS.filter(j => j.shortlisted).length,
+        Evaluated: MOCK_JOBS.filter(j => j.status === 'Evaluated').length,
+        Applied: MOCK_JOBS.filter(j => j.status === 'Applied').length,
+        Responded: MOCK_JOBS.filter(j => j.status === 'Responded').length,
+        Interview: MOCK_JOBS.filter(j => j.status === 'Interview').length,
+        Offer: MOCK_JOBS.filter(j => j.status === 'Offer').length,
+        closed: MOCK_JOBS.filter(j => ['Discarded', 'SKIP', 'Rejected'].includes(j.status)).length,
+        runs: (DASH_STATE && Array.isArray(DASH_STATE.runs)) ? DASH_STATE.runs.length : 0
+      };
+
+      for (const [k, v] of Object.entries(stats)) {
+        const el = document.getElementById(`cnt-${k.toLowerCase()}`);
+        if (el) el.textContent = v;
+      }
+    }
+
+    // 过滤岗位算法
+    function getFilteredJobs() {
+      return MOCK_JOBS.filter(job => {
+        // 1. 视图状态过滤
+        if (currentView === 'shortlist' && !job.shortlisted) return false;
+        if (currentView === 'pending' && job.status !== 'pending') return false;
+        if (currentView === 'Evaluated' && job.status !== 'Evaluated') return false;
+        if (currentView === 'Applied' && job.status !== 'Applied') return false;
+        if (currentView === 'Responded' && job.status !== 'Responded') return false;
+        if (currentView === 'Interview' && job.status !== 'Interview') return false;
+        if (currentView === 'Offer' && job.status !== 'Offer') return false;
+        if (currentView === 'closed' && !['Discarded', 'SKIP', 'Rejected'].includes(job.status)) return false;
+
+        // 2. 独立只看想投
+        if (isShortlistOnly && !job.shortlisted) return false;
+
+        // 3. 推荐等级
+        if (selectedRec && !job.recommendation.includes(selectedRec)) return false;
+
+        // 4. 区域
+        if (selectedDistrict && job.district !== selectedDistrict) return false;
+
+        // 5. 状态
+        if (selectedStatus && job.status !== selectedStatus) return false;
+
+        // 6. 薪资
+        if (selectedSalary) {
+          const [min, max] = selectedSalary.split('-').map(Number);
+          const jMin = job.salary_min || 0;
+          if (jMin < min || jMin >= max) return false;
+        }
+
+        // 7. 关键词
+        if (searchKeyword) {
+          const kw = searchKeyword.toLowerCase();
+          const target = `${job.company} ${job.company_short || ''} ${job.title} ${job.district || ''}`.toLowerCase();
+          if (!target.includes(kw)) return false;
+        }
+
+        return true;
+      }).sort((a, b) => {
+        if (sortBy === 'score') return (b.career_ops_score || 0) - (a.career_ops_score || 0);
+        if (sortBy === 'cv') return (b.cv_match_score || 0) - (a.cv_match_score || 0);
+        if (sortBy === 'salary') return (b.salary_max || 0) - (a.salary_max || 0);
+        if (sortBy === 'time') return String(b.collected_at || '').localeCompare(String(a.collected_at || ''));
+        // 默认按推荐顺序
+        const recRank = { '强烈推荐': 4, '推荐': 3, '一般': 2, '不推荐': 1, '硬红线跳过': 0 };
+        return (recRank[b.recommendation] || 0) - (recRank[a.recommendation] || 0);
+      });
+    }
+
+    // 渲染中栏列表
+    function renderJobList() {
+      const jobs = getFilteredJobs();
+      const countEl = document.getElementById('filter-state');
+      if (countEl) countEl.textContent = `当前筛选：${jobs.length} 个岗位`;
+
+      // 检查是否有活跃过滤条件
+      const hasActiveFilters = !!(selectedRec || selectedDistrict || selectedSalary || selectedStatus || isShortlistOnly || searchKeyword);
+      const clearBtn = document.getElementById('btn-clear-filters');
+      if (clearBtn) clearBtn.classList.toggle('show', hasActiveFilters);
+
+      if (jobs.length === 0) {
+        jobListScroll.innerHTML = `
+          <div style="padding:48px 20px; text-align:center; color:var(--text-faint);">
+            <div style="font-size:32px; margin-bottom:12px;">📂</div>
+            <div style="font-size:14px; font-weight:600; color:var(--text-ink); margin-bottom:4px;">当前筛选条件下没有匹配岗位</div>
+            <div style="font-size:12px; color:var(--text-sub);">您可以点击“重置筛选”或调整上方检索条件</div>
+          </div>
+        `;
+        return;
+      }
+
+      if (!jobs.some(j => j.id === activeJobId)) {
+        activeJobId = jobs[0].id;
+      }
+
+      jobListScroll.innerHTML = jobs.map(j => {
+        const isActive = j.id === activeJobId;
+        const recMeta = getRecClass(j.recommendation);
+        const isStar = !!j.shortlisted;
+        const conf = j.score_confidence || null;   // 缺失不伪造：无可信度数据时显示 —
+
+        return `
+          <div class="job-card-c ${isActive ? 'active' : ''}" data-id="${esc(j.id)}">
+            <div class="jc-line1">
+              <div style="display:flex; align-items:center; gap:8px; flex:1">
+                <span class="jc-star-btn ${isStar ? 'on' : ''}" data-star-id="${esc(j.id)}" title="${isStar ? '已加入想投' : '标记想投'}">${isStar ? '⭐' : '☆'}</span>
+                <span class="jc-title">${esc(j.title)}</span>
+              </div>
+              <span class="jc-salary">${esc(j.salary)}</span>
+            </div>
+            <div class="jc-company-line">
+              <span style="font-weight:600; color:var(--text-ink)">${esc(j.company_short || j.company)}</span>
+              <span>·</span>
+              <span>${esc(j.city)}${j.district ? ' · ' + esc(j.district) : ''}</span>
+            </div>
+            <div class="jc-meta-line">
+              <span>${esc(j.experience || '—')}</span>
+              <span>·</span>
+              <span>${esc(j.education || '—')}</span>
+              <span>·</span>
+              <span>采集于 ${esc((j.collected_at || '').slice(0, 10))}</span>
+            </div>
+            <div class="jc-chips-row">
+              <span class="chip chip-cv">匹配 <b>${esc(j.cv_match_score ?? '—')}%</b></span>
+              <span class="chip chip-ops">综合 <b>${esc(j.career_ops_score ?? '—')}</b>/100</span>
+              <span class="chip chip-conf">可信度 <b>${esc(conf?.percent ?? '—')}%</b></span>
+              <span class="chip chip-rec ${recMeta.cls}">${esc(recMeta.label)}</span>
+              <span class="chip chip-status">${esc(j.status_zh || j.status)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 卡片点击
+      jobListScroll.querySelectorAll('.job-card-c').forEach(card => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('[data-star-id]')) return;
+          activeJobId = card.dataset.id;
+          reportLastViewed(activeJobId);   // 数据接线：上报最后浏览岗位
+          renderJobList();
+          renderDetail();
+        });
+      });
+
+      // 星标切换
+      jobListScroll.querySelectorAll('[data-star-id]').forEach(star => {
+        star.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const jid = star.dataset.starId;
+          const job = MOCK_JOBS.find(j => j.id === jid);
+          if (job) {
+            toggleShortlist(job);          // 数据接线：写回 /api/shortlist（原为内存写）
+          }
+        });
+      });
+
+      renderDetail();
+    }
+
+    // 渲染右栏详情
+    function renderDetail() {
+      const job = MOCK_JOBS.find(j => j.id === activeJobId) || MOCK_JOBS[0];
+      if (!job) return;
+
+      const recMeta = getRecClass(job.recommendation);
+      const conf = job.score_confidence || null;   // 缺失不伪造：无可信度数据时显示 —
+
+      document.getElementById('dt-title').textContent = job.title;
+      document.getElementById('dt-company').textContent = job.company;
+      document.getElementById('dt-location').textContent = `${job.city || ''}${job.district ? ' · ' + job.district : ''}`;
+      document.getElementById('dt-salary').textContent = job.salary;
+
+      // 星标状态
+      const dtStar = document.getElementById('dt-star');
+      dtStar.textContent = job.shortlisted ? '⭐' : '☆';
+      dtStar.className = `jc-star-btn ${job.shortlisted ? 'on' : ''}`;
+      dtStar.onclick = () => {
+        toggleShortlist(job);            // 数据接线：写回 /api/shortlist（原为内存写）
+      };
+
+      // 状态胶囊
+      const stPill = document.getElementById('dt-status-pill');
+      stPill.textContent = job.status_zh || job.status;
+
+      // 裁决顶栏
+      const recBadge = document.getElementById('dt-rec-badge');
+      recBadge.textContent = recMeta.label;
+      recBadge.className = `vhc-rec-tag chip-rec ${recMeta.cls}`;
+
+      // 三根微计量规 (格式化为“XX 分”，完全对齐图 2)
+      // 数据接线：缺值保持缺值语义 —— 数值文本显示 —（不伪造 0 分），只有进度条宽度在缺值时收到 0%（视觉空条）
+      const cvScore = Number.isFinite(job.cv_match_score) ? job.cv_match_score : null;
+      document.getElementById('dt-cv-val').textContent = cvScore === null ? '—' : `${cvScore} 分`;
+      document.getElementById('dt-cv-bar').style.width = `${cvScore ?? 0}%`;
+
+      const opsScore = Number.isFinite(job.career_ops_score) ? job.career_ops_score : null;
+      document.getElementById('dt-ops-val').textContent = opsScore === null ? '—' : `${opsScore} 分`;
+      document.getElementById('dt-ops-bar').style.width = `${opsScore ?? 0}%`;
+
+      const confScore = conf?.percent ?? null;
+      document.getElementById('dt-conf-val').textContent = confScore === null ? '—' : `${confScore} 分`;
+      document.getElementById('dt-conf-bar').style.width = `${confScore ?? 0}%`;
+
+      // 推进状态按钮与链接
+      document.getElementById('btn-flow-status-text').textContent = job.status_zh || job.status;
+      const bossLink = document.getElementById('dt-boss-link');
+      bossLink.href = safeUrl(job.job_url) === '#' ? 'https://www.zhipin.com' : safeUrl(job.job_url);
+
+      // 导出按钮事件：接真实导出端点（attachment 下载，不离开当前页面）
+      document.getElementById('btn-export-excel').onclick = () => downloadExport('/api/export/latest-excel', 'Excel');
+      document.getElementById('btn-export-md').onclick = () => downloadExport('/api/export/latest-md', 'Markdown');
+
+      // 推荐原因卡片
+      document.getElementById('dt-rationale').textContent = job.recommendation_reason || '暂无详细理由';
+      document.getElementById('dt-meta-salary').textContent = job.salary;
+      document.getElementById('dt-meta-location').textContent = `${job.city || ''}${job.district ? ' · ' + job.district : ''}`;
+      document.getElementById('dt-meta-time').textContent = job.collected_at || '最新采集';
+
+      // 核心优势
+      const strengthsList = document.getElementById('dt-strengths-list');
+      const strengths = job.strengths || [];
+      if (strengths.length) {
+        strengthsList.innerHTML = strengths.map(s => `<li class="bullet-item"><span class="dot" style="color:var(--claude-olive)">✓</span><span>${esc(s)}</span></li>`).join('');
+        document.getElementById('dt-strengths-card').style.display = 'flex';
+      } else {
+        document.getElementById('dt-strengths-card').style.display = 'none';
+      }
+
+      // 主要短板
+      const gapsList = document.getElementById('dt-gaps-list');
+      const gaps = job.gaps || [];
+      if (gaps.length) {
+        gapsList.innerHTML = gaps.map(g => `<li class="bullet-item"><span class="dot" style="color:var(--claude-terracotta)">⚠</span><span>${esc(g)}</span></li>`).join('');
+        document.getElementById('dt-gaps-card').style.display = 'flex';
+      } else {
+        document.getElementById('dt-gaps-card').style.display = 'none';
+      }
+
+      // 硬红线 / 阻断
+      const blockerCard = document.getElementById('dt-blocker-card');
+      const blockerText = document.getElementById('dt-blocker-text');
+      if (job.hard_redline || (job.blockers && Object.values(job.blockers).some(Boolean))) {
+        blockerCard.style.display = 'flex';
+        blockerText.textContent = job.redline_reason || '命中核心候选人阻断红线（薪资底线击穿、职级倒退或外包派遣风险）';
+      } else {
+        blockerCard.style.display = 'none';
+      }
+
+      // 可弥补缺口
+      const softgapsCard = document.getElementById('dt-softgaps-card');
+      const softgapsList = document.getElementById('dt-softgaps-list');
+      const softGaps = job.soft_gaps || [];
+      if (softGaps.length) {
+        softgapsCard.style.display = 'flex';
+        softgapsList.innerHTML = softGaps.map(sg => `<li class="bullet-item"><span class="dot" style="color:var(--claude-amber)">🩹</span><span><b>${esc(sg.text || sg)}</b>${sg.fix ? ' —— 建议：' + esc(sg.fix) : ''}</span></li>`).join('');
+      } else {
+        softgapsCard.style.display = 'none';
+      }
+
+      // 简历建议
+      document.getElementById('dt-cv-advice-body').innerHTML = listify(job.cv_advice);
+
+      // 面试建议
+      let ivContent = listify(job.interview_focus);
+      if (job.interview_traps && job.interview_traps.length) {
+        ivContent += '<div style="margin-top:14px; padding-top:10px; border-top:1px dashed var(--border-line);"><b style="color:var(--claude-terracotta)">高频防雷真题攻防：</b>' +
+          job.interview_traps.map(t => `<div style="margin-top:6px"><b>Q: ${esc(t.question)}</b><div style="color:var(--text-sub); margin-top:2px">A策略: ${esc(t.answer_strategy)}</div></div>`).join('') + '</div>';
+      }
+      document.getElementById('dt-interview-body').innerHTML = ivContent;
+
+      // 决策链透传
+      const trace = Array.isArray(job.decision_trace) ? job.decision_trace : [];
+      document.getElementById('dt-trace-body').innerHTML = trace.map(t => `
+        <div style="display:flex; gap:8px; margin-bottom:6px; font-size:12px;">
+          <span style="color:var(--claude-terracotta); font-family:var(--font-mono); font-weight:700;">→</span>
+          <span>${esc(t)}</span>
+        </div>
+      `).join('') || '暂无决策链明细';
+
+      // 十维图谱表格
+      // 数据接线：维度 score=null（unknown，证据不足）时保持缺值语义 —— 得分与加权分都显示 —，
+      // 不再用 Number(null)=0 把缺值算成 0.0 加权分。DOM 结构 / class / 列顺序不变。
+      const dims = (job.score_breakdown && job.score_breakdown.dimensions) || [];
+      const tbody = document.getElementById('dt-dims-tbody');
+      tbody.innerHTML = dims.map(d => {
+        const dimKnown = Number.isFinite(d.score);
+        return `
+        <tr class="dim-row" data-key="${esc(d.key)}">
+          <td style="font-weight:600">${esc(d.name)}</td>
+          <td style="font-family:var(--font-mono); color:var(--claude-terracotta); font-weight:700">${dimKnown ? esc(d.score) : '—'}</td>
+          <td>${esc(d.weight)}%</td>
+          <td style="font-family:var(--font-mono)">${dimKnown ? ((Number(d.score) * Number(d.weight)) / 100).toFixed(1) : '—'}</td>
+          <td style="color:var(--text-faint); font-size:11px">查看依据 ▾</td>
+        </tr>
+      `;
+      }).join('');
+
+      const evidenceBox = document.getElementById('dt-dim-evidence-box');
+      tbody.querySelectorAll('.dim-row').forEach(row => {
+        row.onclick = () => {
+          const k = row.dataset.key;
+          const dim = dims.find(x => x.key === k);
+          if (dim) {
+            evidenceBox.style.display = 'block';
+            evidenceBox.innerHTML = `<b>【${esc(dim.name)}】评分依据：</b><br>${esc(dim.reason || '暂无详细证据')}`;
+          }
+        };
+      });
+
+      // JD 原文
+      document.getElementById('dt-jd-body').innerHTML = jdHtml(job.jd_original || job.description);
+      document.getElementById('dt-jd-comp').textContent = `JD 完整度：${job.jd_completeness === 'complete' ? '完整' : '部分'}`;
+    }
+
+    // 渲染搜索记录页 (Runs View)
+    // 数据接线：卡片结构与样式逐字保持成品 UI 原样，只把写死的轮次文件名/城市/条数
+    // 换成 /api/state 的 runs（后端按时间升序，这里倒序让最新轮次在上）。
+    function renderRuns() {
+      const runs = ((DASH_STATE && DASH_STATE.runs) || []).slice().reverse();
+      const cards = runs.map((r, i) => {
+        const cfg = r.config || {};
+        const c = r.counters || {};
+        const newest = i === 0;
+        const file = String(r.file || '').split(/[\\/]/).pop();
+        const titles = (cfg.target_titles || []).join(' / ') || '未配置';
+        const cities = (cfg.target_city || []).join(' / ') || '未配置';
+        const salary = (cfg.salary_min_k != null && cfg.salary_max_k != null)
+          ? `${cfg.salary_min_k}-${cfg.salary_max_k}K` : '未配置';
+        const when = String(r.rescored_at || r.run_at || '').slice(0, 10) || '未记录';
+        const risks = Array.isArray(r.risk_events) ? r.risk_events.length : 0;
+        const riskText = risks ? `${risks} 条风险事件` : '正常无异常';
+        return `
+          <div class="dash-top-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+              <span style="font-weight:700; font-size:14px">${esc(file)}</span>
+              ${newest
+                ? `<span class="chip chip-status" style="background:var(--claude-olive-soft); color:var(--claude-olive)">最新轮次 · ${esc(when)}</span>`
+                : '<span class="chip chip-status">归档轮次</span>'}
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:14px; font-size:12px; color:var(--text-sub)">
+              <span>目标岗位：${esc(titles)}</span>
+              <span>城市：${esc(cities)}</span>
+              ${newest ? `<span>薪资带：${esc(salary)}</span>` : ''}
+              <span>发现：${esc(c.collected ?? r.job_count ?? 0)} 岗位</span>
+              <span>分析：${esc(c.analyzed ?? 0)} 岗位</span>
+              ${newest ? `<span>风控状态：${esc(riskText)}</span>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+      runsView.innerHTML = `
+        <div style="margin-bottom:14px">
+          <h2 style="font-family:var(--font-serif); font-size:20px; font-weight:600; margin-bottom:4px">🔍 采集轮次与爬取履历</h2>
+          <div style="font-size:12px; color:var(--text-faint)">记录自动化探针历次采集到的原始岗位库与风险事件</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          ${cards || '<div class="dash-top-card"><span style="font-size:12.5px; color:var(--text-faint)">暂无数据</span></div>'}
+        </div>
+      `;
+    }
+
+    // 渲染设置页 (Settings View)
+    function renderSettings() {
+      // 数据接线：三处数据源计数改为从 /api/state 如实读取（原成品写死 86 份 / 无行数）
+      const runCount = (DASH_STATE && Array.isArray(DASH_STATE.runs)) ? DASH_STATE.runs.length : 0;
+      const jobCount = (DASH_STATE && DASH_STATE.stats && DASH_STATE.stats.total != null) ? DASH_STATE.stats.total : MOCK_JOBS.length;
+      const trackerRows = (DASH_STATE && DASH_STATE.tracker && DASH_STATE.tracker.rows != null) ? DASH_STATE.tracker.rows : 0;
+      settingsView.innerHTML = `
+        <div style="margin-bottom:14px">
+          <h2 style="font-family:var(--font-serif); font-size:20px; font-weight:600; margin-bottom:4px">⚙️ 本地中枢数据与设置</h2>
+          <div style="font-size:12px; color:var(--text-faint)">当前展示层运行在 127.0.0.1 本地回环网络，数据全部存储在本地工作区</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div class="dash-top-card">
+            <div style="font-weight:700; font-size:14px; margin-bottom:8px">本地数据源（只读）</div>
+            <div style="display:grid; grid-template-columns:140px 1fr; gap:6px; font-size:12.5px; color:var(--text-sub)">
+              <span>候选人画像</span><span>config/profile.yml (${esc(ROLE_PORTFOLIO.name || '未配置')} / ${esc(ROLE_PORTFOLIO.title || '未配置')})</span>
+              <span>搜索结果</span><span>data/search-results-*.json (${esc(runCount)} 轮 · 共 ${esc(jobCount)} 份岗位元数据)</span>
+              <span>投递追踪表</span><span>data/applications.md (${esc(trackerRows)} 行 · 8 状态规范同步)</span>
+              <span>评分引擎版本</span><span>Phase 6 · 冻结十维权重归一化</span>
+            </div>
+          </div>
+          <div class="dash-top-card">
+            <div style="font-weight:700; font-size:14px; margin-bottom:8px">8 状态机规范对照 (Canonical States)</div>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; font-size:12px">
+              <div>Evaluated: 已分析待决策</div>
+              <div>Applied: 已投递</div>
+              <div>Responded: 招聘方回应</div>
+              <div>Interview: 面试推进</div>
+              <div>Offer: 录用意向</div>
+              <div>Discarded: 已放弃</div>
+              <div>SKIP: 判定不投</div>
+              <div>Rejected: 未通过</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 方案二：现代优雅的物理垂直滚轮引擎 (Vertical Odometer Ticker)
+    function rollOdometer(container, targetValue, duration = 1200, delay = 0) {
+      if (!container) return;
+      if (container._timerId) clearTimeout(container._timerId);
+
+      const strVal = String(targetValue);
+      let html = '';
+      for (const char of strVal) {
+        if (char === '.') {
+          html += '<span class="ticker-dot">.</span>';
+        } else if (/[0-9]/.test(char)) {
+          html += `<span class="ticker-col"><span class="ticker-strip" data-target="${char}">`;
+          for (let d = 0; d <= 9; d++) {
+            html += `<span class="ticker-digit">${d}</span>`;
+          }
+          html += `</span></span>`;
+        } else {
+          html += `<span>${char}</span>`;
+        }
+      }
+      container.innerHTML = html;
+
+      const strips = container.querySelectorAll('.ticker-strip');
+      // 1. 初始化强制归零
+      strips.forEach(s => {
+        s.style.transition = 'none';
+        s.style.transform = 'translateY(0)';
+      });
+
+      // 强制触发回流以确保归零生效
+      void container.offsetWidth;
+
+      // 2. 延迟平滑滑动入位（采用极其从容优雅的物理滑动曲线，绝对无原地狂闪）
+      container._timerId = setTimeout(() => {
+        strips.forEach((s, idx) => {
+          const targetDigit = parseInt(s.dataset.target, 10) || 0;
+          // 位间微错峰：高位到低位微延迟 30ms，更有机械层次感
+          const colDelay = idx * 30;
+          s.style.transition = `transform ${duration}ms cubic-bezier(0.16, 1, 0.3, 1) ${colDelay}ms`;
+          s.style.transform = `translateY(-${targetDigit * 1.2}em)`;
+        });
+      }, delay);
+    }
+
+    // 渲染总览
+    function renderDash() {
+      // 1. KPI 4 大核心指标垂直滚轮滑动
+      const valAnalyzed = analyzedCount();
+      const valShortlist = MOCK_JOBS.filter(j => j.shortlisted).length;
+      // 真实均值（原成品把这两项平均写死为 78.6 / 76.5）：
+      // 优先用聚合层 /api/state 的 stats.avg_*（已按“只对有效数值求平均、缺失不当 0 分”的口径算好），
+      // 拿不到时按同一口径在前端兜底；两者都没有 → '--'。
+      const apiStats = (DASH_STATE && DASH_STATE.stats) || {};
+      const valCv = Number.isFinite(apiStats.avg_cv_match)
+        ? apiStats.avg_cv_match.toFixed(1)
+        : meanOf(MOCK_JOBS.map(j => j.cv_match_score));
+      const valOps = Number.isFinite(apiStats.avg_career_ops_score)
+        ? apiStats.avg_career_ops_score.toFixed(1)
+        : meanOf(MOCK_JOBS.map(j => j.career_ops_score));
+
+      rollOdometer(document.getElementById('k-num-analyzed'), valAnalyzed, 1000, 0);
+      rollOdometer(document.getElementById('k-num-shortlist'), valShortlist, 1000, 60);
+      rollOdometer(document.getElementById('k-num-cv'), valCv, 1200, 120);
+      rollOdometer(document.getElementById('k-num-ops'), valOps, 1200, 180);
+
+      // 2. 推荐等级分布 5 格垂直滚轮滑动
+      const cntStrong = MOCK_JOBS.filter(j => j.recommendation === '强烈推荐').length;
+      const cntRec = MOCK_JOBS.filter(j => j.recommendation.includes('推荐') && j.recommendation !== '强烈推荐' && j.recommendation !== '不推荐').length;
+      const cntNormal = MOCK_JOBS.filter(j => j.recommendation === '一般' || j.recommendation.includes('调研')).length;
+      const cntWeak = MOCK_JOBS.filter(j => j.recommendation === '不推荐').length;
+      const cntRedline = MOCK_JOBS.filter(j => j.recommendation === '硬红线跳过').length;
+
+      rollOdometer(document.getElementById('rec-cnt-strong'), cntStrong, 800, 220);
+      rollOdometer(document.getElementById('rec-cnt-rec'), cntRec, 800, 260);
+      rollOdometer(document.getElementById('rec-cnt-normal'), cntNormal, 800, 300);
+      rollOdometer(document.getElementById('rec-cnt-weak'), cntWeak, 800, 340);
+      rollOdometer(document.getElementById('rec-cnt-redline'), cntRedline, 800, 380);
+
+      const topRows = document.getElementById('dash-top-rows');
+      // 数据接线：概览「Top Picks」必须真的是排过序的前 5 条。
+      // 原成品对已按推荐排序的 mock 数组直接 slice(0,5)；真实数据是采集顺序，
+      // 因此复用项目既有 rankJobs（推荐档 → Career Score → CV Match，只排序不重算）取前 5，视觉与行数不变。
+      topRows.innerHTML = rankJobs(MOCK_JOBS).slice(0, 5).map((job, idx) => {
+        const recMeta = getRecClass(job.recommendation);
+        return `
+          <div class="dash-job-row" data-id="${esc(job.id)}">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span style="font-family:var(--font-mono); font-weight:700; color:var(--claude-terracotta)">#0${idx+1}</span>
+              <div>
+                <span style="font-weight:600; color:var(--text-ink)">${esc(job.company_short || job.company)}</span>
+                <span style="color:var(--text-sub); font-size:13px"> · ${esc(job.title)}</span>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:14px;">
+              <span style="font-family:var(--font-mono); font-weight:600; color:var(--claude-terracotta)">${esc(job.salary)}</span>
+              <span class="chip chip-rec ${recMeta.cls}">${esc(recMeta.label)}</span>
+              <span style="font-size:12px; color:var(--text-faint)">综合: <b>${esc(job.career_ops_score ?? '—')}分</b></span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      topRows.querySelectorAll('.dash-job-row').forEach(row => {
+        row.onclick = () => {
+          activeJobId = row.dataset.id;
+          reportLastViewed(activeJobId);   // 数据接线：上报最后浏览岗位
+          currentView = 'all';
+          setView('three-panel');
+        };
+      });
+
+      updateSidebarCounts();
+    }
+
+    // 视图切换控制器
+    function setView(mode) {
+      dashView.style.display = 'none';
+      jobListScroll.style.display = 'none';
+      runsView.style.display = 'none';
+      settingsView.style.display = 'none';
+      midToolbar.style.display = 'none';
+      detailPanel.style.display = 'none';
+
+      if (mode === 'dash') {
+        currentView = 'dash';
+        shell.classList.remove('mode-three-panel');
+        dashView.style.display = 'flex';
+        document.getElementById('page-title').textContent = '首页概览';
+        document.getElementById('filter-state').textContent = `当前大盘：已研判 ${analyzedCount()} 个采购标的`;
+        document.getElementById('btn-switch-view').textContent = '切换至全部岗位列表 ↗';
+        renderDash();
+      } else if (mode === 'runs') {
+        currentView = 'runs';
+        shell.classList.remove('mode-three-panel');
+        runsView.style.display = 'flex';
+        document.getElementById('page-title').textContent = '搜索记录与轮次';
+        document.getElementById('filter-state').textContent = `共 ${(DASH_STATE && DASH_STATE.runs ? DASH_STATE.runs.length : 0)} 个抓取批次归档`;
+        document.getElementById('btn-switch-view').textContent = '返回首页概览 ◂';
+        renderRuns();
+      } else if (mode === 'settings') {
+        currentView = 'settings';
+        shell.classList.remove('mode-three-panel');
+        settingsView.style.display = 'flex';
+        document.getElementById('page-title').textContent = '数据与系统设置';
+        document.getElementById('filter-state').textContent = '本地系统数据契约';
+        document.getElementById('btn-switch-view').textContent = '返回首页概览 ◂';
+        renderSettings();
+      } else {
+        // 三栏模式 (three-panel)
+        shell.classList.add('mode-three-panel');
+        jobListScroll.style.display = 'flex';
+        midToolbar.style.display = 'flex';
+        detailPanel.style.display = 'flex';
+        document.getElementById('btn-switch-view').textContent = '返回首页概览 ◂';
+
+        const titleMap = {
+          all: '全部岗位决策',
+          pending: '📥 待处理岗位',
+          shortlist: '⭐ 想投精选',
+          Evaluated: '🟡 已分析待决策',
+          Applied: '📤 已投递追踪',
+          Responded: '💬 招聘方回应',
+          Interview: '🎤 面试推进中',
+          Offer: '🎉 录用意向 (Offer)',
+          closed: '🗄️ 已放弃 / 淘汰池'
+        };
+        document.getElementById('page-title').textContent = titleMap[currentView] || '全部岗位决策';
+        renderJobList();
+      }
+
+      document.querySelectorAll('.nav-btn[data-page]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.page === currentView);
+      });
+      updateSidebarCounts();
+    }
+
+    // 事件绑定
+    initFilterOptions();
+
+    // 1. 侧边栏按钮点击
+    document.querySelectorAll('.nav-btn[data-page]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const page = btn.dataset.page;
+        if (page === 'dash') setView('dash');
+        else if (page === 'runs') setView('runs');
+        else if (page === 'settings') setView('settings');
+        else {
+          currentView = page;
+          setView('three-panel');
+        }
+      });
+    });
+
+    // 2. 概览 5 格推荐点击
+    document.querySelectorAll('.rec-cell-btn').forEach(cell => {
+      cell.addEventListener('click', () => {
+        selectedRec = cell.dataset.rec;
+        document.getElementById('rec-filter').value = selectedRec;
+        currentView = 'all';
+        setView('three-panel');
+      });
+    });
+
+    // 3. 搜索与工具栏
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      searchKeyword = e.target.value.trim();
+      renderJobList();
+    });
+    document.getElementById('rec-filter').addEventListener('change', (e) => {
+      selectedRec = e.target.value;
+      renderJobList();
+    });
+    document.getElementById('sort-by').addEventListener('change', (e) => {
+      sortBy = e.target.value;
+      renderJobList();
+    });
+    document.getElementById('district-filter').addEventListener('change', (e) => {
+      selectedDistrict = e.target.value;
+      renderJobList();
+    });
+    document.getElementById('salary-filter').addEventListener('change', (e) => {
+      selectedSalary = e.target.value;
+      renderJobList();
+    });
+    document.getElementById('status-filter').addEventListener('change', (e) => {
+      selectedStatus = e.target.value;
+      renderJobList();
+    });
+
+    // 只看想投按钮
+    const starToggleBtn = document.getElementById('btn-shortlist-toggle');
+    starToggleBtn.addEventListener('click', () => {
+      isShortlistOnly = !isShortlistOnly;
+      starToggleBtn.classList.toggle('active', isShortlistOnly);
+      renderJobList();
+    });
+
+    // 清除全部筛选
+    document.getElementById('btn-clear-filters').addEventListener('click', () => {
+      selectedRec = '';
+      selectedDistrict = '';
+      selectedSalary = '';
+      selectedStatus = '';
+      isShortlistOnly = false;
+      searchKeyword = '';
+      document.getElementById('search-input').value = '';
+      document.getElementById('rec-filter').value = '';
+      document.getElementById('district-filter').value = '';
+      document.getElementById('salary-filter').value = '';
+      document.getElementById('status-filter').value = '';
+      starToggleBtn.classList.remove('active');
+      renderJobList();
+    });
+
+    // 刷新与切换
+    document.getElementById('btn-refresh').addEventListener('click', async () => {
+      // 数据接线：刷新 = 重新拉一次 /api/state（保持当前视图与选中岗位），再走原来的重绘路径
+      await loadData().catch(err => {
+        console.error('刷新失败：', err);
+        DATA_ERROR = err && err.message ? err.message : String(err);
+      });
+      initFilterOptions();
+      updateSidebarCounts();
+      if (currentView === 'dash') renderDash();
+      else renderJobList();
+    });
+    document.getElementById('btn-switch-view').addEventListener('click', () => {
+      if (currentView === 'dash') {
+        currentView = 'all';
+        setView('three-panel');
+      } else {
+        setView('dash');
+      }
+    });
+    document.getElementById('btn-back-home').addEventListener('click', () => setView('dash'));
+
+    // 状态修改下拉菜单
+    const btnFlowStatus = document.getElementById('btn-flow-status');
+    const statusDropdownMenu = document.getElementById('status-dropdown-menu');
+    btnFlowStatus.addEventListener('click', (e) => {
+      e.stopPropagation();
+      statusDropdownMenu.classList.toggle('show');
+    });
+    document.querySelectorAll('.status-dropdown-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const job = MOCK_JOBS.find(j => j.id === activeJobId);
+        if (job) {
+          statusDropdownMenu.classList.remove('show');
+          changeStatus(job, item.dataset.status, item.dataset.zh);  // 数据接线：写回 /api/status（原为内存写）
+        }
+      });
+    });
+    document.addEventListener('click', () => statusDropdownMenu.classList.remove('show'));
+
+    // 初始化启动（数据接线：先取 /api/state，再走原来的启动逻辑；UI 行为不变）
+    updateSidebarCounts();   // 先把成品 HTML 里自带的示例计数清零，避免取数期间显示 mock 数字
+    await loadData().catch(err => {
+      console.error('Dashboard 数据加载失败：', err);
+      DATA_ERROR = err && err.message ? err.message : String(err);
+    });
+    initFilterOptions();   // 区域下拉依赖真实数据，取数后重建一次（幂等）
+    setView('dash');
+    if (DATA_ERROR) {
+      // 只复用既有的状态行文本位，不新增任何 DOM / 样式
+      const el = document.getElementById('filter-state');
+      if (el) el.textContent = `⚠ 数据加载失败：${DATA_ERROR}（请确认本地 server 已启动：npm run dashboard）`;
+    }
+  </script>
 </body>
 </html>

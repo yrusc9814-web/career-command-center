@@ -51,11 +51,19 @@ export function listSorted(dataDir, prefix, suffix) {
   } catch { return []; }
 }
 
-export function loadRuns(dataDir) {
-  return listSorted(dataDir, 'search-results-', '.json').map(p => {
-    const j = readJsonSafe(p);
-    return j ? { file: path.basename(p), ...j } : null;
-  }).filter(Boolean);
+// UI Preview Demo 的采集文件名标记（Demo 已隔离到 data-demo/，官方模式仍纵深防御）：
+// 2099-01-01 的 Demo 文件在字典序上永远排在真实文件之后，会抢占 latest，因此默认跳过；
+// 只有显式 demoMode 才把 ui-preview-demo 文件纳入聚合。
+export const DEMO_FILE_MARK = 'ui-preview-demo';
+
+export function loadRuns(dataDir, { includeDemo = false } = {}) {
+  return listSorted(dataDir, 'search-results-', '.json')
+    .filter(p => includeDemo || !path.basename(p).includes(DEMO_FILE_MARK))
+    .map(p => {
+      const j = readJsonSafe(p);
+      return j ? { file: path.basename(p), ...j } : null;
+    })
+    .filter(Boolean);
 }
 
 export function loadHistory(dataDir) {
@@ -195,11 +203,12 @@ function latestOf(files) { return files.length ? files[files.length - 1] : null;
 
 /**
  * 聚合 Dashboard 全量状态。
- * @param {object} p { dataDir, outputDir, reportsDir, inboxDir, profile, dashboardState }
+ * @param {object} p { dataDir, outputDir, reportsDir, inboxDir, profile, dashboardState, demoMode }
+ *   demoMode=true 时允许把 *ui-preview-demo* 采集文件纳入聚合（配合 data-demo/ 使用）。
  */
 export function buildState(p) {
   const { dataDir, outputDir, reportsDir, inboxDir, profile, dashboardState } = p;
-  const runs = loadRuns(dataDir);
+  const runs = loadRuns(dataDir, { includeDemo: !!p.demoMode });
   const history = loadHistory(dataDir);
   const appsText = readTextSafe(path.join(dataDir, 'applications.md')) || '';
   const appRows = parseApplications(appsText);
@@ -279,6 +288,7 @@ export function buildState(p) {
           blockers: a.blockers || null,                    // candidate-side blocker 布尔（只覆盖 Recommendation）
           hard_gaps: a.hard_gaps || null,                  // §22.1 四级：HARD_GAP
           soft_gaps: a.soft_gaps || null,                  // §22.1 四级：SOFT_GAP
+          interview_traps: a.interview_traps || null,    // 防雷真题（成品 UI 消费字段；此前白名单漏透传，Runtime 有则显示、无则维持隐藏，不重算）
           hard_requirements: a.hard_requirements || null,  // Eligibility 明细（透传备用）
           eligibility_status: a.eligibility_status || null,
           taxonomy: a.taxonomy || null,                    // Archetype/品类归档（透传）

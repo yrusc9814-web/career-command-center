@@ -1,0 +1,14 @@
+<svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#D97757">
+  <!-- 品牌雷达 C 字标（与 index.html 侧栏 avatar / landing.html hero 同一图形），
+       仅按 favicon 小尺寸加粗线宽，未引入新图标库。
+  <line x1="100" y1="14" x2="100" y2="186" stroke-width="10"/>
+  <line x1="14" y1="100" x2="186" y2="100" stroke-width="10"/>
+  <circle cx="100" cy="100" r="66" stroke-width="10"/>
+  <circle cx="146.7" cy="53.3" r="11" fill="#D97757" stroke="none"/>
+  <circle cx="53.3" cy="53.3" r="11" fill="#D97757" stroke="none"/>
+  <circle cx="53.3" cy="146.7" r="11" fill="#D97757" stroke="none"/>
+  <circle cx="146.7" cy="146.7" r="11" fill="#D97757" stroke="none"/>
+  <path d="M 136 86 L 152 86 A 54 54 0 1 0 152 114 L 136 114 A 38 38 0 1 1 136 86 Z" stroke-width="11"/>
+  <circle cx="100" cy="100" r="13" stroke-width="10"/>
+  <circle cx="100" cy="100" r="6" fill="#D97757" stroke="none"/>
+</svg>

@@ -318,21 +318,33 @@ test('UI1-UI3 计数从 jobs 派生：pending/Applied/Evaluated 任意切换语�
   assert.equal(c3.Applied, 1); assert.equal(c3.Evaluated, 2); assert.equal(c3.pending, 1); assert.equal(c3.all, 4);
 });
 
-test('UI4-UI5 当前页面同步语义（app.js 内容守卫）：pending 页过滤分支与 isList 白名单', () => {
-  const app = fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'dashboard-web', 'app.js'), 'utf8');
-  // pending 页 = status null 过滤（卡片即时出列）；all 页无 status 过滤（卡片保留）
-  assert.ok(app.includes("state.page === 'pending'"), 'pending 页过滤分支存在');
-  assert.ok(app.includes("jobs = jobs.filter(j => !j.status)"), 'pending = 无人工状态');
-  assert.ok(app.includes("['all', 'pending', 'shortlist', 'closed'"), 'isList 白名单含 pending');
-  assert.ok(!/state\.page === 'pending'.*\n.*filter\(j => j\.status\)/.test(app), 'all 页不得按 status 过滤');
+test('UI4-UI5 当前页面同步语义（成品单文件 UI）：pending 过滤分支与视图语义', () => {
+  const app = fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'dashboard-web', 'index.html'), 'utf8');
+  // 待处理 = 后端 status 为空；唯一映射点在数据边界 adapter（不在渲染层各写一套）
+  assert.ok(app.includes("status: j.status || 'pending'"), 'pending = 无人工状态（唯一映射点）');
+  assert.ok(app.includes("currentView === 'pending' && job.status !== 'pending'"), 'pending 视图过滤分支存在');
+  // all 视图不得按 status 过滤（否则写回后卡片会从全部岗位里消失）
+  assert.ok(!/currentView === 'all' && job\.status/.test(app), 'all 视图不得按 status 过滤');
+  // closed 池覆盖三类终止态
+  assert.ok(app.includes("['Discarded', 'SKIP', 'Rejected'].includes(job.status)"), 'closed 池含 Discarded/SKIP/Rejected');
 });
 
-test('UI6-UI7 计数无独立缓存：app.js 不存在 sidebarCounts/pendingCount 等可变计数变量', () => {
-  const app = fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'dashboard-web', 'app.js'), 'utf8');
+test('UI6-UI7 计数无独立缓存 + 写回一律走后端端点（成品单文件 UI）', () => {
+  const app = fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'dashboard-web', 'index.html'), 'utf8');
   assert.ok(!/const sidebarCounts|let pendingCount|let appliedCount/.test(app), '禁止独立计数缓存');
-  assert.ok(app.includes("$('#cnt-pending').textContent = counts.pending;"), '计数全部由 renderNav 从 counts 派生');
-  assert.ok(/statusMutating/.test(app), 'per-job 写回锁存在');
-  assert.ok(app.includes('await refresh(); // 全量重派生所有计数与列表'), '写回成功后全量 refresh');
+  assert.ok(app.includes('function updateSidebarCounts()'), '计数由单一函数现算');
+  assert.ok(/all: MOCK_JOBS\.length/.test(app), '计数全部由 MOCK_JOBS 派生');
+  // 三处写回（想投 / 状态 / 浏览）都打到后端，失败回滚，不在本地留假状态
+  assert.ok(app.includes("postJson('/api/shortlist'"), '想投写回 /api/shortlist');
+  assert.ok(app.includes("postJson('/api/status'"), '状态写回 /api/status');
+  assert.ok(app.includes("postJson('/api/last-viewed'"), '浏览上报 /api/last-viewed');
+  assert.ok(app.includes('job.shortlisted = prev;'), '想投写回失败必须回滚');
+  // 状态写回：失败必须回滚到「服务端已确认状态」，且同岗位写回串行化（per-job queue + request sequence），
+  // 旧请求的迟到响应/失败都不得污染最新意图。
+  assert.ok(/\.catch\(err => \{[\s\S]{0,400}Object\.assign\(job, ctl\.confirmed\)/.test(app), '状态写回失败必须回滚');
+  assert.ok(/const statusMutations = new Map\(\)/.test(app) && /if \(seq !== ctl\.seq\) return;/.test(app),
+    '状态写回必须具备同岗位串行 / 乱序响应保护');
+  assert.ok(!/job\.shortlisted = !job\.shortlisted;\s*\n\s*render/.test(app), '不得残留裸内存写');
 });
 
 // ---------------------------------------------------------------------------

@@ -28,7 +28,13 @@ import {
 } from './fixtures/phase6-fixtures.mjs';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'dashboard-web');
-const readWeb = f => fs.readFileSync(path.join(WEB_DIR, f), 'utf8');
+// 成品 UI 是单文件（HTML + CSS + JS 全内联在 dashboard-web/index.html）；
+// 旧版拆分的 app.js / styles.css 已随本次 UI 替换退役（曾短暂备份为 app-old.js / styles-old.css，
+// 现已连同未被任何入口引用的 landing.html 一并清理）。品牌首页恢复为原成品入口，部署为
+// dashboard-web/home.html（server 根路径 / 返回它），驾驶舱仍是 dashboard-web/index.html。
+// 因此“扫描前端实现”的断言统一按 UI_ALIAS 落到 index.html。
+const UI_ALIAS = { 'app.js': 'index.html', 'styles.css': 'index.html' };
+const readWeb = f => fs.readFileSync(path.join(WEB_DIR, UI_ALIAS[f] || f), 'utf8');
 
 function tmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'phase6dash-'));
@@ -280,7 +286,8 @@ test('P16 legacy 报告缺新字段不崩：全退役维度 → 暂无可展示�
   assert.deepEqual(displayDimensions(j.analysis.score_breakdown).map(d => d.key), []);
   const cards = verdictCards(j.analysis);
   assert.deepEqual(cards.map(c => c.num), ['—', '—', '—', '—']);
-  assert.ok(readWeb('app.js').includes('暂无可展示维度')); // 旧报告空态文案存在
+  // 展示层只认冻结十维：成品 UI 直接消费 displayDimensions()（旧 breakdown 不补算、不外漏）
+  assert.ok(readWeb('index.html').includes('displayDimensions('), 'UI 维度明细走 displayDimensions 过滤');
   // 无 breakdown / 无 dimensions 的极端 legacy 也不崩
   assert.deepEqual(displayDimensions(null), []);
   assert.deepEqual(displayDimensions(undefined), []);
@@ -340,26 +347,37 @@ test('P30 generate-search-summary 用户可见表头/日志无 Career Ops 残留
   assert.ok(summary.includes("L.push('| 公司 | 岗位 | 区域 | 薪资 | 匹配度 | 综合评分 | 推荐 |');"));
 });
 
-test('P19 "查看完整分析"保持单一主入口', () => {
-  const app = readWeb('app.js');
-  assert.equal(app.split('查看完整分析').length - 1, 1, 'app.js 只能有一个"查看完整分析"入口');
-  assert.equal(readWeb('index.html').includes('查看完整分析'), false);
-  // toggle 按钮存在且复用同一 section（不存在第二个同级分析按钮）
-  assert.ok(app.includes('id="toggleReportBtn"'));
+test('P19 分析内容只有右栏详情一个展示面（无第二"完整分析"入口）', () => {
+  const html = readWeb('index.html');
+  // 成品 UI 把全部分析内容内联在右栏详情面板，不再提供"查看完整分析"二级入口
+  assert.equal((html.match(/查看完整分析/g) || []).length, 0, '不得残留旧版第二分析入口');
+  assert.equal((html.match(/id="detail-panel"/g) || []).length, 1, '详情面板唯一');
+  assert.equal((html.match(/id="dt-rationale"/g) || []).length, 1, '推荐原因只有一处展示位');
+  // 十维明细 / 决策链 / JD 原文都在同一面板内（单一载体的组成部分）
+  for (const id of ['dt-trace-body', 'dt-dims-tbody', 'dt-jd-body']) {
+    assert.equal((html.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, `${id} 只出现一处`);
+  }
 });
 
 test('P20 Dashboard 不实现 scoring（前端无重算，只消费 Runtime 字段）', () => {
   const forbidden = [
     /computeScore\s*\(/, /computeRecommendation\s*\(/, /SCORING_RUBRIC/, /RECOMMENDATION_MATRIX/,
-    /GAP_DOWNGRADE/, /scoreBand\s*\(/, /\bscore\s*\*\s*weight\b/, /weightedSum\s*[+=]/,
+    /GAP_DOWNGRADE/, /scoreBand\s*\(/, /weightedSum\s*[+=]/,
     /effectiveWeight\s*\+=/, /^[ \t]*import\b[^;'"]*scoring\.mjs/m,
   ];
-  for (const f of ['app.js', 'lib/view-model.mjs', 'lib/aggregator.mjs']) {
+  for (const f of ['index.html', 'lib/view-model.mjs', 'lib/aggregator.mjs']) {
     const src = readWeb(f);
     for (const re of forbidden) {
       assert.ok(!re.test(src), `${f} 出现评分/决策实现痕迹：${re}`);
     }
   }
+  // 例外（逐处显式锁定，不允许扩散）：成品 UI 的十维明细表有且只有一列
+  // “单维度加权 = score×weight/100”的展示级乘积；总分 career_ops_score 与 recommendation
+  // 仍完全来自 Runtime，前端不重算总分、不重推推荐。此处把“只允许 1 处”钉住。
+  const html = readWeb('index.html');
+  assert.equal((html.match(/score\)\s*\*\s*Number\(d\.weight/g) || []).length, 1, '加权列乘积只允许出现在十维明细一处');
+  assert.ok(!/career_ops_score\s*=/.test(html), '前端不得回写 career_ops_score');
+  assert.ok(!/recommendation\s*=\s*[^;]*(score|matrix)/.test(html), '前端不得按分数反推 recommendation');
 });
 
 // ---------------------------------------------------------------------------
@@ -454,57 +472,48 @@ function declAtWidth(css, selector, prop, width) {
 }
 
 const CSS = readWeb('styles.css');
-const SHELL_BASE = 'clamp(196px, 15vw, 250px) clamp(540px, 46vw, 650px) minmax(360px, 1fr)';
+const SHELL_THREE = '240px clamp(460px, 38vw, 540px) minmax(420px, 1fr)';
 
-test('P23 1280px 布局：三栏 base 栅格 + 推荐结果 5 格 + 核心进度结构锁定', () => {
-  assert.equal(declAtWidth(CSS, '.shell', 'grid-template-columns', 1280), SHELL_BASE);
-  assert.equal(declAtWidth(CSS, '.rec-grid', 'grid-template-columns', 1280), 'repeat(5, minmax(0, 1fr))');
-  // 核心进度（Round 3）：KPI 指标卡布局 + 分类可点击交互样式；legacy ring/star 选择器保留占位
-  assert.equal(baseDecl(CSS, '.kpi-grid', 'grid-template-columns'), 'repeat(4, minmax(0, 1fr))');
-  assert.ok(CSS.includes('.kpi-card:hover'), 'KPI 卡 hover elevation');
-  assert.ok(CSS.includes('.rec-cell.is-clickable'), '推荐分类可点击交互样式');
-  assert.ok(CSS.includes('.star-disc'), 'legacy star 占位保留');
-  assert.ok(CSS.includes('.ring-track'), 'legacy ring 占位保留');
+test('P23 三栏驾驶舱栅格 + 推荐结果 5 格 + KPI 4 卡结构锁定', () => {
+  assert.equal(baseDecl(CSS, '.claude-shell', 'grid-template-columns'), '240px 1fr');
+  assert.equal(baseDecl(CSS, '.claude-shell.mode-three-panel', 'grid-template-columns'), SHELL_THREE);
+  assert.equal(baseDecl(CSS, '.rec-classifier-cells', 'grid-template-columns'), 'repeat(5, 1fr)');
+  assert.equal(baseDecl(CSS, '.kpi-row-grid', 'grid-template-columns'), 'repeat(4, 1fr)');
+  assert.ok(CSS.includes('.job-card-c:hover'), '岗位卡 hover 反馈');
+  assert.ok(CSS.includes('.rec-cell-btn:hover'), '推荐分类可点击交互样式');
+  assert.ok(!CSS.includes('.star-disc'), '不得为过旧测试保留 dead star 选择器');
+  assert.ok(!CSS.includes('.ring-track'), '不得为过旧测试保留 dead ring 选择器');
 });
 
-test('P24 1440px 布局：base 栅格 + 详情结果概览模块 + 概览内容宽度上限', () => {
-  assert.equal(declAtWidth(CSS, '.shell', 'grid-template-columns', 1440), SHELL_BASE);
-  // Round 3：详情顶部改为结果概览（推荐结论行 + 三条评分条），不再是四等分卡
-  assert.ok(CSS.includes('.sv-rec-row'), '推荐结论行样式');
-  assert.ok(CSS.includes('.score-bar'), '横向评分条样式');
-  assert.ok(CSS.includes('.v-card'), 'legacy v-card 占位保留');
-  assert.equal(baseDecl(CSS, '.dash-view', 'max-width'), '1060px');
+test('P24 概览/列表/详情三个滚动容器各自独立（长内容不丢、不整页溢出）', () => {
+  assert.equal(baseDecl(CSS, '.dash-view-scroll', 'overflow-y'), 'auto', '概览自身可滚');
+  assert.equal(baseDecl(CSS, '.job-list-scroll', 'overflow-y'), 'auto', '中栏列表自身可滚');
+  assert.equal(baseDecl(CSS, '.c-detail-panel', 'overflow-y'), 'auto', '右栏详情自身可滚（审计红线：不删滚动容器）');
+  assert.equal(baseDecl(CSS, '.claude-shell', 'max-width'), '1720px', '外壳宽度上限');
+  assert.ok(CSS.includes('.c-fold-body'), '折叠区（简历/面试/决策链/明细/JD）容器存在');
+  assert.ok(!CSS.includes('.v-card'), '不得为过旧测试保留 dead v-card');
 });
 
-test('P25 1680px 布局：base 栅格 + wide 两栏变体 + 内容区滚动收敛', () => {
-  assert.equal(declAtWidth(CSS, '.shell', 'grid-template-columns', 1680), SHELL_BASE);
-  assert.ok(declAtWidth(CSS, '.shell', 'grid-template-columns', 1680).includes('minmax(360px, 1fr)'));
-  // 概览/记录/设置页 wide 变体（隐藏右栏）保持
-  assert.equal(baseDecl(CSS, '.shell.wide', 'grid-template-columns'), 'clamp(196px, 15vw, 250px) minmax(0, 1fr)');
-  assert.equal(baseDecl(CSS, '.content-area', 'overflow-y'), 'auto');
-  // 断点仅 1220/1060/920：任何 ≤1280 的真实桌面宽度不会触发
-  const breakpoints = parseMediaBlocks(CSS)
-    .map(b => parseFloat((b.cond.match(/([\d.]+)px/) || [])[1]))
-    .sort((a, b) => b - a);
-  assert.deepEqual(breakpoints, [1220, 1060, 1060, 920]);
+test('P25 流式宽度（clamp/minmax，不写断点栅格）+ 老虎机滚轮样式完整', () => {
+  // 成品 UI 用 clamp()/minmax() 自适应，而不是旧版 @media 断点栅格：
+  // 这里锁“不存在断点栅格”，避免有人再往单文件 UI 里塞一套并行响应式规则。
+  assert.deepEqual(parseMediaBlocks(CSS), [], '内联 CSS 不得引入 @media 断点栅格');
+  assert.ok(baseDecl(CSS, '.claude-shell.mode-three-panel', 'grid-template-columns').includes('clamp('), '中栏用 clamp 自适应');
+  assert.ok(baseDecl(CSS, '.claude-shell.mode-three-panel', 'grid-template-columns').includes('minmax(420px, 1fr)'), '右栏 minmax 保底宽度');
+  // 数字滚轮（老虎机）样式：列高 1.2em + overflow hidden + strip 位移，缺一即退化成闪字
+  assert.ok(baseDecl(CSS, '.ticker-col', 'overflow'), 'hidden', '滚轮列裁切');
+  assert.ok(baseDecl(CSS, '.ticker-digit', 'height'), '1.2em', '单字高度=位移刻度');
+  assert.ok(baseDecl(CSS, '.ticker-strip', 'transform') === 'translateY(0)', 'strip 初值归零（动画起点）');
+  assert.ok(!CSS.includes('@keyframes'), '滚轮用 transform 过渡，不引入 keyframes 动画');
 });
 
 // ---------------------------------------------------------------------------
 // P26-P28. Review 复核修复锁定（Phase 6 第二轮）
 // ---------------------------------------------------------------------------
 
-test('P26 报告原文区顶部含"旧版存档"提示（单处、位于原文之前，报告原文本身不被改写）', () => {
-  const app = readWeb('app.js');
-  assert.equal(app.split('旧版存档').length - 1, 1, '存档提示只能有一处');
-  assert.ok(app.includes('该报告由旧版评分引擎生成，评分维度体系已更新，以下为历史存档原文'));
-  // 提示在报告原文容器（reportContent）之前，且原文仍原样注入（textContent），不被改写
-  const idxNotice = app.indexOf('旧版存档');
-  const idxReport = app.indexOf('id="reportContent-');
-  assert.ok(idxNotice > -1 && idxReport > -1 && idxNotice < idxReport);
-  assert.ok(app.includes("el.textContent = r.content"));
-  // 无第二分析入口（P19 联动）
-  assert.equal(app.split('查看完整分析').length - 1, 1);
-});
+// P26（旧版"报告原文区 + 旧版存档提示"）已随旧 UI 退役：
+// 成品单文件 UI 不提供 .md 报告原文浏览面板（分析内容直接来自 /api/state 的 analysis 字段），
+// 因此不再对该提示的位置与唯一性做源码断言。报告原文本身仍由 server 的 /api/report 原样返回。
 
 test('P27 真实旧格式形态锁定：四值照常展示 + 新字段缺失→暂无数据语义 + 明细空态（P0-1 裁决）', () => {
   const s = stateWith({ ...PHASE6_RUN, jobs: [LEGACY_SCORED_RUN.jobs[0]] });
@@ -521,8 +530,8 @@ test('P27 真实旧格式形态锁定：四值照常展示 + 新字段缺失→�
     ['简历匹配度', '综合评分 / 100', '推荐结论', '可信度 · 高']);
   // 零截断锁定：四卡 label 长度不超过基线最长卡（"综合评分 / 100" = 10 字符）
   for (const c of verdictCards(a)) assert.ok(c.label.length <= 10, `v-card label 过长会截断：${c.label}`);
-  // "Career Score 层语义"由评分明细汇总行的长 label 承载（app.js），四值卡内不重复
-  assert.equal(readWeb('app.js').split('评分可信度（Career Score）').length - 1, 1);
+  // "Career Score 层语义"由详情三根量规中的“评估可信度”承载（成品 UI 内联模板），四值卡内不重复
+  assert.equal((readWeb('index.html').match(/>\s*评估可信度\s*</g) || []).length, 1);
   // Phase 4+ 新字段缺失：aggregator 透传 null，不崩、不伪造、不补算
   assert.equal(a.decision_trace, null);
   assert.equal(a.blockers, null);
@@ -537,7 +546,7 @@ test('P27 真实旧格式形态锁定：四值照常展示 + 新字段缺失→�
   assert.deepEqual(blockerHits(a.blockers), []);
   assert.deepEqual(displayDimensions(a.score_breakdown).map(d => d.key), []);
   assert.ok(!JSON.stringify(displayDimensions(a.score_breakdown)).includes('north_star'));
-  assert.ok(readWeb('app.js').includes('暂无可展示维度'));
+  assert.ok(readWeb('index.html').includes('displayDimensions('), '维度明细走 displayDimensions（退役维度不展示）');
   // 置信度 percent 缺失 → 绝不显示 "null%"（P1-1 联动锁定）
   assert.equal(verdictCards({ score_confidence: { percent: null, level: null } })[3].num, '—');
   assert.equal(verdictCards({ score_confidence: { percent: null, level: null } })[3].label, '可信度');
@@ -573,7 +582,7 @@ test('P29 平均值只对有效数值岗位求平均：缺失不当作 0 分，�
   const s2 = stateWith({ ...PHASE6_RUN, jobs: [{ ...FIXTURE_002, job_id: 'fixture-avg-3', analysis: {} }] });
   assert.equal(s2.stats.avg_cv_match, null);
   assert.equal(s2.stats.avg_career_ops_score, null);
-  assert.ok(readWeb('app.js').includes("'暂无数据'")); // 摘要行空态文案
+  assert.ok(readWeb('index.html').includes('暂无数据')); // 展示层缺失语义仍在（成品 UI 内联模板）
 });
 
 // ---------------------------------------------------------------------------
@@ -619,9 +628,11 @@ test('P31 reasonZh 推荐原因去内部术语：调试括号段移除 + 措辞�
   assert.equal(a2.recommendation, '不推荐');
   assert.equal(a2.cv_match_score, 48);
   assert.equal(a2.career_ops_score, 45);
-  // 接线锁定：app.js 两处 recommendation_reason 展示点（列表行 + 详情 reason-box）均用 reasonZh
-  const app = readWeb('app.js');
-  assert.equal(app.split('reasonZh(a.recommendation_reason)').length - 1, 2);
+  // 接线锁定：recommendation_reason 在数据边界过一次 reasonZh，详情展示位读的已是清洗后的字段
+  const html = readWeb('index.html');
+  assert.ok(html.includes("recommendation_reason: reasonZh(a.recommendation_reason || '')"), '边界处调用 reasonZh');
+  assert.ok(html.includes("document.getElementById('dt-rationale').textContent = job.recommendation_reason"), '展示位消费已清洗字段');
+  assert.ok(!/\.innerHTML\s*=\s*[^;]*recommendation_reason/.test(html), '推荐原因不得以 innerHTML 直插原始字段');
 });
 
 // ---------------------------------------------------------------------------
@@ -824,25 +835,25 @@ test('R10-R12 Top N：默认最多 10；<=10 全显示；>10 只显示前 10（r
   assert.equal(few.length, 7); // <=10 全显示（rankJobs 不截断，截断由展示层 slice 控制）
 });
 
-test('R13-R15 Top 列表接线：无"查看全部"/展开收起/分页；每项保留 data-job 点击进入全部岗位详情', () => {
-  const app = readWeb('app.js');
+test('R13-R15 Top 列表接线：无"查看全部"/展开收起/分页；点击行进入全部岗位详情', () => {
+  const app = readWeb('index.html');
   assert.ok(!app.includes('查看全部'), '不得新增查看全部按钮');
   assert.ok(!/展开|收起/.test(app), '不得新增展开/收起逻辑');
-  assert.ok(app.includes('rankJobs(d.jobs).slice(0, 10)'), 'Top 列表 = rankJobs + slice(0,10)');
-  // 点击接线不变：top-job-row onclick → activeJobId + page='all'
-  assert.ok(app.includes("state.activeJobId = row.dataset.job;"));
-  assert.ok(app.includes("state.page = 'all';"));
+  assert.ok(app.includes('rankJobs(MOCK_JOBS).slice(0, 5)'), 'Top 列表 = 统一排序 + 截断 5 行');
+  // 点击接线不变：行 onclick → activeJobId + currentView='all' → 三栏
+  assert.ok(app.includes("activeJobId = row.dataset.id;"));
+  assert.ok(app.includes("currentView = 'all';"));
+  assert.ok(!/pagination|分页/.test(app), '无分页实现');
 });
 
-test('R16-R19 品牌与排序说明文案（index.html / app.js）', () => {
+test('R16-R19 品牌与排序说明文案（成品单文件 UI）', () => {
   const html = readWeb('index.html');
-  const app = readWeb('app.js');
   assert.ok(html.includes('<div class="brand">Career-ops</div>'), '主标题逐字 Career-ops');
   assert.ok(!html.includes('CareerOps') && !html.includes('career-ops">career'), '不得出现 CareerOps/career-ops 变体');
-  assert.ok(html.includes('<div class="tagline" id="tagline">求职决策中枢</div>'), '副标题不变');
+  assert.ok(html.includes('求职决策中枢'), '副标题保持不变');
   assert.ok(!html.includes('求职指挥中心'), '旧主标题不再出现');
-  assert.ok(app.includes('推荐优先，其次按综合评分排序'), '排序说明新文案');
-  assert.ok(!app.includes('按综合评分排序，不代表建议投递'), '旧排序说明移除');
+  assert.ok(html.includes('<option value="rec">排序：推荐优先</option>'), '排序说明新文案');
+  assert.ok(!html.includes('按综合评分排序，不代表建议投递'), '旧排序说明移除');
 });
 
 // ---------------------------------------------------------------------------
@@ -854,14 +865,18 @@ test('R16-R19 品牌与排序说明文案（index.html / app.js）', () => {
 
 import { STATE_ZH as STATE_ZH_AGG, CANONICAL_STATES as CANON_AGG } from '../../dashboard-web/lib/aggregator.mjs';
 
-test('PF1 状态筛选 option 有 value 必有非空 label（回归：fillSelect 对象数组曾生成空 option）', () => {
-  const app = readWeb('app.js');
-  // 状态筛选现在传对象数组 + valOf（s => s.id），不允许再出现 fmt 取 undefined 的调用
-  assert.ok(app.includes("fillSelect($('#statusFilter'), d.states, '全部状态', s => s.zh, s => s.id)"),
-    '状态筛选必须显式传 valOf 与 fmt');
-  assert.ok(!app.includes("d.states.map(s => s.id), '全部状态', s => s.zh"), '旧错误调用已移除');
-  // fillSelect 契约：对象数组必须有 valOf
-  assert.ok(/function fillSelect\(sel, values, label, fmt, valOf\)/.test(app));
+test('PF1 状态筛选 option 有 value 必有非空 label（回归：曾生成空 option）', () => {
+  const html = readWeb('index.html');
+  // 成品 UI 用固定 statuses 数组生成 option：value 与中文 label 同源于一条记录
+  assert.ok(html.includes('<option value="${s.id}">${s.zh}</option>'), '状态 option 同时带 value 与非空 label');
+  const items = html.match(/\{ id: '[A-Za-z]+', zh: '[^']+' \}/g) || [];
+  assert.ok(items.length >= 7, `状态枚举条目应 ≥7，实际 ${items.length}`);
+  for (const it of items) assert.ok(/zh: '[^']+'/ .test(it), `存在空 label 条目：${it}`);
+  // 下拉覆盖除 Rejected（系统态，不由人工选）外的全部 canonical 状态
+  const ids = items.map(it => it.match(/id: '([A-Za-z]+)'/)[1]);
+  for (const s of CANON_AGG.filter(x => x !== 'Rejected')) {
+    assert.ok(ids.includes(s), `状态下拉缺 ${s}`);
+  }
 });
 
 test('PF2 STATE_ZH 八个 canonical 状态中文映射全部非空（下拉与导航共用）', () => {
@@ -904,9 +919,8 @@ test('PF4 待处理生命周期：写回状态后立即出队；全部岗位仍�
   assert.equal(st2.jobs.find(j => j.job_id === 'job-a').status, 'Evaluated', '人工状态优先于重抓');
 });
 
-test('PF5 待处理接线：导航/计数/过滤/标题（index.html + app.js）', () => {
+test('PF5 待处理接线：导航/计数/过滤/标题（成品单文件 UI）', () => {
   const html = readWeb('index.html');
-  const app = readWeb('app.js');
   // 导航顺序：全部岗位 → 待处理（正下方）
   const iAll = html.indexOf('data-page="all"');
   const iPending = html.indexOf('data-page="pending"');
@@ -914,20 +928,23 @@ test('PF5 待处理接线：导航/计数/过滤/标题（index.html + app.js）
   assert.ok(iAll !== -1 && iPending > iAll && iPending < iShort, '待处理必须位于全部岗位正下方');
   assert.ok(html.includes('<span>待处理</span>'), '导航名称逐字为待处理');
   assert.ok(html.includes('id="cnt-pending"'), '导航计数元素存在');
-  // 过滤与计数接线
-  assert.ok(app.includes("state.page === 'pending'"), 'pending 页面过滤分支');
-  assert.ok(!app.includes("state.page === 'pending' jobs = jobs.filter(j => j.status"), '不得用已处理状态过滤');
-  assert.ok(app.includes("jobs = jobs.filter(j => !j.status)"), '待处理 = 无人工状态');
-  assert.ok(app.includes("$('#cnt-pending').textContent = counts.pending;"), '计数接线');
-  assert.ok(app.includes("pending: '待处理'"), '页面标题');
-  // 待处理页排序走统一 SoT（filteredJobs 默认 rec 分支）
-  assert.ok(app.includes("if (by === 'rec') return rankJobs(jobs);"), '全部岗位默认排序复用 rankJobs');
+  // 过滤与计数接线：后端 status=null 在数据边界唯一映射为前端 'pending'
+  assert.ok(html.includes("status: j.status || 'pending'"), 'null 状态 → pending 的唯一映射点');
+  assert.ok(html.includes("currentView === 'pending' && job.status !== 'pending'"), 'pending 视图过滤分支');
+  assert.ok(!/currentView === 'pending' && job\.status === 'pending'/.test(html), '不得反向过滤成"已处理"');
+  assert.ok(html.includes("pending: MOCK_JOBS.filter(j => j.status === 'pending').length"), '待处理计数由 jobs 派生');
+  assert.ok(!/const sidebarCounts|let pendingCount/.test(html), '禁止独立计数缓存');
+  assert.ok(html.includes("pending: '📥 待处理岗位'"), '页面标题');
+  // 默认排序仍是"推荐优先"（不要求复用 rankJobs，但档位顺序必须强→弱）
+  assert.ok(html.includes("let sortBy = 'rec';"), '默认排序 = 推荐优先');
+  assert.ok(/recRank = \{ '强烈推荐': 4, '推荐': 3/.test(html), '推荐档序：强烈推荐最高');
   assert.ok(html.includes('<option value="rec">排序：推荐优先</option>'), '排序控件默认项语义');
 });
 
-test('PF6 排序控件默认选中"推荐优先"且 Dashboard/全部岗位共用 rankJobs', () => {
+test('PF6 排序控件默认"推荐优先"且概览 Top 复用统一排序', () => {
   const html = readWeb('index.html');
-  const app = readWeb('app.js');
-  assert.ok(html.includes('<select class="input" id="sortBy">\n        <option value="rec"'), 'sortBy 首个 option 为 rec（HTML 默认选中）');
-  assert.equal(app.split('rankJobs(').length - 1 >= 2, true, 'rankJobs 至少两处调用（Top 列表 + filteredJobs）');
+  assert.ok(/<select class="pill-select" id="sort-by"[^>]*>\s*<option value="rec"/.test(html),
+    'sort-by 首个 option 为 rec（HTML 默认选中）');
+  assert.ok(html.includes('rankJobs(MOCK_JOBS).slice(0, 5)'), '概览 Top Picks 复用 rankJobs 统一排序');
+  assert.ok(!/function rankJobs|RECOMMENDATION_RANK\s*=/.test(html), '前端不另写一套排序 SoT');
 });

@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAREER-OPS // 求职决策中枢</title>
+  <style>
+    :root {
+      --font-grotesk: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+      
+      --bg-dark: #0D0D0C;
+      --bg-surface: #141413;
+      --bg-card: #1A1A18;
+      --bg-card-hover: #222220;
+      
+      --border-dark: rgba(255, 255, 255, 0.09);
+      --border-subtle: rgba(255, 255, 255, 0.05);
+      --border-highlight: rgba(255, 255, 255, 0.22);
+      
+      --text-white: #EFEEEC;
+      --text-muted: #8E8A82;
+      --text-dim: #555552;
+      
+      --accent-terracotta: #D97757;
+      --accent-olive: #4E785C;
+      --accent-gold: #C29B38;
+      
+      --radius-pill: 9999px;
+      --radius-card: 16px;
+      --radius-sm: 8px;
+      
+      --ease-monolog: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-white);
+      font-family: var(--font-grotesk);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ═══ 1. 动态电影级胶片微噪点 (Animated Film Grain · 会动的背景) ═══ */
+    .grain-overlay {
+      position: fixed;
+      top: -40px;
+      left: -40px;
+      width: calc(100% + 80px);
+      height: calc(100% + 80px);
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.045'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 100;
+      animation: grainShimmer 0.35s steps(4) infinite;
+    }
+    @keyframes grainShimmer {
+      0% { transform: translate(0, 0); }
+      25% { transform: translate(-4px, 3px); }
+      50% { transform: translate(3px, -4px); }
+      75% { transform: translate(-3px, -2px); }
+      100% { transform: translate(0, 0); }
+    }
+
+    /* ═══ 2. 动态多核极光与流体动量星流画布 (Fluid Aurora & Momentum Particle Canvas) ═══ */
+    .ambient-stage {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+    #ambient-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* ═══ 顶栏导航 (极简留白 · 仅保留品牌与启动主按钮) ═══ */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(13, 13, 12, 0.78);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 44px;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+    }
+    /* 先锋极宽野兽派艺术字标 (Brutalist Extended with Radar Target ⊙) */
+    .nav-brand-brutalist {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif;
+      font-size: 19px;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      color: #EFEEEC;
+      text-transform: uppercase;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      transform: scaleY(1.15);
+      transform-origin: left center;
+      transition: opacity 0.2s;
+    }
+    .nav-brand-brutalist:hover {
+      opacity: 0.88;
+    }
+    .nav-brand-brutalist .brand-radar-o {
+      color: inherit;
+      font-size: 1.02em;
+      line-height: 1;
+      margin: 0 1px;
+      display: inline-block;
+      position: relative;
+      top: -0.5px;
+    }
+
+    /* ═══ Monolog 极简暗黑侧边栏 (Slide-out Sidebar Drawer) ═══ */
+    .drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s var(--ease-monolog);
+    }
+    .drawer-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .monolog-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: min(400px, 92vw);
+      height: 100vh;
+      background: #131311;
+      border-left: 1px solid var(--border-dark);
+      z-index: 210;
+      transform: translateX(100%);
+      transition: transform 0.35s var(--ease-monolog);
+      display: flex;
+      flex-direction: column;
+      padding: 32px 28px;
+      box-shadow: -12px 0 50px rgba(0, 0, 0, 0.7);
+      overflow-y: auto;
+    }
+    .monolog-drawer.active {
+      transform: translateX(0);
+    }
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 24px;
+    }
+    .dh-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+    .dh-close {
+      background: transparent;
+      border: 1px solid var(--border-dark);
+      color: var(--text-muted);
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+    .dh-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    .drawer-metrics-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .dml-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-dark);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s ease;
+    }
+    .dml-card:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: var(--border-highlight);
+    }
+    .dml-card.highlight {
+      border-color: rgba(217, 119, 87, 0.4);
+      background: rgba(217, 119, 87, 0.05);
+    }
+    .dml-info .label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-white);
+      margin-bottom: 2px;
+    }
+    .dml-info .sub {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .dml-val {
+      font-family: var(--font-mono);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-white);
+    }
+    .dml-card.highlight .dml-val {
+      color: var(--accent-terracotta);
+    }
+
+    /* 右侧控制与核心主按钮 (图 3 规范) */
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .sound-chip {
+      width: 34px;
+      height: 34px;
+      border-radius: 6px;
+      border: 1px solid var(--border-dark);
+      background: rgba(255, 255, 255, 0.03);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .btn-launch-cockpit {
+      background: #FFFFFF;
+      color: #0D0D0C;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 8px 18px;
+      border-radius: var(--radius-pill);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      transition: transform 0.25s var(--ease-monolog), opacity 0.2s;
+    }
+    .btn-launch-cockpit:hover {
+      transform: scale(1.02);
+      opacity: 0.95;
+    }
+    .btn-launch-cockpit .arrow-icon {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      transition: transform 0.25s ease;
+    }
+    .btn-launch-cockpit:hover .arrow-icon {
+      transform: translate(2px, -2px);
+    }
+
+    /* ═══ 顶栏 Navbar 居中菜单与药丸徽标 ═══ */
+    .nav-center-menu {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+    .nav-center-menu li a {
+      font-size: 13px;
+      font-weight: 500;
+      color: #C5C2BA;
+      text-decoration: none;
+      letter-spacing: 0.04em;
+      transition: color 0.2s ease;
+    }
+    .nav-center-menu li a:hover {
+      color: #FFFFFF;
+    }
+
+    .btn-launch-cockpit .arrow-box {
+      width: 18px;
+      height: 18px;
+      background: #0D0D0C;
+      border-radius: 4px;
+      color: #FFFFFF;
+      display: inline-grid;
+      place-items: center;
+      font-size: 11px;
+      font-family: monospace;
+      margin-left: 4px;
+    }
+
+    /* ═══ 首屏 Hero 舞台 (参考 Monolog 100vh 疏朗留白架构) ═══ */
+    .hero-stage {
+      height: 100vh;
+      min-height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0;
+      margin: 0;
+      position: relative;
+      overflow: hidden;
+      z-index: 10;
+      box-sizing: border-box;
+    }
+
+    .hero-center-box {
+      margin-top: calc(68px + 5.5vh);
+      max-width: 680px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      z-index: 20;
+    }
+
+    /* 专属白色超细线框雷达 C 标 (52px 精致克制) */
+    .radar-compass-wrapper {
+      width: 86px;
+      height: 86px;
+      display: grid;
+      place-items: center;
+      color: #C5C2BA;
+      margin-bottom: 26px;
+    }
+    .radar-compass-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 居中双段落诗性宣言 (加大2号：18.5px · 加粗 font-weight:600 · 质感微亮暖银白) */
+    .hero-manifesto {
+      font-size: 18.5px;
+      font-weight: 600;
+      line-height: 1.88;
+      color: #E2DFD8;
+      letter-spacing: 0.03em;
+      text-align: center;
+    }
+    .hero-manifesto p {
+      margin: 0;
+    }
+    .hero-manifesto p + p {
+      margin-top: 24px;
+    }
+
+    /* 底部巨幕字标 (100vw 左右贴边 · 基线沉底 · 占屏约 43% 挺拔从容比例) */
+    .hero-bottom-brand {
+      width: 100vw;
+      margin: 0;
+      padding: 0;
+      line-height: 0;
+      user-select: none;
+      pointer-events: none;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 15;
+    }
+    .hero-bottom-brand svg {
+      width: 100vw;
+      height: clamp(260px, 43vh, 450px);
+      display: block;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ═══ 向下滚动：快速透视与直达区域 ═══ */
+    .section-preview {
+      max-width: 1360px;
+      margin: 80px auto 120px;
+      padding: 0 40px;
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .sp-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-bottom: 1px solid var(--border-dark);
+      padding-bottom: 18px;
+    }
+    .sp-title h3 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .sp-title p {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* 精选标的卡片网格 */
+    .top-picks-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    @media (max-width: 900px) {
+      .top-picks-grid { grid-template-columns: 1fr; }
+    }
+
+    .tp-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-dark);
+      border-radius: var(--radius-card);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 18px;
+      transition: transform 0.3s var(--ease-monolog), border-color 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
+    .tp-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--border-highlight);
+      background: var(--bg-card-hover);
+    }
+    .tp-badge-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .tp-rank {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 12px;
+      color: var(--accent-terracotta);
+    }
+    .tp-score-chip {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 2px 8px;
+      border-radius: var(--radius-pill);
+    }
+
+    .tp-body h4 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .tp-role {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+    .tp-salary {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent-terracotta);
+    }
+
+    .tp-cta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .tp-card:hover .tp-cta {
+      color: var(--text-white);
+    }
+
+    /* 底部通栏启动条 */
+    .cockpit-gateway-banner {
+      background: linear-gradient(180deg, rgba(26, 26, 24, 0.6) 0%, rgba(20, 20, 19, 0.95) 100%);
+      border: 1px solid var(--border-dark);
+      border-radius: var(--radius-card);
+      padding: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+    .cgb-info h4 {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .cgb-info p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. 动态胶片微噪点 (Animated Film Grain) -->
+  <div class="grain-overlay"></div>
+
+  <!-- 2. 动态多核极光与流体动量星流画布 (Fluid Aurora & Momentum Particle Canvas) -->
+  <div class="ambient-stage">
+    <canvas id="ambient-canvas"></canvas>
+  </div>
+
+  <!-- ═══ 顶栏导航 (极简留白 · 仅保留品牌与启动主按钮) ═══ -->
+  <header class="navbar">
+    <div class="nav-left">
+      <a href="/home.html" class="nav-brand-brutalist">CAREER-<span class="brand-radar-o">⊙</span>PS</a>
+    </div>
+
+    <!-- 右侧仅保留启动驾驶舱主按钮 -->
+    <div class="nav-right">
+
+      <a href="/index.html" class="btn-launch-cockpit">
+        <span>启动驾驶舱</span>
+        <span class="arrow-box">↗</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- ═══ 首屏 Hero 舞台 ═══ -->
+  <main class="hero-stage">
+    
+    <div class="hero-center-box">
+      <!-- 专属白色线条雷达 C 字标 / 态势感知中枢 (1:1 纯白极细高精线框) -->
+      <div class="radar-compass-wrapper" title="CAREER-OPS // 态势感知中枢">
+        <svg class="radar-compass-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="100" y1="14" x2="100" y2="186" stroke="#B8B5AD" stroke-width="1.1"/>
+          <line x1="14" y1="100" x2="186" y2="100" stroke="#B8B5AD" stroke-width="1.1"/>
+          <circle cx="100" cy="100" r="66" stroke="#B8B5AD" stroke-width="1.1"/>
+          <circle cx="146.7" cy="53.3" r="3" fill="#B8B5AD"/>
+          <circle cx="53.3" cy="53.3" r="3" fill="#B8B5AD"/>
+          <circle cx="53.3" cy="146.7" r="3" fill="#B8B5AD"/>
+          <circle cx="146.7" cy="146.7" r="3" fill="#B8B5AD"/>
+          <path d="M 136 86 L 152 86 A 54 54 0 1 0 152 114 L 136 114 A 38 38 0 1 1 136 86 Z" stroke="#B8B5AD" stroke-width="1.3"/>
+          <circle cx="100" cy="100" r="12" stroke="#B8B5AD" stroke-width="1.1"/>
+          <circle cx="100" cy="100" r="4" fill="#B8B5AD"/>
+        </svg>
+      </div>
+
+      <!-- 居中文案 (参考 Monolog 两段式诗性排版，温暖银灰，从容留白) -->
+      <div class="hero-manifesto">
+        <p>
+          实时捕获全网岗位<br>
+          多维模型深度研判<br>
+          还原你真实的职业身价。
+        </p>
+        <p>
+          对于那些清晰笃定的求职者而言<br>
+          海量分散的数据<br>
+          终将沉淀为精准的决策。
+        </p>
+      </div>
+    </div>
+
+    <!-- 底部巨幅先锋字标 (100vw 贴死左右 · 软曲率微圆角 · 占屏约 34% 舒适矮版比例) -->
+    <div class="hero-bottom-brand">
+      <svg viewBox="0 0 1600 310" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+        <!-- 第一行：CAREER (软曲率微圆角 · 左右贴满 0 ~ 1600 · 实体哑光暖石灰) -->
+        <!-- C: 0 to 245 -->
+        <path d="M 245 96 C 245 44, 180 25, 122 25 C 45 25, 0 70, 0 145 L 0 175 C 0 250, 45 265, 122 265 C 180 265, 245 246, 245 194 L 194 194 C 194 212, 162 220, 122 220 C 78 220, 54 192, 54 160 L 54 130 C 54 98, 78 70, 122 70 C 162 70, 194 78, 194 96 Z" fill="#827F79"/>
+        <!-- A: 272 to 522 -->
+        <path d="M 364 32 C 380 24, 414 24, 430 32 L 522 256 C 522 261, 518 265, 514 265 L 468 265 C 464 265, 460 262, 458 256 L 436 195 L 358 195 L 336 256 C 334 262, 330 265, 326 265 L 280 265 C 276 265, 272 261, 272 256 Z M 397 88 L 422 160 L 372 160 Z" fill="#827F79"/>
+        <!-- R1: 550 to 798 -->
+        <path d="M 550 32 C 550 28, 554 25, 558 25 L 710 25 C 762 25, 796 55, 796 95 C 796 135, 762 162, 710 162 L 604 162 L 604 258 C 604 262, 600 265, 596 265 L 558 265 C 554 265, 550 262, 550 258 Z M 604 68 L 700 68 C 728 68, 744 78, 744 95 C 744 112, 728 122, 700 122 L 604 122 Z M 672 154 L 742 258 C 744 262, 748 265, 752 265 L 794 265 C 798 265, 800 261, 798 257 L 722 154 Z" fill="#827F79"/>
+        <!-- E1: 826 to 1052 -->
+        <path d="M 826 32 C 826 28, 830 25, 834 25 L 1046 25 C 1050 25, 1052 28, 1052 32 L 1052 62 C 1052 66, 1050 68, 1046 68 L 898 68 C 885 68, 880 75, 880 88 L 880 122 C 880 135, 885 140, 898 140 L 1020 140 C 1024 140, 1026 142, 1026 146 L 1026 176 C 1026 180, 1024 182, 1020 182 L 898 182 C 885 182, 880 187, 880 200 L 880 234 C 880 247, 885 254, 898 254 L 1046 254 C 1050 254, 1052 256, 1052 260 L 1052 260 C 1052 263, 1050 265, 1046 265 L 834 265 C 830 265, 826 263, 826 260 Z" fill="#827F79"/>
+        <!-- E2: 1082 to 1308 -->
+        <path d="M 1082 32 C 1082 28, 1086 25, 1090 25 L 1302 25 C 1306 25, 1308 28, 1308 32 L 1308 62 C 1308 66, 1306 68, 1302 68 L 1154 68 C 1141 68, 1136 75, 1136 88 L 1136 122 C 1136 135, 1141 140, 1154 140 L 1276 140 C 1280 140, 1282 142, 1282 146 L 1282 176 C 1282 180, 1280 182, 1276 182 L 1154 182 C 1141 182, 1136 187, 1136 200 L 1136 234 C 1136 247, 1141 254, 1154 254 L 1302 254 C 1306 254, 1308 256, 1308 260 L 1308 260 C 1308 263, 1306 265, 1302 265 L 1090 265 C 1086 265, 1082 263, 1082 260 Z" fill="#827F79"/>
+        <!-- R2: 1338 to 1600 (贴死最右边缘 x=1600) -->
+        <path d="M 1338 32 C 1338 28, 1342 25, 1346 25 L 1502 25 C 1558 25, 1592 55, 1592 95 C 1592 135, 1558 162, 1502 162 L 1392 162 L 1392 258 C 1392 262, 1388 265, 1384 265 L 1346 265 C 1342 265, 1338 262, 1338 258 Z M 1392 68 L 1494 68 C 1522 68, 1538 78, 1538 95 C 1538 112, 1522 122, 1494 122 L 1392 122 Z M 1464 154 L 1536 258 C 1538 262, 1542 265, 1546 265 L 1596 265 C 1600 265, 1602 261, 1600 257 L 1518 154 Z" fill="#827F79"/>
+
+        <!-- 第二行：COMMAND CENTER (精致小字衬托 · 大字距居中) -->
+        <text x="800" y="292" text-anchor="middle" font-size="14.5" font-weight="600" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" letter-spacing="0.52em" fill="#6E6B65">COMMAND CENTER</text>
+      </svg>
+    </div>
+
+  </main>
+
+  <!-- ═══ 向下滚动：快速透视区 ═══ -->
+  <!-- 数据接线：本区块业务数据（岗位/公司/评分/薪资/Recommendation/状态/计数）不再硬编码，
+       由页尾数据接线脚本从 /api/state 读取后渲染进与原成品逐字一致的 tp-card DOM 结构；
+       无岗位（正式空数据 / 取数失败）时整块隐藏，绝不展示假岗位/假分数。 -->
+  <section class="section-preview" id="section-preview">
+    
+    <div class="sp-header">
+      <div class="sp-title">
+        <h3>今日重点裁决标的</h3>
+        <p>已通过硬红线筛除与资格对标，可直接进入三栏系统进行深度四层推理与状态流转</p>
+      </div>
+      <a href="/index.html" id="tp-all-link" style="color:var(--text-white);font-size:12px;font-family:var(--font-mono);text-decoration:none">
+        进入全部决策流 (0个) ↗
+      </a>
+    </div>
+
+    <!-- 精选推荐卡片：结构与原成品 tp-card 完全一致，内容由 /api/state 数据渲染 -->
+    <div class="top-picks-grid" id="top-picks-grid"></div>
+
+  </section>
+
+  <script>
+    // ════ 动态多核极光与流体动量星流算法引擎 (Fluid Aurora & Momentum Flow Engine · 方案三定版) ════
+    (function () {
+      const canvas = document.getElementById('ambient-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      let animTime = 0;
+
+      // 鼠标坐标与平滑瞬时速度向量
+      const mouse = {
+        x: window.innerWidth * 0.5,
+        y: window.innerHeight * 0.5,
+        vx: 0,
+        vy: 0,
+        lastX: window.innerWidth * 0.5,
+        lastY: window.innerHeight * 0.5,
+        isMoving: false,
+        idleTimer: null
+      };
+
+      window.addEventListener('mousemove', (e) => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+
+        const rawVx = mouse.x - mouse.lastX;
+        const rawVy = mouse.y - mouse.lastY;
+
+        // 平滑速度滤波，避免突变抖动
+        mouse.vx += (rawVx - mouse.vx) * 0.45;
+        mouse.vy += (rawVy - mouse.vy) * 0.45;
+
+        mouse.lastX = mouse.x;
+        mouse.lastY = mouse.y;
+        mouse.isMoving = true;
+
+        clearTimeout(mouse.idleTimer);
+        mouse.idleTimer = setTimeout(() => {
+          mouse.isMoving = false;
+        }, 100);
+      }, { passive: true });
+
+      /* ══════════════════════════════════════════════════════════
+         全屏均匀分布的高精粒子系统 (260 颗，0% 聚集死角)
+         ══════════════════════════════════════════════════════════ */
+      const PARTICLE_COUNT = 260;
+      const particles = [];
+
+      function initParticles() {
+        particles.length = 0;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          particles.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            // 初始本底慢速漂浮速度
+            baseVx: (Math.random() - 0.5) * 0.32,
+            baseVy: (Math.random() - 0.5) * 0.32,
+            // 交互受力动量增量
+            extraVx: 0,
+            extraVy: 0,
+            size: Math.random() * 1.5 + 0.65,
+            baseAlpha: Math.random() * 0.45 + 0.2,
+            pulseSpeed: Math.random() * 0.02 + 0.01,
+            pulseOffset: Math.random() * Math.PI * 2,
+            isTerracotta: Math.random() > 0.8
+          });
+        }
+      }
+
+      function render() {
+        animTime += 0.009;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // ════ 1. 底层：非对称多核极光柔和漫射 (四角外围分布，中心开阔通透) ════
+        const lobes = [
+          { x: w * 0.22 + Math.sin(animTime * 0.7) * 120, y: h * 0.28 + Math.cos(animTime * 0.5) * 80, r: 540, color: 'rgba(217, 119, 87, 0.09)' },
+          { x: w * 0.78 + Math.cos(animTime * 0.6) * 140, y: h * 0.36 + Math.sin(animTime * 0.8) * 100, r: 620, color: 'rgba(78, 120, 92, 0.07)' },
+          { x: w * 0.48 + Math.sin(animTime * 0.9) * 90, y: h * 0.88 + Math.cos(animTime * 0.4) * 60, r: 580, color: 'rgba(194, 155, 56, 0.05)' }
+        ];
+
+        lobes.forEach(l => {
+          const grad = ctx.createRadialGradient(l.x, l.y, 0, l.x, l.y, l.r);
+          grad.addColorStop(0, l.color);
+          grad.addColorStop(1, 'rgba(13, 13, 12, 0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(l.x, l.y, l.r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // 鼠标速度阻尼衰减（光标静止后平滑归零）
+        if (!mouse.isMoving) {
+          mouse.vx *= 0.86;
+          mouse.vy *= 0.86;
+        }
+
+        // ════ 2. 表层：流体动量跟手随动粒子 ════
+        const mSpeed = Math.hypot(mouse.vx, mouse.vy);
+
+        particles.forEach(p => {
+          // 宏观深空暗流场微弱波动
+          const flowAngle = Math.sin(p.x * 0.0025 + animTime * 0.8) + Math.cos(p.y * 0.0025 + animTime * 0.6);
+          p.baseVx += Math.cos(flowAngle) * 0.015;
+          p.baseVy += Math.sin(flowAngle) * 0.015;
+          p.baseVx *= 0.97;
+          p.baseVy *= 0.97;
+
+          // 纯粹的流体动量随动（绝无向心吸力，绝无切向打转）
+          const dist = Math.hypot(p.x - mouse.x, p.y - mouse.y);
+          const radius = 240; // 鼠标气流动量波及半径
+
+          if (dist < radius && mSpeed > 0.2) {
+            // 越靠近鼠标中心，跟随鼠标移动矢量的动量传递越强
+            const factor = Math.pow(1.0 - dist / radius, 1.6);
+            p.extraVx += mouse.vx * factor * 0.052;
+            p.extraVy += mouse.vy * factor * 0.052;
+          }
+
+          // 外力动量自然阻尼消散（鼠标停下或移开后，粒子缓缓归零，回归平静）
+          p.extraVx *= 0.94;
+          p.extraVy *= 0.94;
+
+          // 最终合速度
+          p.x += (p.baseVx + p.extraVx);
+          p.y += (p.baseVy + p.extraVy);
+
+          // 屏幕边界循环穿梭，保证全画幅均匀分布
+          if (p.x < -10) p.x = w + 10;
+          if (p.x > w + 10) p.x = -10;
+          if (p.y < -10) p.y = h + 10;
+          if (p.y > h + 10) p.y = -10;
+
+          // 微光呼吸感
+          const breathe = 0.65 + 0.35 * Math.sin(animTime * 2.5 + p.pulseOffset);
+          // 受气流扰动时微亮高光
+          const extraSpeed = Math.hypot(p.extraVx, p.extraVy);
+          const glowBoost = Math.min(1.0, extraSpeed * 0.25);
+          const finalAlpha = Math.min(0.85, (p.baseAlpha * breathe) + glowBoost * 0.3);
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+
+          if (p.isTerracotta || glowBoost > 0.3) {
+            ctx.fillStyle = `rgba(217, 119, 87, ${finalAlpha * 1.15})`;
+          } else {
+            ctx.fillStyle = `rgba(239, 238, 236, ${finalAlpha})`;
+          }
+          ctx.fill();
+        });
+
+        requestAnimationFrame(render);
+      }
+
+      function resizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(window.innerWidth * dpr);
+        canvas.height = Math.round(window.innerHeight * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        initParticles();
+      }
+
+      window.addEventListener('resize', resizeCanvas);
+
+      // 启动运行
+      resizeCanvas();
+      requestAnimationFrame(render);
+    })();
+  </script>
+
+  <script type="module">
+    // ════ 数据接线（本页唯一新增代码块）：/api/state → 原成品 Top Picks DOM/CSS ════
+    // · 岗位 / 公司 / 综合评分 / CV Match / 薪资 / Recommendation / 状态 / 总数计数全部来自
+    //   本地 server 的 /api/state（demo 模式 = Demo Runtime 数据，正式模式 = 正式 Runtime 数据）。
+    // · 排序复用驾驶舱同一 rankJobs（Recommendation 档 → 综合评分 → CV Match），不重算、不重推导。
+    // · 卡片 DOM 结构、class、三槽位配色（默认赭红 / olive / gold）逐字沿用原成品标记，只是数据位来自接口；
+    //   真实数据进 innerHTML 前统一 esc()；无岗位或取数失败 → 整块隐藏（null fallback，绝不显示假数据）。
+    // · 上方 canvas 粒子引擎与原页面所有 UI 行为未改动。
+    import { rankJobs } from './lib/view-model.mjs';
+
+    const ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    function esc(v) {
+      if (v === null || v === undefined) return '';
+      return String(v).replace(/[&<>"']/g, c => ESC_MAP[c]);
+    }
+    const numText = (v) => (v != null && Number.isFinite(Number(v)) ? esc(v) : '—');
+
+    // 状态 → CTA 动词：复用原成品文案的三种形态（审阅研报 / 追踪面试 / 谈判 Offer），按真实 tracker 状态取值
+    const STATUS_CTA = {
+      Offer: '谈判 Offer →',
+      Interview: '追踪面试 →',
+      Responded: '跟进回复 →',
+      Applied: '查看投递 →',
+    };
+
+    // 卡片模板：与原成品 tp-card 逐字一致，仅业务数据位置换成 /api/state 字段插值
+    function tpCardHtml(job, idx) {
+      const a = job.analysis || {};
+      const rankColor = idx === 1 ? ' style="color:var(--accent-olive)"' : idx === 2 ? ' style="color:var(--accent-gold)"' : '';
+      const loc = [job.city, job.district].filter(Boolean).join(' · ');
+      const line = [loc, job.status_zh || job.status].filter(Boolean).join(' · ');
+      return `
+      <a href="/index.html#job=${encodeURIComponent(job.job_id)}" class="tp-card">
+        <div class="tp-badge-row">
+          <span class="tp-rank"${rankColor}>★ #0${idx + 1} ${esc(a.recommendation || '待研判')}</span>
+          <span class="tp-score-chip">综合 ${numText(a.career_ops_score)}分 · 契合度 ${numText(a.cv_match_score)}%</span>
+        </div>
+        <div class="tp-body">
+          <h4>${esc(job.company)}</h4>
+          <div class="tp-role">${esc(job.title)}</div>
+          <div class="tp-salary">${esc(job.salary || '—')}</div>
+        </div>
+        <div class="tp-cta">
+          <span>${esc(line || '—')}</span>
+          <span>${STATUS_CTA[job.status] || '审阅研报 →'}</span>
+        </div>
+      </a>`;
+    }
+
+    async function renderTopPicks() {
+      const section = document.getElementById('section-preview');
+      const grid = document.getElementById('top-picks-grid');
+      const link = document.getElementById('tp-all-link');
+      let jobs = [];
+      let total = 0;
+      try {
+        const res = await fetch('/api/state', { headers: { Accept: 'application/json' } });
+        if (!res.ok) throw new Error(`/api/state → HTTP ${res.status}`);
+        const state = await res.json();
+        jobs = Array.isArray(state.jobs) ? state.jobs : [];
+        total = state.stats && state.stats.total != null ? state.stats.total : jobs.length;
+      } catch (err) {
+        console.warn('品牌首页取数失败（隐藏透视区，不展示任何假数据）：', err);
+        jobs = [];
+      }
+      if (!jobs.length) {
+        section.style.display = 'none';   // 正式无岗位 / 取数失败：不出现假岗位、假分数
+        return;
+      }
+      section.style.display = '';
+      link.textContent = `进入全部决策流 (${total}个) ↗`;
+      grid.innerHTML = rankJobs(jobs).slice(0, 3).map(tpCardHtml).join('\n');
+    }
+    renderTopPicks();
+  </script>
+</body>
+</html>
