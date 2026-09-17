@@ -353,10 +353,12 @@ test('P19 分析内容只有右栏详情一个展示面（无第二"完整分析
   assert.equal((html.match(/查看完整分析/g) || []).length, 0, '不得残留旧版第二分析入口');
   assert.equal((html.match(/id="detail-panel"/g) || []).length, 1, '详情面板唯一');
   assert.equal((html.match(/id="dt-rationale"/g) || []).length, 1, '推荐原因只有一处展示位');
-  // 十维明细 / 决策链 / JD 原文都在同一面板内（单一载体的组成部分）
-  for (const id of ['dt-trace-body', 'dt-dims-tbody', 'dt-jd-body']) {
+  // 十维明细 / JD 原文都在同一面板内（单一载体的组成部分）；
+  // 决策链（dt-trace-body）属内部 Runtime trace，本轮已停止渲染，仅锁其不复出现。
+  for (const id of ['dt-dims-tbody', 'dt-jd-body']) {
     assert.equal((html.match(new RegExp(`id="${id}"`, 'g')) || []).length, 1, `${id} 只出现一处`);
   }
+  assert.equal((html.match(/id="dt-trace-body"/g) || []).length, 0, '决策链渲染容器不得回归普通 UI');
 });
 
 test('P20 Dashboard 不实现 scoring（前端无重算，只消费 Runtime 字段）', () => {

@@ -17,7 +17,7 @@
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, renameSync, existsSync } from 'fs';
 import { join, basename, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { readProfileTracker, normalizeCompany, roleFuzzyMatch } from './tracker-backend.mjs';
+import { readProfileTracker, normalizeCompany } from './tracker-backend.mjs';
 
 // fileURLToPath handles spaces in path correctly (vs .pathname which encodes them as %20)
 // Script lives in tools/; project root is one level up.
@@ -72,8 +72,10 @@ function validateStatus(status) {
   return 'Evaluated';
 }
 
-// normalizeCompany + roleFuzzyMatch imported from tracker-backend.mjs
+// normalizeCompany imported from tracker-backend.mjs
 // (single source of truth; local copies removed — they had the CN-strip bug).
+// role fuzzy matching was removed from dedup: job identity contract requires
+// job_id → URL → company+exact-role, never fuzzy title matching.
 
 function extractReportNum(reportStr) {
   const m = reportStr.match(/\[(\d+)\]/);
@@ -85,19 +87,55 @@ function parseScore(s) {
   return m ? parseFloat(m[1]) : 0;
 }
 
+// Job Identity 单元格形态（12 列布局的 Job ID 列 / 通用兜底扫描共用）：
+// Boss 岗位 ID 为 16-32 位字母数字（可含 - 或 _，如 d369c8847c8dd30c03B-3dS8EFVS），
+// 必须同时含数字与字母，排除 URL、公司名、岗位名。
+const JOB_ID_CELL_RE = /^[0-9A-Za-z_-]{16,32}$/;
+function looksLikeJobIdCell(v) {
+  return Boolean(v) && !/^https?:/.test(v) && JOB_ID_CELL_RE.test(v)
+    && /\d/.test(v) && /[A-Za-z]/.test(v);
+}
+function looksLikeScoreCell(v) {
+  return /^\d+\.?\d*\s*\/\s*(100|5)$/.test(v) || v === 'N/A' || v === 'DUP';
+}
+function looksLikeStatusCell(v) {
+  return /^(Evaluated|Applied|Responded|Interview|Offer|Rejected|Discarded|SKIP|N\/A|DUP)$/i.test(String(v || '').trim());
+}
+
 function parseAppLine(line) {
   const parts = line.split('|').map(s => s.trim());
   // parts.length = cells + 2 (leading + trailing empties from `|...|`).
   //   9-col legacy layout  → parts.length === 11
   //   11-col extended      → parts.length === 13
+  //   12-col (Job ID 独立列，2026-09 起 dashboard/TSV 写回标准) → parts.length === 14
   const cellCount = parts.length - 2;
   if (cellCount < 9) return null;
   const num = parseInt(parts[1]);
   if (isNaN(num) || num === 0) return null;
+  // 12-col layout: | # | Date | Company | Role | Job ID | Score | Status | PDF | URL | Report | Notes | Closed At |
+  //   判定：第 5 格是 job_id 形态；或第 5 格为空但 6/7 格是 score+status（容忍空 Job ID 单元格）。
   // 11-col layout (2026-04-20): | # | Date | Company | Role | Score | Status | PDF | URL | Report | Notes | Closed At |
-  // 9-col legacy layout:         | # | Date | Company | Role | Score | Status | PDF | Report | Notes |
-  const hasExtended = cellCount >= 11;
-  const row = {
+  // 9-col legacy layout:        | # | Date | Company | Role | Score | Status | PDF | Report | Notes |
+  const jobCol = cellCount >= 10
+    && (looksLikeJobIdCell(parts[5])
+      || (parts[5] === '' && looksLikeScoreCell(parts[6] || '') && looksLikeStatusCell(parts[7] || '')));
+  const hasExtended = !jobCol && cellCount >= 11;
+  const row = jobCol ? {
+    num,
+    date: parts[2],
+    company: parts[3],
+    role: parts[4],
+    job_id: parts[5] || '',
+    score: parts[6],
+    status: parts[7],
+    pdf: parts[8],
+    url: cellCount >= 11 ? parts[9] : '',
+    report: cellCount >= 11 ? parts[10] : parts[9],
+    notes: cellCount >= 11 ? (parts[11] || '') : (parts[10] || ''),
+    closedAt: cellCount >= 12 ? (parts[12] || '') : '',
+    statusIdx: 7,
+    raw: line,
+  } : {
     num,
     date: parts[2],
     company: parts[3],
@@ -109,14 +147,17 @@ function parseAppLine(line) {
     report: hasExtended ? parts[9] : parts[8],
     notes: hasExtended ? (parts[10] || '') : (parts[9] || ''),
     closedAt: hasExtended ? (parts[11] || '') : '',
+    statusIdx: 6,
     raw: line,
   };
-  // job_id 提取：Boss 岗位 ID 形态（16-32 位字母数字混合、非 URL）作为独立单元格存在于行内
-  for (let i = 1; i < parts.length - 1; i++) {
-    const c = parts[i];
-    if (c && !/^https?:/.test(c) && /^[0-9A-Za-z]{16,32}$/.test(c) && /[0-9]/.test(c) && /[A-Za-z]/.test(c) && c !== row.company && c !== row.role) {
-      row.job_id = c;
-      break;
+  // job_id 兜底提取（仅非独立列布局）：Job ID 以独立单元格形态存在于行内其他位置
+  if (!jobCol && !row.job_id) {
+    for (let i = 1; i < parts.length - 1; i++) {
+      const c = parts[i];
+      if (c && looksLikeJobIdCell(c) && c !== row.company && c !== row.role) {
+        row.job_id = c;
+        break;
+      }
     }
   }
   return row;
@@ -387,38 +428,48 @@ for (const file of tsvFiles) {
   if (!addition) { skipped++; continue; }
 
   // Check for duplicate by:
-  // 1. report number match（仅在 company 归一相同时才视为同一岗位——report num 不是岗位身份，
+  // 1. job_id exact match（岗位身份 SoT；双方都有 job_id 且不同 → 不同岗位，直接排除）
+  // 2. report number match（仅在 company 归一相同时才视为同一岗位——report num 不是岗位身份，
   //    不同岗位共用编号时禁止跨岗位命中）
-  // 2. exact entry num match（同样要求 company 归一相同）
-  // 3. company + role fuzzy match（归一化公司 + 岗位模糊匹配）
+  // 3. exact entry num match（同样要求 company 归一相同）
+  // 4. fallback：company 归一 + role 严格相等（job identity 合同禁止 fuzzy title 参与身份判定）
   // 任一匹配规则命中多行（歧义）→ 拒绝合并该 TSV，不修改任何数据。
   const normAdditionCompany = normalizeCompany(addition.company);
   const byCompany = (app) => normalizeCompany(app.company) === normAdditionCompany;
+  const additionJobId = (addition.job_id || '').trim();
+  const rowJobId = (app) => (app.job_id || '').trim();
+  // 双方都有 job_id 且不相等 → 必然是不同岗位（同公司同理），禁止因 title 相似而互相覆盖
+  const isDifferentPosting = (app) => Boolean(additionJobId && rowJobId(app) && rowJobId(app) !== additionJobId);
   const reportNum = extractReportNum(addition.report);
   let duplicate = null;
   let ambiguous = false;
 
   // 身份优先级 1：job_id 精确（dashboard 写回携带；report num / tracker num / fuzzy 均不得单独决定身份）
-  if (addition.job_id) {
-    const hits = existingApps.filter(app => (app.job_id || '').trim() === addition.job_id);
+  if (additionJobId) {
+    const hits = existingApps.filter(app => rowJobId(app) === additionJobId);
     if (hits.length > 1) ambiguous = true;
     else if (hits.length === 1) duplicate = hits[0];
   }
 
   if (reportNum) {
-    const hits = existingApps.filter(app => byCompany(app) && extractReportNum(app.report) === reportNum);
+    const hits = existingApps.filter(app => byCompany(app) && !isDifferentPosting(app) && extractReportNum(app.report) === reportNum);
     if (hits.length > 1) ambiguous = true;
     else if (hits.length === 1) duplicate = hits[0];
   }
 
   if (!duplicate && !ambiguous) {
-    const hits = existingApps.filter(app => byCompany(app) && app.num === addition.num);
+    const hits = existingApps.filter(app => byCompany(app) && !isDifferentPosting(app) && app.num === addition.num);
     if (hits.length > 1) ambiguous = true;
     else if (hits.length === 1) duplicate = hits[0];
   }
 
   if (!duplicate && !ambiguous) {
-    const hits = existingApps.filter(app => byCompany(app) && roleFuzzyMatch(addition.role, app.role));
+    const additionRole = String(addition.role || '').trim().toLowerCase();
+    const hits = existingApps.filter(app => {
+      if (!byCompany(app) || isDifferentPosting(app)) return false;
+      const appRole = String(app.role || '').trim().toLowerCase();
+      return appRole && additionRole && appRole === additionRole;
+    });
     if (hits.length > 1) ambiguous = true;
     else if (hits.length === 1) duplicate = hits[0];
   }
@@ -437,17 +488,14 @@ for (const file of tsvFiles) {
     const oldScore = parseScore(duplicate.score);
 
     // 同一 job_id 再次合并（dashboard/crawler 重写）：人工状态以最新一次写回为准
-    if (addition.job_id && (duplicate.job_id || '') === addition.job_id) {
+    if (additionJobId && rowJobId(duplicate) === additionJobId) {
       const lineIdx = appLines.indexOf(duplicate.raw);
-      if (lineIdx >= 0) {
+      if (lineIdx >= 0 && duplicate.statusIdx > 0) {
         const cells = duplicate.raw.split('|').map(x => x.trim());
-        const statusIdx = cells.findIndex((c, i) => i > 0 && /^(Evaluated|Applied|Responded|Interview|Offer|Rejected|Discarded|SKIP)$/.test(c));
-        if (statusIdx > 0) {
-          cells[statusIdx] = addition.status;
-          appLines[lineIdx] = `| ${cells.slice(1, -1).join(' | ')} |`;
-          updated++;
-          console.log(`🔁 job_id 更新: #${duplicate.num} ${addition.company} — ${addition.role} → ${addition.status}`);
-        }
+        cells[duplicate.statusIdx] = addition.status;
+        appLines[lineIdx] = `| ${cells.slice(1, -1).join(' | ')} |`;
+        updated++;
+        console.log(`🔁 job_id 更新: #${duplicate.num} ${addition.company} — ${addition.role} → ${addition.status}`);
       }
       skipped++; // 行已在 tracker，仅状态同步
       continue;

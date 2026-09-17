@@ -271,15 +271,64 @@ function deriveInterviewFocusFromFactors(factors) {
  *   partial 3–4  —— 结构在、部分 narrative 实质为空
  *   sparse  ≤2    —— 仅初筛事实（典型：6b 规则链路 / 后续采集批）
  * 不引入第二个 0-100 分；阈值冻结，改动需走合同变更。
+ *
+ * Dashboard 优化轮加强：cv_advice / interview_focus 的信号位要求"实质内容"——
+ * 一句占位话（<40 字、无结构）不再占满信号位。判定纯文本确定性规则：
+ *   - trim 后 < 40 字符 → 非实质；
+ *   - ①-⑳ 编号 ≥ 3 条 → 实质；
+ *   - ；/;/换行分隔 ≥ 3 段 → 实质；
+ *   - 连续叙述 ≥ 80 字符 → 实质。
+ * interview_focus 完整度收紧轮：interview_focus 的信号位在"实质内容"之上还要求
+ * "可执行的准备动作"（isActionableInterviewFocus：≥2 类动作信号）——
+ * 复述 gap / JD 要求但不给准备动作的文本不再占满信号位。
+ * 仅影响 analysis_gate.content_status 元数据；不参与评分 / 推荐 / 持久化拦截。
  */
+export function isSubstantiveNarrative(v) {
+  const t = String(v ?? '').trim();
+  const bullets = (t.match(/[①-⑳]/g) || []).length;
+  if (bullets >= 3) return true;   // 3 条及以上编号要点 = 已结构化，非占位话
+  if (t.length < 40) return false;
+  const segs = t.split(/[；;\n]/).map(x => x.trim()).filter(Boolean);
+  if (segs.length >= 3) return true;
+  return t.length >= 80;
+}
+
+/** interview_focus 的"面试准备动作"信号词表（interview_focus 完整度收紧轮）。
+ *  完整的 interview_focus 必须给出可执行的准备动作——可能被追问的问题 / 要准备的
+ *  STAR 案例 / 要验证的专业能力 / gap 解释口径 / JD 职责要准备的实例 / 反向提问
+ *  或应答策略；把 gap / JD 要求复述一遍不算完整，不论字数与分隔结构。
+ *  词表与 tools/backfill-narrative.mjs 的生成模板对齐。 */
+const INTERVIEW_ACTION_SIGNALS = Object.freeze([
+  /准备/,                              // 明确的准备动作
+  /追问|反问|提问清单|问题清单/,        // 预判被追问的问题 / 反向提问
+  /STAR|背景[—–-]动作|案例|实例/,      // 要准备的案例 / 实例
+  /口径|话术|应答|解释|讲法|说法/,      // gap 解释口径 / 应答策略
+  /演练|模拟|复盘/,                    // 练习动作
+  /底线|让步/,                          // 谈判准备
+  /验证|核实/,                          // 要验证的专业能力 / 信息
+]);
+
+/**
+ * interview_focus 专项完整度判定：结构实质（isSubstantiveNarrative 占位守卫）
+ * 且命中 ≥2 类不同的准备动作信号。仅字数够 + 有分隔结构的 gap/JD 复述型文本
+ * 动作信号为 0 → false。仅影响 analysis_gate.content_status 元数据；
+ * 不参与评分 / 推荐 / 持久化拦截。
+ */
+export function isActionableInterviewFocus(v) {
+  const t = String(v ?? '').trim();
+  if (!isSubstantiveNarrative(t)) return false;
+  const hits = INTERVIEW_ACTION_SIGNALS.filter(re => re.test(t)).length;
+  return hits >= 2;
+}
+
 export function computeContentStatus(a) {
   const signals = {
     recommendation_reason: String(a?.recommendation_reason ?? '').trim().length > 0,
     strengths: Array.isArray(a?.strengths) && a.strengths.length > 0,
     gaps: Array.isArray(a?.gaps) && a.gaps.length > 0,
     soft_gaps: Array.isArray(a?.soft_gaps) && a.soft_gaps.length > 0,
-    cv_advice: String(a?.cv_advice ?? '').trim().length > 0,
-    interview_focus: String(a?.interview_focus ?? '').trim().length > 0,
+    cv_advice: isSubstantiveNarrative(a?.cv_advice),
+    interview_focus: isActionableInterviewFocus(a?.interview_focus),
   };
   const substantive = Object.values(signals).filter(Boolean).length;
   const status = substantive >= 5 ? 'rich' : substantive >= 3 ? 'partial' : 'sparse';

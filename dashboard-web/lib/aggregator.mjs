@@ -144,7 +144,9 @@ export function findTrackerRows(rows, job) {
   });
 }
 
-/** 原位更新 applications.md 中某行 Status（不增删行、不动其他列）；jobId 提供时回填 Job ID 列 */
+/** 原位更新 applications.md 中某行 Status（不增删行、不动其他列）；jobId 提供时回填 Job ID 列。
+ *  行匹配与 findTrackerRows 同一身份合同：job_id 精确优先；仅 legacy 行（无 job_id）回退
+ *  公司归一 + role 严格相等。禁止 fuzzy title 参与写回定位。 */
 export function updateApplicationsStatus(text, { company, role, status, job_id }) {
   const lines = text.split(/\r?\n/);
   const headerIdx = lines.findIndex(l => l.includes('|') && /company/i.test(l) && /role/i.test(l));
@@ -157,6 +159,7 @@ export function updateApplicationsStatus(text, { company, role, status, job_id }
   let updated = false;
   const nTarget = normalizeCompany(company);
   const roleLc = String(role || '').trim().toLowerCase();
+  const jid = String(job_id || '').trim();
   for (let i = headerIdx + 2; i < lines.length; i++) {
     const line = lines[i];
     if (!line.includes('|')) break;
@@ -164,8 +167,11 @@ export function updateApplicationsStatus(text, { company, role, status, job_id }
     const inner = cells.slice(1, -1);
     const rc = normalizeCompany(inner[companyCol]);
     const rr = String(inner[roleCol] || '').trim().toLowerCase();
-    const match = (rc.includes(nTarget) || nTarget.includes(rc)) &&
-      (rr === roleLc || rr.includes(roleLc) || roleLc.includes(rr));
+    const rowJid = jobIdCol !== -1 ? String(inner[jobIdCol] || '').trim() : '';
+    // 双方都有 job_id → 必须精确相等；legacy 行（无 job_id）→ 公司归一 + role 严格相等
+    const match = jid && rowJid
+      ? rowJid === jid
+      : (rc.includes(nTarget) || nTarget.includes(rc)) && rr === roleLc;
     if (match) {
       inner[statusCol] = status;
       if (job_id && jobIdCol !== -1) inner[jobIdCol] = job_id;

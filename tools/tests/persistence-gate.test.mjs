@@ -13,7 +13,7 @@ import path from 'node:path';
 import {
   ANALYSIS_SCHEMA_VERSION,
   finalizeAnalysisForPersistence, assertCanonicalAnalysis, isAnalyzed,
-  computeContentStatus, buildBatchSummary, formatBatchSummary,
+  computeContentStatus, isActionableInterviewFocus, buildBatchSummary, formatBatchSummary,
 } from '../../dashboard-web/lib/analysis-contract.mjs';
 import { writeRunFile, readRunFile, auditRunJobs } from '../lib/analysis-persistence.mjs';
 
@@ -162,7 +162,11 @@ test('P10 未过 Gate 的 raw analysis 直接调 writer → 拒绝且不落盘',
 // ── P11 rescore preservation（narrative 不丢）────────────────────────
 test('P11 strict=false（rescore 路径）→ 既有 narrative 保留 + gate 元数据刷新', () => {
   const persisted = finalizeAnalysisForPersistence({
-    provider: { strengths: ['既有优势'], gaps: ['既有缺口'], soft_gaps: ['可弥补'], cv_advice: '既有建议', interview_focus: '既有关注' },
+    provider: {
+      strengths: ['既有优势'], gaps: ['既有缺口'], soft_gaps: ['可弥补'],
+      cv_advice: '① 既有建议一；② 既有建议二；③ 既有建议三',
+      interview_focus: '① 既有关注一；② 既有关注二；③ 既有关注三；④ 既有关注四',
+    },
     engine: ENGINE_OK({ career_ops_score: 50 }),
   });
   assert.equal(persisted.ok, true);
@@ -175,7 +179,7 @@ test('P11 strict=false（rescore 路径）→ 既有 narrative 保留 + gate 元
   });
   assert.equal(rescored.ok, true);
   assert.deepEqual(rescored.analysis.strengths, ['既有优势']);
-  assert.equal(rescored.analysis.cv_advice, '既有建议');
+  assert.equal(rescored.analysis.cv_advice, '① 既有建议一；② 既有建议二；③ 既有建议三');
   assert.equal(rescored.analysis.career_ops_score, 70);
   assert.equal(rescored.analysis.analysis_gate.content_status, 'rich');
 });
@@ -236,10 +240,22 @@ test('P13 三种 provider 形态 → persisted keys/types 完全一致', () => {
 
 // ── P14 content_status deterministic 锁定 ────────────────────────────
 test('P14 rich/partial/sparse 判定 deterministic（模型无权自报）', () => {
+  // Dashboard 优化轮加强：cv_advice / interview_focus 需实质内容（≥40 字 + 结构）才占信号位
+  // interview_focus 完整度收紧轮：interview_focus 还需 ≥2 类"面试准备动作"信号（isActionableInterviewFocus）
+  const SUB_CV = '① 把供应商开发经历前置并量化为全年开发 100+ 家；② 补充询比价降本百分比；③ 用项目制描述补齐品类深度';
+  const SUB_IV = '① 品类学习路径怎么讲；② 供应商开发方法论案例；③ 降本拆解口径；④ 对工作制的真实接受度';
   assert.equal(computeContentStatus({
     recommendation_reason: 'r', strengths: ['1', '2'], gaps: ['1'],
-    soft_gaps: ['1'], cv_advice: 'c', interview_focus: 'i',
+    soft_gaps: ['1'], cv_advice: SUB_CV, interview_focus: SUB_IV,
   }).status, 'rich');
+  // 一句占位话不算实质信号：其余 4 位齐全也只能是 partial
+  const placeholder = computeContentStatus({
+    recommendation_reason: 'r', strengths: ['1', '2'], gaps: ['1'],
+    soft_gaps: ['1'], cv_advice: 'c', interview_focus: 'i',
+  });
+  assert.equal(placeholder.status, 'partial');
+  assert.equal(placeholder.signals.cv_advice, false, '占位话 cv_advice 不算实质');
+  assert.equal(placeholder.signals.interview_focus, false, '占位话 interview_focus 不算实质');
   assert.equal(computeContentStatus({
     recommendation_reason: 'r', strengths: ['1', '2'], gaps: ['1'],
     soft_gaps: [], cv_advice: '', interview_focus: '',
@@ -247,6 +263,20 @@ test('P14 rich/partial/sparse 判定 deterministic（模型无权自报）', () 
   assert.equal(computeContentStatus({
     recommendation_reason: 'r', strengths: ['1'], gaps: [], soft_gaps: [], cv_advice: '', interview_focus: '',
   }).status, 'sparse');
+  // interview_focus 完整度收紧轮：结构实质但只复述 gap/JD 差异、无任何"面试准备动作"
+  // （准备/追问/案例/口径/反向提问…）的文本不再占 interview_focus 信号位
+  const gapRestate = '品类已知但不相交：JD 原材料 vs CV 机械设备；行业不相交：JD trade vs CV industrial；候选人 5 年 < JD 下限 8 年（差 3 年）';
+  const restate = computeContentStatus({
+    recommendation_reason: 'r', strengths: ['1', '2'], gaps: ['1'],
+    soft_gaps: ['1'], cv_advice: SUB_CV, interview_focus: gapRestate,
+  });
+  assert.equal(restate.signals.interview_focus, false, 'gap 复述型 interview_focus 不算实质');
+  assert.equal(restate.status, 'rich', '信号位 = 5（其余 5 位齐全）→ rich；interview_focus 信号位单独断言为 false');
+  // 可执行准备点（≥2 类动作信号：准备被追问 / 案例 / 反向提问+问题清单）→ 占信号位
+  const actionable = '① 「熟悉生产工艺」是隐含硬性门槛且当前证据不足：准备被追问时的如实说明 + 相邻替代经验各一句话。② 「品类经验」简历无实证：准备快速上手路径的说法（相邻品类迁移 / 方法论 / 学习计划）。③ JD 未明示「数字化」：准备反向提问（工作制 / 汇报线 / 品类规模），带着问题清单进面。';
+  assert.equal(isActionableInterviewFocus(actionable), true, '可执行准备点占信号位');
+  assert.equal(isActionableInterviewFocus(''), false);
+  assert.equal(isActionableInterviewFocus('准备一下'), false, '占位短文本直接 false');
   // gate 元数据里的 content_status 与现算一致（gate 判定不被 provider 覆盖）
   const r = finalizeAnalysisForPersistence({
     provider: { strengths: ['1'], content_status: 'rich' }, engine: ENGINE_OK(),
@@ -328,7 +358,12 @@ test('未分析行（isAnalyzed=false）writer 不做 canonical 要求', () => {
 // ── auditRunJobs 审计函数 ─────────────────────────────────────────────
 test('auditRunJobs：schema_fail 与 content 分布统计正确', () => {
   const good = finalizeAnalysisForPersistence({
-    provider: { strengths: ['1', '2'], gaps: ['1'], soft_gaps: ['1'], cv_advice: 'c', interview_focus: 'i', recommendation_reason: 'r' },
+    provider: {
+      strengths: ['1', '2'], gaps: ['1'], soft_gaps: ['1'],
+      cv_advice: '① 建议一；② 建议二；③ 建议三',
+      interview_focus: '① 关注一；② 关注二；③ 关注三；④ 关注四',
+      recommendation_reason: 'r',
+    },
     engine: ENGINE_OK(),
   });
   const run = { jobs: [
@@ -403,7 +438,8 @@ test('2C-A browser-search 生产 persistence entry：匿名 fixture 经真实 CL
   assert.equal(a.eligibility_status, 'eligible');
   assert.equal(a.score_scale_version, 2);
   assert.equal(a.analysis_gate.schema_status, 'complete');
-  assert.equal(a.analysis_gate.content_status, 'rich');
+  // 加强判定：provider 一句占位 narrative（'量化降本战果'/'确认品类资源要求'）不再构成实质信号 → partial
+  assert.equal(a.analysis_gate.content_status, 'partial');
   assert.equal(typeof a.cv_advice, 'string');
   assert.ok('trash_unknown_field' in (a.analysis_gate.dropped_keys ?? []) === false && a.analysis_gate.dropped_keys.includes('trash_unknown_field'));
   assert.ok(!('trash_unknown_field' in a));
@@ -456,7 +492,9 @@ test('2C-B batch 生产 persistence entry：双岗 fixture（A canonical / B ali
   const { code, output } = runFinalizeCli(inFile, outFile);
   assert.equal(code, 0);
   // §8 batch summary 字段由生产链真实输出
-  for (const line of ['Total: 2', 'Schema PASS: 2/2', 'Repaired:', 'Rich: 1', 'Partial: 1', 'Sparse: 0',
+  // （加强判定后：A 的 cv/interview 占位话不占信号位 → partial；
+  //   B 的 weaknesses:42 归一为空数组、cv 占位话不占位 → 仅 2 信号 → sparse）
+  for (const line of ['Total: 2', 'Schema PASS: 2/2', 'Repaired:', 'Rich: 0', 'Partial: 1', 'Sparse: 1',
     'Rejected: 0', 'Numeric Drift: 1', 'Recommendation Drift: 1', 'Eligibility Drift: 1']) {
     assert.ok(output.includes(line), `batch summary 缺字段: ${line}`);
   }

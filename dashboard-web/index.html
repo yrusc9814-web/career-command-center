@@ -482,12 +482,24 @@
 
     /* ═══ 3. 右栏 (Detail Panel) ═══ */
     .c-detail-panel {
+      /* 第三列排版 token（本轮统一调档：字号 ≈5-10% 下降、行高/内边距/卡片间距同步压缩。
+         所有第三列字号/间距统一从这里取值，不写零散 magic number） */
+      --dt-fs-title: 20px;    /* 岗位大标题（原 22px） */
+      --dt-fs-head: 13px;     /* 卡片/分组标题（原 13.5-14.5px） */
+      --dt-fs-body: 12px;     /* 正文（原 12.5-13px） */
+      --dt-fs-sm: 11.5px;     /* 次级正文/列表/表体（原 12-12.5px） */
+      --dt-fs-meta: 11px;     /* metadata（原 12px） */
+      --dt-fs-val: 12.5px;    /* 计量条数值（原 13.5px） */
+      --dt-lh: 1.5;           /* 统一行高（原 1.55-1.75） */
+      --dt-gap: 14px;         /* 卡片间距（原 18px） */
+      --dt-pad-block: 12px;   /* 卡片纵向内边距（原 16px） */
+      --dt-pad-inline: 16px;  /* 卡片横向内边距（原 20px） */
       display: flex;
       flex-direction: column;
       background: #FFFFFF;
       overflow-y: auto;
-      padding: 24px 28px 48px;
-      gap: 18px;
+      padding: 20px 24px 40px;
+      gap: var(--dt-gap);
     }
     .c-detail-panel > * {
       flex-shrink: 0;
@@ -497,23 +509,35 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 16px;
-      padding-bottom: 14px;
+      gap: 12px;
+      padding-bottom: 10px;
       border-bottom: 1px solid var(--border-line);
+    }
+    .detail-head-main {
+      min-width: 0;
+    }
+    /* 岗位标题右侧同行动作区：状态下拉 + Boss 原链接 + 返回（纵向紧凑排列） */
+    .detail-head-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: stretch;
+      flex-shrink: 0;
+      position: relative;
     }
     .detail-top-title {
       font-family: var(--font-serif);
-      font-size: 22px;
+      font-size: var(--dt-fs-title);
       font-weight: 600;
       color: var(--text-ink);
       line-height: 1.3;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       display: flex;
       align-items: center;
       gap: 10px;
     }
     .detail-top-meta {
-      font-size: 13px;
+      font-size: var(--dt-fs-body);
       color: var(--text-sub);
       display: flex;
       flex-wrap: wrap;
@@ -526,26 +550,26 @@
       background: #FFFFFF;
       border: 1px solid var(--border-line);
       border-radius: var(--radius-md);
-      padding: 16px 20px;
+      padding: var(--dt-pad-block) var(--dt-pad-inline);
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 10px;
       box-shadow: 0 1px 4px rgba(44, 41, 37, 0.03);
     }
     .vhc-top-line {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 12px;
+      padding-bottom: 9px;
       border-bottom: 1px solid var(--border-subtle);
     }
     .vhc-top-label {
-      font-size: 13.5px;
+      font-size: var(--dt-fs-head);
       font-weight: 600;
       color: var(--text-ink);
     }
     .vhc-rec-tag {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 600;
       padding: 3px 12px;
       border-radius: var(--radius-pill);
@@ -553,7 +577,7 @@
     .vhc-meters-stack {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 9px;
     }
     .micro-meter-row {
       display: flex;
@@ -564,12 +588,12 @@
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      font-size: 12.5px;
+      font-size: var(--dt-fs-sm);
       color: var(--text-sub);
     }
     .mm-val {
       font-family: var(--font-mono);
-      font-size: 13.5px;
+      font-size: var(--dt-fs-val);
       font-weight: 700;
       color: var(--text-ink);
     }
@@ -590,23 +614,17 @@
     .mm-fill.fill-terracotta { background: var(--claude-terracotta); }
     .mm-fill.fill-amber { background: var(--claude-amber); }
 
-    /* 动作操作条 (Action Deck - 紧凑胶囊对齐图 2) */
-    .action-deck {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
+    /* 动作操作条（控件本体保留，容器已并入标题右侧 .detail-head-actions） */
     .btn-status-pill {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 14px;
+      padding: 5px 12px;
       border-radius: var(--radius-pill);
       border: 1px solid var(--border-line);
       background: #FFFFFF;
       color: var(--text-ink);
-      font-size: 12.5px;
+      font-size: var(--dt-fs-body);
       font-weight: 500;
       cursor: pointer;
       transition: all 0.18s;
@@ -618,13 +636,14 @@
     .btn-boss-link {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
-      padding: 6px 16px;
+      padding: 5px 14px;
       border-radius: var(--radius-pill);
       border: 1px solid var(--border-line);
       background: #FFFFFF;
       color: var(--text-ink);
-      font-size: 12.5px;
+      font-size: var(--dt-fs-body);
       font-weight: 500;
       text-decoration: none;
       transition: all 0.2s var(--ease-claude);
@@ -646,14 +665,14 @@
     .analysis-plate {
       border: 1px solid var(--border-line);
       border-radius: var(--radius-md);
-      padding: 16px 20px;
+      padding: var(--dt-pad-block) var(--dt-pad-inline);
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
     }
     .ap-title {
       font-family: var(--font-serif);
-      font-size: 14.5px;
+      font-size: var(--dt-fs-head);
       font-weight: 600;
       color: var(--text-ink);
       display: flex;
@@ -665,8 +684,8 @@
       border-left: 3px solid var(--claude-terracotta);
     }
     .ap-rationale-text {
-      font-size: 13px;
-      line-height: 1.65;
+      font-size: var(--dt-fs-body);
+      line-height: var(--dt-lh);
       color: var(--text-ink);
       font-style: normal;
     }
@@ -674,9 +693,9 @@
       display: flex;
       flex-wrap: wrap;
       gap: 14px;
-      font-size: 12px;
+      font-size: var(--dt-fs-meta);
       color: var(--text-sub);
-      padding-top: 8px;
+      padding-top: 6px;
       border-top: 1px dashed var(--border-subtle);
     }
 
@@ -697,19 +716,19 @@
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 7px;
+      gap: 6px;
     }
     .bullet-item {
       display: flex;
       gap: 8px;
       align-items: baseline;
-      font-size: 12.5px;
-      line-height: 1.55;
+      font-size: var(--dt-fs-sm);
+      line-height: var(--dt-lh);
       color: var(--text-ink);
     }
     .bullet-item .dot {
       flex-shrink: 0;
-      font-size: 12px;
+      font-size: 11.5px;
     }
 
     /* 高定折叠面板群 (Accordions - 完全对齐图 1 独立圆角卡片规范) */
@@ -727,8 +746,8 @@
       box-shadow: 0 2px 8px rgba(44, 41, 37, 0.04);
     }
     .c-fold summary {
-      padding: 12px 18px;
-      font-size: 13.5px;
+      padding: 9px 14px;
+      font-size: var(--dt-fs-head);
       font-weight: 600;
       color: var(--text-ink);
       cursor: pointer;
@@ -766,10 +785,10 @@
       transform: rotate(180deg);
     }
     .c-fold-body {
-      padding: 16px 20px;
+      padding: var(--dt-pad-block) var(--dt-pad-inline);
       background: #FFFFFF;
-      font-size: 12.5px;
-      line-height: 1.65;
+      font-size: var(--dt-fs-sm);
+      line-height: var(--dt-lh);
     }
 
     /* 独立导出卡片 (完全对齐图 1) */
@@ -778,14 +797,14 @@
       background: #FFFFFF;
       border: 1px solid var(--border-line);
       border-radius: var(--radius-md);
-      padding: 14px 18px;
+      padding: 11px 14px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 9px;
       box-shadow: 0 1px 3px rgba(44, 41, 37, 0.02);
     }
     .export-card-title {
-      font-size: 13.5px;
+      font-size: var(--dt-fs-head);
       font-weight: 600;
       color: var(--text-ink);
       display: flex;
@@ -798,8 +817,8 @@
       align-items: center;
     }
     .c-btn-export {
-      padding: 6px 16px;
-      font-size: 12px;
+      padding: 5px 14px;
+      font-size: var(--dt-fs-sm);
       font-weight: 500;
       border-radius: var(--radius-sm);
       border: 1px solid var(--border-line);
@@ -818,7 +837,7 @@
     .dims-scorecard-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
+      font-size: var(--dt-fs-sm);
     }
     .dims-scorecard-table th {
       text-align: left;
@@ -1254,9 +1273,9 @@
     <!-- ═══ 3. 右栏：岗位深度决策详情 (Detail Panel) ═══ -->
     <aside class="c-detail-panel" id="detail-panel" style="display:none">
       
-      <!-- 头部：标题与基础元数据 -->
+      <!-- 头部：岗位标题区域（标题右侧同行 = 状态下拉 + Boss 原链接；原独立 action-deck 行已删除） -->
       <div class="detail-head-wrap">
-        <div>
+        <div class="detail-head-main">
           <h2 class="detail-top-title">
             <span id="dt-title">—</span>
             <span class="jc-star-btn" id="dt-star" title="标记为想投">☆</span>
@@ -1271,12 +1290,55 @@
             <span id="dt-status-pill" class="chip chip-status">—</span>
           </div>
         </div>
-        <div style="display:flex; gap:8px; align-items:center;">
+        <div class="detail-head-actions">
+          <div class="status-dropdown-wrap">
+            <button class="btn-status-pill" id="btn-flow-status">
+              <span id="btn-flow-status-text">—</span>
+              <span style="font-size:10px; margin-left:2px;">▾</span>
+            </button>
+            <div class="status-dropdown-menu" id="status-dropdown-menu">
+              <div class="status-dropdown-item" data-status="Evaluated" data-zh="已分析（待决策）"><span>🟡 已分析待决策</span></div>
+              <div class="status-dropdown-item" data-status="Applied" data-zh="已投递"><span>📤 已投递</span></div>
+              <div class="status-dropdown-item" data-status="Responded" data-zh="招聘方回应"><span>💬 招聘方回应</span></div>
+              <div class="status-dropdown-item" data-status="Interview" data-zh="面试"><span>🎤 面试推进</span></div>
+              <div class="status-dropdown-item" data-status="Offer" data-zh="Offer（录用）"><span>🎉 Offer（录用）</span></div>
+              <div style="height:1px; background:var(--border-subtle); margin:4px 0;"></div>
+              <!-- 数据接线：canonical states 含 Rejected（未通过），菜单补齐该状态；
+                   沿用既有 .status-dropdown-item 结构与样式，不新增任何 CSS / 控件形态 -->
+              <div class="status-dropdown-item" data-status="Rejected" data-zh="未通过"><span>❌ 未通过</span></div>
+              <div class="status-dropdown-item" data-status="Discarded" data-zh="已放弃"><span>🗄️ 已放弃 / 淘汰</span></div>
+              <div class="status-dropdown-item" data-status="SKIP" data-zh="不投"><span>🚫 判定不投</span></div>
+            </div>
+          </div>
+
+          <a class="btn-boss-link" id="dt-boss-link" href="#" target="_blank" rel="noopener noreferrer">
+            <span>Boss 原链接</span>
+            <span class="arrow">↗</span>
+          </a>
+
           <button class="c-btn" id="btn-back-home">返回概览 ◂</button>
         </div>
       </div>
 
-      <!-- 决策裁决看板 (Verdict Hero Card) - 垂直排版 (完全对齐图 2) -->
+      <!-- ═══ 正文顺序（本轮调整）：1 完整 JD → 2 结论看板 → 3 推荐原因 → 4 优势 → 5 短板/硬性缺口
+           → 6 可弥补缺口 → 7 简历修改建议 → 8 面试建议 → 9 评分明细 → 导出。
+           核心原则：先让用户看清楚 JD，再看系统判断。只调展示顺序，不改变分析数据。 ═══ -->
+
+      <!-- 正文 1: 📄 完整 JD（<details open> 默认打开；含 JD 完整度徽章） -->
+      <details class="c-fold" open>
+        <summary>
+          <div class="fold-left">
+            <span>📄 完整 JD</span>
+          </div>
+          <div class="fold-right">
+            <span id="dt-jd-comp" class="chip chip-status" style="font-size:11px; padding:2px 8px;">JD 完整度：—</span>
+            <span class="chevron">▾</span>
+          </div>
+        </summary>
+        <div class="c-fold-body" id="dt-jd-body" style="white-space:pre-wrap; line-height:var(--dt-lh); font-family:var(--font-sans); color:var(--text-sub);"></div>
+      </details>
+
+      <!-- 正文 2: 决策裁决看板 (Verdict Hero Card) - 垂直排版 (完全对齐图 2) -->
       <div class="verdict-hero-card">
         <div class="vhc-top-line">
           <span class="vhc-top-label">推荐结论</span>
@@ -1310,35 +1372,7 @@
         </div>
       </div>
 
-      <!-- 动作操作条 (Action Deck - 紧跟裁决看板，对齐图 2) -->
-      <div class="action-deck">
-        <div class="status-dropdown-wrap">
-          <button class="btn-status-pill" id="btn-flow-status">
-            <span id="btn-flow-status-text">—</span>
-            <span style="font-size:10px; margin-left:2px;">▾</span>
-          </button>
-          <div class="status-dropdown-menu" id="status-dropdown-menu">
-            <div class="status-dropdown-item" data-status="Evaluated" data-zh="已分析（待决策）"><span>🟡 已分析待决策</span></div>
-            <div class="status-dropdown-item" data-status="Applied" data-zh="已投递"><span>📤 已投递</span></div>
-            <div class="status-dropdown-item" data-status="Responded" data-zh="招聘方回应"><span>💬 招聘方回应</span></div>
-            <div class="status-dropdown-item" data-status="Interview" data-zh="面试"><span>🎤 面试推进</span></div>
-            <div class="status-dropdown-item" data-status="Offer" data-zh="Offer（录用）"><span>🎉 Offer（录用）</span></div>
-            <div style="height:1px; background:var(--border-subtle); margin:4px 0;"></div>
-            <!-- 数据接线：canonical states 含 Rejected（未通过），菜单补齐该状态；
-                 沿用既有 .status-dropdown-item 结构与样式，不新增任何 CSS / 控件形态 -->
-            <div class="status-dropdown-item" data-status="Rejected" data-zh="未通过"><span>❌ 未通过</span></div>
-            <div class="status-dropdown-item" data-status="Discarded" data-zh="已放弃"><span>🗄️ 已放弃 / 淘汰</span></div>
-            <div class="status-dropdown-item" data-status="SKIP" data-zh="不投"><span>🚫 判定不投</span></div>
-          </div>
-        </div>
-
-        <a class="btn-boss-link" id="dt-boss-link" href="#" target="_blank" rel="noopener noreferrer">
-          <span>Boss 原链接</span>
-          <span class="arrow">↗</span>
-        </a>
-      </div>
-
-      <!-- 核心业务分析卡片 (推荐原因与优劣势) -->
+      <!-- 正文 3: 核心业务分析卡片 (推荐原因与优劣势) -->
       <div class="analysis-plate ap-rationale">
         <div class="ap-title">📌 推荐原因</div>
         <div class="ap-rationale-text" id="dt-rationale">正在解析推荐原因...</div>
@@ -1361,7 +1395,7 @@
 
       <div class="analysis-plate ap-blocker" id="dt-blocker-card" style="display:none">
         <div class="ap-title" style="color:var(--claude-rust)">⛔ 硬性阻断拦截</div>
-        <div id="dt-blocker-text" style="font-size:12.5px; line-height:1.6; color:var(--claude-rust)"></div>
+        <div id="dt-blocker-text" style="font-size:var(--dt-fs-sm); line-height:var(--dt-lh); color:var(--claude-rust)"></div>
       </div>
 
       <div class="analysis-plate" id="dt-softgaps-card" style="background:#FAF9F6; border-color:var(--border-line);">
@@ -1397,18 +1431,8 @@
         <div class="c-fold-body" id="dt-interview-body"></div>
       </details>
 
-      <!-- 模块 3: 🧭 推荐决策链 (Runtime 透传) -->
-      <details class="c-fold">
-        <summary>
-          <div class="fold-left">
-            <span>🧭 推荐决策链 (Runtime 透传)</span>
-          </div>
-          <div class="fold-right">
-            <span class="chevron">▾</span>
-          </div>
-        </summary>
-        <div class="c-fold-body" id="dt-trace-body"></div>
-      </details>
+      <!-- 模块 3（已移除）：推荐决策链属内部 Runtime trace，普通 Dashboard 不再渲染；
+           decision_trace 数据继续由 /api/state 透传保留，仅不影响用户可见 UI。 -->
 
       <!-- 模块 4: 🧮 评分明细 -->
       <details class="c-fold">
@@ -1437,19 +1461,7 @@
         </div>
       </details>
 
-      <!-- 模块 5: 📄 完整 JD (含 JD 完整度徽章) -->
-      <details class="c-fold">
-        <summary>
-          <div class="fold-left">
-            <span>📄 完整 JD</span>
-          </div>
-          <div class="fold-right">
-            <span id="dt-jd-comp" class="chip chip-status" style="font-size:11px; padding:2px 8px;">JD 完整度：—</span>
-            <span class="chevron">▾</span>
-          </div>
-        </summary>
-        <div class="c-fold-body" id="dt-jd-body" style="white-space:pre-wrap; line-height:1.75; font-family:var(--font-sans); color:var(--text-sub);"></div>
-      </details>
+      <!-- 模块 5（已并入正文 1）：完整 JD 前移至详情顶部、默认打开 -->
 
       <!-- 模块 6: 📦 导出 (独立卡片，完全对齐图 1) -->
       <div class="c-export-card">
@@ -1471,14 +1483,14 @@
     //   · mock 数据改为向本地 server 的 /api/state 取真实数据，
     //     并在 adaptJob() 里把 API 的嵌套结构（job_id / analysis.*）摊平成 UI 一直在读的扁平字段。
     //   · Runtime 文案 → 用户可见文案一律复用项目既有展示层纯函数 lib/view-model.mjs
-    //     （reasonZh / zhMetrics / traceLines / gapItemText / displayDimensions / blockerHits），
+    //     （reasonZh / zhMetrics / gapItemText / displayDimensions / blockerHits），
     //     不在前端新写一套映射，也不重算任何评分或推荐结论。
     //   · 三处内存写（shortlisted / status）改为写回 /api/shortlist 与 /api/status；
     //     切换岗位详情时上报 /api/last-viewed。写回失败一律回滚，不在本地留下与后端不一致的状态。
     //   · 所有进入 innerHTML 的真实数据统一走 esc()（JD 原文、简历建议、优势/短板、防雷真题等）。
     // ══════════════════════════════════════════════════════════════════════
     import {
-      reasonZh, zhMetrics, traceLines, gapItemText, displayDimensions, blockerHits, rankJobs,
+      reasonZh, zhMetrics, gapItemText, displayDimensions, blockerHits, rankJobs,
     } from './lib/view-model.mjs';
 
     let MOCK_JOBS = [];
@@ -1531,7 +1543,7 @@
         recommendation: a.recommendation || '',
         // 推荐原因：引擎措辞/内部 token 由 reasonZh 转用户可见中文（不改变结论语义）
         recommendation_reason: reasonZh(a.recommendation_reason || ''),
-        decision_trace: traceLines(a.decision_trace),
+        // decision_trace：内部 Runtime trace，普通 UI 不渲染；字段本身由 API 层透传保留，前端不再派生展示行
         blockers: a.blockers || null,
         hard_redline: !!a.hard_redline,
         // 阻断原因文案：优先 Runtime 显式给出，否则用 blockerHits 的中文命中项（不新写映射表）
@@ -2022,14 +2034,7 @@
       }
       document.getElementById('dt-interview-body').innerHTML = ivContent;
 
-      // 决策链透传
-      const trace = Array.isArray(job.decision_trace) ? job.decision_trace : [];
-      document.getElementById('dt-trace-body').innerHTML = trace.map(t => `
-        <div style="display:flex; gap:8px; margin-bottom:6px; font-size:12px;">
-          <span style="color:var(--claude-terracotta); font-family:var(--font-mono); font-weight:700;">→</span>
-          <span>${esc(t)}</span>
-        </div>
-      `).join('') || '暂无决策链明细';
+      // 决策链（Runtime trace）已停止在普通 UI 渲染（4A）：decision_trace 数据仍由 /api/state 透传。
 
       // 十维图谱表格
       // 数据接线：维度 score=null（unknown，证据不足）时保持缺值语义 —— 得分与加权分都显示 —，
@@ -2151,10 +2156,32 @@
     }
 
     // 方案二：现代优雅的物理垂直滚轮引擎 (Vertical Odometer Ticker)
-    function rollOdometer(container, targetValue, duration = 1200, delay = 0) {
-      if (!container) return;
-      if (container._timerId) clearTimeout(container._timerId);
+    // 本轮（KPI 动画同步）改造：rollOdometer 只负责构建数字位、归零并注册目标值；
+    // 动画由 KPI_ANIM 共享协调器统一驱动 —— 两排共 9 个数字共用同一个
+    // requestAnimationFrame loop / startTime / duration / easing，同一帧开始、同一时刻结束；
+    // 每个条目只允许 target value 不同，不再有 per-card timer / delay / duration。
+    const KPI_ANIM = {
+      items: [],        // [{ container, strips }]
+      rafId: 0,
+      duration: 1100,   // 共享时长（ms），全部 KPI 数字一致
+    };
+    // 共享 easing：ease-out cubic（前快后慢、单调）；全部 KPI 数字共用
+    function kpiEase(t) { return 1 - Math.pow(1 - t, 3); }
+    // 无障碍：prefers-reduced-motion 开启时跳过动画，直接显示最终值
+    const KPI_REDUCED_MOTION = !!(window.matchMedia
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
+    function kpiApplyStrips(strips, p) {
+      for (const s of strips) {
+        const targetDigit = parseInt(s.dataset.target, 10) || 0;
+        s.style.transform = p >= 1
+          ? `translateY(-${targetDigit * 1.2}em)`
+          : `translateY(-${targetDigit * 1.2 * p}em)`;
+      }
+    }
+
+    function rollOdometer(container, targetValue) {
+      if (!container) return;
       const strVal = String(targetValue);
       let html = '';
       for (const char of strVal) {
@@ -2173,7 +2200,7 @@
       container.innerHTML = html;
 
       const strips = container.querySelectorAll('.ticker-strip');
-      // 1. 初始化强制归零
+      // 1. 初始化强制归零（起点 0；同时清除可能残留的 transition，动画由 rAF 逐帧驱动）
       strips.forEach(s => {
         s.style.transition = 'none';
         s.style.transform = 'translateY(0)';
@@ -2182,16 +2209,40 @@
       // 强制触发回流以确保归零生效
       void container.offsetWidth;
 
-      // 2. 延迟平滑滑动入位（采用极其从容优雅的物理滑动曲线，绝对无原地狂闪）
-      container._timerId = setTimeout(() => {
-        strips.forEach((s, idx) => {
-          const targetDigit = parseInt(s.dataset.target, 10) || 0;
-          // 位间微错峰：高位到低位微延迟 30ms，更有机械层次感
-          const colDelay = idx * 30;
-          s.style.transition = `transform ${duration}ms cubic-bezier(0.16, 1, 0.3, 1) ${colDelay}ms`;
-          s.style.transform = `translateY(-${targetDigit * 1.2}em)`;
-        });
-      }, delay);
+      if (KPI_REDUCED_MOTION) {
+        // reduce 模式：不进共享动画，直接显示最终值
+        kpiApplyStrips(strips, 1);
+        return;
+      }
+
+      // 2. 注册进共享协调器（同容器重播 → 顶替旧注册，防止叠加）
+      KPI_ANIM.items = KPI_ANIM.items.filter(it => it.container !== container);
+      KPI_ANIM.items.push({ container, strips });
+    }
+
+    // 共享协调器入口：renderDash 完成全部 rollOdometer 注册后调用一次，
+    // 所有注册条目在同一 rAF 帧以同一 startTime 开始，同一时刻结束。
+    function kpiAnimStart() {
+      if (!KPI_ANIM.items.length) return;
+      // 重入：取消上一轮共享循环（不叠加）
+      if (KPI_ANIM.rafId) cancelAnimationFrame(KPI_ANIM.rafId);
+      const items = KPI_ANIM.items;
+      const start = performance.now();
+      const duration = KPI_ANIM.duration;
+      const tick = (now) => {
+        const t = Math.min((now - start) / duration, 1);
+        const p = kpiEase(t);
+        for (const it of items) kpiApplyStrips(it.strips, p);
+        if (t < 1) {
+          KPI_ANIM.rafId = requestAnimationFrame(tick);
+        } else {
+          // 同一时刻结束：终帧精确到位（不跳字、不漂移）
+          for (const it of items) kpiApplyStrips(it.strips, 1);
+          KPI_ANIM.items = [];
+          KPI_ANIM.rafId = 0;
+        }
+      };
+      KPI_ANIM.rafId = requestAnimationFrame(tick);
     }
 
     // 渲染总览
@@ -2210,10 +2261,10 @@
         ? apiStats.avg_career_ops_score.toFixed(1)
         : meanOf(MOCK_JOBS.map(j => j.career_ops_score));
 
-      rollOdometer(document.getElementById('k-num-analyzed'), valAnalyzed, 1000, 0);
-      rollOdometer(document.getElementById('k-num-shortlist'), valShortlist, 1000, 60);
-      rollOdometer(document.getElementById('k-num-cv'), valCv, 1200, 120);
-      rollOdometer(document.getElementById('k-num-ops'), valOps, 1200, 180);
+      rollOdometer(document.getElementById('k-num-analyzed'), valAnalyzed);
+      rollOdometer(document.getElementById('k-num-shortlist'), valShortlist);
+      rollOdometer(document.getElementById('k-num-cv'), valCv);
+      rollOdometer(document.getElementById('k-num-ops'), valOps);
 
       // 2. 推荐等级分布 5 格垂直滚轮滑动
       const cntStrong = MOCK_JOBS.filter(j => j.recommendation === '强烈推荐').length;
@@ -2222,11 +2273,13 @@
       const cntWeak = MOCK_JOBS.filter(j => j.recommendation === '不推荐').length;
       const cntRedline = MOCK_JOBS.filter(j => j.recommendation === '硬红线跳过').length;
 
-      rollOdometer(document.getElementById('rec-cnt-strong'), cntStrong, 800, 220);
-      rollOdometer(document.getElementById('rec-cnt-rec'), cntRec, 800, 260);
-      rollOdometer(document.getElementById('rec-cnt-normal'), cntNormal, 800, 300);
-      rollOdometer(document.getElementById('rec-cnt-weak'), cntWeak, 800, 340);
-      rollOdometer(document.getElementById('rec-cnt-redline'), cntRedline, 800, 380);
+      rollOdometer(document.getElementById('rec-cnt-strong'), cntStrong);
+      rollOdometer(document.getElementById('rec-cnt-rec'), cntRec);
+      rollOdometer(document.getElementById('rec-cnt-normal'), cntNormal);
+      rollOdometer(document.getElementById('rec-cnt-weak'), cntWeak);
+      rollOdometer(document.getElementById('rec-cnt-redline'), cntRedline);
+      // 两排 KPI 数字共用同一协调器：同帧开始、同 duration / easing、同时结束
+      kpiAnimStart();
 
       const topRows = document.getElementById('dash-top-rows');
       // 数据接线：概览「Top Picks」必须真的是排过序的前 5 条。

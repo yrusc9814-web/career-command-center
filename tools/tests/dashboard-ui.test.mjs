@@ -82,11 +82,13 @@ test('U4 进入 innerHTML 的真实字段必须经过 esc()/listify()/jdHtml() �
   assert.ok(UI.includes('const s = esc(String(text).trim());'), 'listify 先转义再排版');
   assert.ok(UI.includes('return esc(text)'), 'jdHtml 先转义再排版');
   // 抽样锁定：这些真实数据插值点必须包 esc()
+  // （决策链属内部 Runtime trace，本轮已停止渲染，原 `${esc(t)}` 抽样位同步移除）
   for (const re of [
     /\$\{esc\(j\.title\)\}/,                       // 列表标题
     /\$\{esc\(s\)\}<\/span><\/li>/.source ? /\$\{esc\(s\)\}/ : null,   // 优势条目
-    /\$\{esc\(t\)\}/,                              // 决策链一行
+    /\$\{esc\(sg\.text \|\| sg\)\}/,               // 可弥补缺口条目
     /\$\{esc\(dim\.name\)\}/,                      // 维度名
+    /\$\{esc\(t\.question\)\}/,                    // 防雷真题题干
     /\$\{esc\(\(j\.collected_at \|\| ''\)\.slice\(0, 10\)\)\}/, // 采集时间
   ].filter(Boolean)) {
     assert.ok(re.test(UI_JS), `插值点缺少转义：${re}`);

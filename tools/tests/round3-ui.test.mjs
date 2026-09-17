@@ -67,12 +67,31 @@ test('U2 动画起点/终点：插值终帧精确等于真实值；新 UI 滚轮
   assert.ok(/translateY\(-\$\{targetDigit \* 1\.2\}em\)/.test(UI), '终点 = 目标数字所在位（不跳字、不漂移）');
 });
 
-// ── U3 重播：重入取消上一轮定时器；概览每次激活都重放 ────────────────────────
-test('U3 重播：重入先取消上一轮计时；概览激活即重放', () => {
-  assert.ok(UI.includes('if (container._timerId) clearTimeout(container._timerId);'), '重入取消上一轮（不叠加）');
+// ── U3 重播：重入取消上一轮共享动画；概览每次激活都重放 ────────────────────────
+test('U3 重播：重入先取消上一轮共享动画；概览激活即重放', () => {
+  // KPI 动画已改为共享协调器（单一 rAF loop / startTime / duration / easing）：
+  // 重入语义 = 取消上一轮共享循环，从零重排，不叠加。
+  assert.ok(UI.includes('if (KPI_ANIM.rafId) cancelAnimationFrame(KPI_ANIM.rafId);'), '重入取消上一轮共享循环（不叠加）');
   assert.ok(/if \(mode === 'dash'\)[\s\S]*?renderDash\(\);/.test(UI), '概览激活 → renderDash（内部重新驱动全部滚轮）');
   // 再次从 0 起算本身即重播语义
   assert.equal(easeOutCounter(0, 61, 0), 0);
+});
+
+// ── U3b KPI 动画共享协调器：两排同帧开始 / 同 duration / 同 easing / 同时结束 ──
+test('U3b KPI 动画同步：单一共享协调器，无 per-card timer/delay/duration', () => {
+  // 单一 rAF loop + 单一 startTime + 单一 duration + 单一 easing
+  assert.ok(UI.includes('const KPI_ANIM = {'), '共享协调器对象存在');
+  assert.ok(/requestAnimationFrame\(tick\)/.test(UI), '动画由单一 requestAnimationFrame loop 驱动');
+  assert.ok(/const start = performance\.now\(\);/.test(UI), '所有注册条目共用同一 startTime');
+  assert.ok(/const duration = KPI_ANIM\.duration;/.test(UI), '所有注册条目共用同一 duration');
+  assert.ok(UI.includes('function kpiEase(t)'), '共享 easing 函数唯一');
+  assert.ok(UI.includes('kpiAnimStart();'), 'renderDash 注册完毕后统一开跑（同一帧开始）');
+  // 每个条目只允许 target value 不同：rollOdometer 不再接收 per-call duration/delay
+  assert.ok(!/rollOdometer\([^)]+,\s*\d+\s*,\s*\d+\)/.test(UI), '不再有 per-card duration/delay 参数');
+  assert.ok(!/setTimeout\(\s*\(\)\s*=>\s*\{[\s\S]*?ticker-strip/.test(UI), '不再有 per-card setTimeout 动画 timer');
+  // prefers-reduced-motion：开启后直接显示最终值
+  assert.ok(UI.includes("window.matchMedia('(prefers-reduced-motion: reduce)')"), 'reduce 模式检测存在');
+  assert.ok(UI.includes('kpiApplyStrips(strips, 1)'), 'reduce 模式直接落到最终值');
 });
 
 // ── U5 分类点击：data-rec 承载 canonical 值，点击后写入现有筛选并切到全部岗位 ──
@@ -162,7 +181,8 @@ test('U10 推荐结论：文字 Badge（语义样式），无横条无分数化'
   assert.ok(UI.includes('vhc-rec-tag chip-rec'), '复用 recommendation 语义 chip 样式');
   assert.ok(UI.includes("recMeta.label"), '数据源 = canonical recommendation');
   // 结论看板标记区（HTML 侧，不是 CSS 规则）只有三根量规，结论本身是文字 chip
-  const verdictMarkup = UI.slice(UI.indexOf('<div class="verdict-hero-card">'), UI.indexOf('<!-- 动作操作条'));
+  // （动作操作条已并入标题右侧 .detail-head-actions，切片终点改为推荐原因卡片标记）
+  const verdictMarkup = UI.slice(UI.indexOf('<div class="verdict-hero-card">'), UI.indexOf('<!-- 正文 3'));
   assert.ok(verdictMarkup.length > 100, '定位到结论看板标记');
   assert.equal((verdictMarkup.match(/class="mm-fill /g) || []).length, 3, '结论看板内只有三根量规');
   assert.ok(!/%/.test(verdictMarkup.split('\n').find(l => l.includes('vhc-rec-tag')) || ''), '结论 chip 不百分比化');
@@ -218,15 +238,20 @@ test('U14 新 UI 路径不引入内部 token：helper 与渲染文案无 raw enu
   assert.ok(VM.includes('key in BLOCKER_ZH'), 'blockerHits 白名单守卫保持');
 });
 
-// ── U15 section 稳定：空态 fallback 与板块顺序保持 ───────────────────────────
+// ── U15 section 稳定：空态 fallback 与板块顺序保持（本轮顺序合同：JD 前置）────
 test('U15 section 稳定：SECTION_EMPTY_TEXT fallback 与板块顺序保持', async () => {
   const { SECTION_EMPTY_TEXT } = await import('../../dashboard-web/lib/analysis-contract.mjs');
   assert.ok(SECTION_EMPTY_TEXT.strengths, '主要优势空态');
   assert.ok(SECTION_EMPTY_TEXT.gaps, '主要短板空态');
-  assert.ok(SECTION_EMPTY_TEXT.decision_trace, '决策链空态');
-  // 板块顺序：裁决看板 → 推荐原因 → 主要优势 → 主要短板 → 可弥补缺口 → 简历/面试 → 决策链 → 评分明细 → JD 原文
-  const order = ['verdict-hero-card', '📌 推荐原因', '✅ 主要优势', '⚠️ 主要短板', '🩹 可弥补缺口', '📝 简历修改建议', '🎤 面试建议', '🧭 推荐决策链', '🧮 评分明细'];
+  assert.ok(SECTION_EMPTY_TEXT.decision_trace, '决策链空态（数据合同仍在）');
+  // 板块顺序（Dashboard 优化轮调整）：完整 JD（默认展开）→ 裁决看板 → 推荐原因 → 主要优势
+  //   → 主要短板 → 可弥补缺口 → 简历/面试 → 评分明细
+  // 核心原则：先让用户看清楚 JD，再看系统判断。
+  const order = ['📄 完整 JD', '<div class="verdict-hero-card">', '📌 推荐原因', '✅ 主要优势', '⚠️ 主要短板', '🩹 可弥补缺口', '📝 简历修改建议', '🎤 面试建议', '🧮 评分明细'];
   const idx = order.map(k => UI.indexOf(k));
   assert.ok(idx.every(i => i > -1), `新 UI 板块文案齐备：${order.filter((k, i) => idx[i] === -1).join(' / ')}`);
-  assert.deepEqual([...idx].sort((a, b) => a - b), idx, '板块顺序不变');
+  assert.deepEqual([...idx].sort((a, b) => a - b), idx, '板块顺序符合本轮合同');
+  // Runtime 决策链（内部 trace）不再出现在普通 UI
+  assert.ok(!UI.includes('🧭 推荐决策链'), 'Runtime 决策链卡片已从普通 UI 移除');
+  assert.ok(!UI.includes('dt-trace-body'), '决策链渲染容器已移除（decision_trace 数据仍由 API 透传）');
 });
